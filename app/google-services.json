@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529769973008",
+    "project_id": "obiterjus",
+    "storage_bucket": "obiterjus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529769973008:android:cc6f1248e5790b76381195",
+        "android_client_info": {
+          "package_name": "com.obiterjus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0iSas1gB2jvxH6jbkHE43_A19md_Y3Uo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

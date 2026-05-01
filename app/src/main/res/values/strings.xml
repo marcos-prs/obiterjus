@@ -1,3 +1,219 @@
 <resources>
     <string name="app_name">ObiterJus</string>
+    <string name="aba_monitoramento">Monitoramento</string>
+    <string name="aba_publicacoes">Publicações</string>
+    <string name="aba_agenda">Agenda</string>
+    <string name="aba_processos">Processos</string>
+    <string name="monitoramento_title">Monitoramento CNJ</string>
+    <string name="monitoramento_label_numero_oab">Número da OAB</string>
+    <string name="monitoramento_label_uf">UF</string>
+    <string name="monitoramento_label_data_inicio">Início</string>
+    <string name="monitoramento_label_data_fim">Fim</string>
+    <string name="monitoramento_label_frequencia">Frequência de Sincronização</string>
+    <string name="monitoramento_freq_4h">4 horas</string>
+    <string name="monitoramento_freq_12h">12 horas</string>
+    <string name="monitoramento_freq_24h">Diário</string>
+    <string name="monitoramento_action_buscar">Buscar publicações</string>
+    <string name="monitoramento_action_buscar_loading">Buscando...</string>
+    <string name="monitoramento_error_title">Não foi possível sincronizar</string>
+    <string name="monitoramento_error_invalid_date">Informe datas válidas no formato DD/MM/AAAA.</string>
+    <string name="monitoramento_error_sync_failed">Não foi possível sincronizar agora.</string>
+    <string name="monitoramento_status_title">Sincronização automática</string>
+    <string name="monitoramento_status_success">Último sucesso em %1$s. Novas publicações na última execução: %2$d.</string>
+    <string name="monitoramento_status_error">Última tentativa em %1$s. Falha registrada: %2$s.</string>
+    <string name="monitoramento_resumo_title">Resumo da sincronização</string>
+    <string name="monitoramento_metric_remotas">Remotas</string>
+    <string name="monitoramento_metric_recebidas">Recebidas</string>
+    <string name="monitoramento_metric_novas">Novas</string>
+    <string name="monitoramento_metric_atualizadas">Atualizadas</string>
+    <string name="monitoramento_metric_sigilosas">Sigilosas</string>
+    <string name="monitoramento_metric_processos">Processos</string>
+    <string name="monitoramento_djen_resumo">DJEN: %1$d página(s) consultada(s). Resultado: %2$s.</string>
+    <string name="monitoramento_djen_stop_empty_page">sem novas páginas</string>
+    <string name="monitoramento_djen_stop_partial_page">última página parcial</string>
+    <string name="monitoramento_djen_stop_count_consumed">total remoto consumido</string>
+    <string name="monitoramento_djen_stop_repeated_page">página repetida detectada</string>
+    <string name="monitoramento_djen_stop_page_limit">limite defensivo atingido</string>
+    <string name="monitoramento_djen_stop_unknown">status desconhecido</string>
+    <string name="monitoramento_djen_falha_title">Consulta DJEN indisponível</string>
+    <string name="monitoramento_djen_falha_message">Não foi possível consultar o DJEN agora. Verifique sua internet e tente novamente.</string>
+    <string name="monitoramento_datajud_sem_processos">DataJud: nenhum processo novo para enriquecer.</string>
+    <string name="monitoramento_datajud_resumo">DataJud: %1$d encontrado(s), %2$d não encontrado(s), %3$d falha(s).</string>
+    <string name="monitoramento_datajud_pendente_title">DataJud pendente</string>
+    <string name="monitoramento_datajud_pendente_message">A chave DataJud ainda não está configurada neste build.</string>
+    <string name="publicacoes_title">Publicações</string>
+    <string name="publicacoes_subtitle">%1$d de %2$d publicações</string>
+    <string name="publicacoes_label_filtro">Processo, tribunal, tipo ou texto</string>
+    <string name="publicacoes_label_tribunal">Tribunal</string>
+    <string name="publicacoes_label_tipo">Tipo de comunicação</string>
+    <string name="publicacoes_label_data_inicio">Data inicial</string>
+    <string name="publicacoes_label_data_fim">Data final</string>
+    <string name="publicacoes_filtro_sigilosas">Somente sigilosas</string>
+    <string name="publicacoes_filtro_limpar">Limpar</string>
+    <string name="publicacoes_empty_title">Nenhuma publicação encontrada</string>
+    <string name="publicacoes_empty_body">Busque publicações no monitoramento para alimentar esta lista.</string>
+    <string name="publicacoes_sem_numero_processo">Processo não informado</string>
+    <string name="publicacoes_sem_data">Data não informada</string>
+    <string name="publicacoes_sigilo_content_description">Publicação sigilosa</string>
+    <string name="publicacoes_sem_tribunal">Tribunal não informado</string>
+    <string name="publicacoes_sem_tipo">Tipo não informado</string>
+    <string name="publicacoes_texto_sigiloso">Texto omitido por sigilo.</string>
+    <string name="publicacoes_sem_texto">Texto não informado.</string>
+    <string name="publicacoes_detalhe_title">Detalhe da publicação</string>
+    <string name="publicacoes_detalhe_fechar">Fechar detalhe da publicação</string>
+    <string name="publicacoes_detalhe_certidao">Abrir certidão PDF</string>
+    <string name="publicacoes_detalhe_certidao_erro">Não foi possível abrir a certidão desta publicação.</string>
+    <string name="publicacoes_detalhe_sigilosa">Sigilosa</string>
+    <string name="publicacoes_detalhe_id">ID da publicação</string>
+    <string name="publicacoes_detalhe_data_disponibilizacao">Data de disponibilização</string>
+    <string name="publicacoes_detalhe_orgao">Órgão</string>
+    <string name="publicacoes_detalhe_participantes">Participantes</string>
+    <string name="publicacoes_detalhe_prazo">Prazo identificado</string>
+    <string name="publicacoes_detalhe_capturado_em">Capturado em</string>
+    <string name="publicacoes_detalhe_atualizado_em">Atualizado em</string>
+    <string name="publicacoes_detalhe_texto">Texto</string>
+    <string name="publicacoes_detalhe_nao_informado">Não informado</string>
+
+    <string name="agenda_title">Agenda de prazos</string>
+    <string name="agenda_subtitle">%1$d prazo(s), %2$d vencido(s), %3$d próximo(s)</string>
+    <string name="agenda_metric_total">Total: %1$d</string>
+    <string name="agenda_metric_vencidos">Vencidos: %1$d</string>
+    <string name="agenda_metric_proximos">Próximos: %1$d</string>
+    <string name="agenda_metric_sem_data">Sem data: %1$d</string>
+    <string name="agenda_empty_title">Nenhum prazo identificado</string>
+    <string name="agenda_empty_body">Quando uma publicação trouxer prazo no texto, ela aparecerá aqui automaticamente.</string>
+    <string name="agenda_item_vencimento">Vence em %1$s</string>
+    <string name="agenda_item_sem_data">Prazo sem vencimento estimado</string>
+    <string name="agenda_status_vencido">Vencido</string>
+    <string name="agenda_status_proximo">Próximo</string>
+    <string name="agenda_status_futuro">Futuro</string>
+    <string name="agenda_status_sem_data">Sem data</string>
+    <string name="agenda_confirmar_prazo">Confirmar Prazo</string>
+    <string name="agenda_prazo_confirmado">Prazo confirmado (%1$s)</string>
+    <string name="agenda_prazo_confirmado_local">Prazo confirmado (Local)</string>
+
+    <string name="processos_title">Processos</string>
+    <string name="processos_subtitle">%1$d de %2$d processos</string>
+    <string name="processos_label_filtro">Processo, tribunal, classe ou órgão</string>
+    <string name="processos_empty_title">Nenhum processo encontrado</string>
+    <string name="processos_empty_body">Busque publicações no monitoramento para enriquecer processos pelo DataJud.</string>
+    <string name="processos_nao_informado">Não informado</string>
+    <string name="processos_atualizado_em">Atualizado em %1$s</string>
+    <string name="processos_detalhe_title">Detalhe do processo</string>
+    <string name="processos_detalhe_fechar">Fechar detalhe do processo</string>
+    <string name="processos_detalhe_status">Status</string>
+    <string name="processos_detalhe_tribunal">Tribunal</string>
+    <string name="processos_detalhe_grau">Grau</string>
+    <string name="processos_detalhe_classe">Classe</string>
+    <string name="processos_detalhe_assuntos">Assuntos</string>
+    <string name="processos_detalhe_orgao">Órgão julgador</string>
+    <string name="processos_detalhe_ajuizamento">Ajuizamento</string>
+    <string name="processos_movimentos_title">%1$d movimento(s)</string>
+    <string name="processos_movimentos_empty">Nenhum movimento salvo para este processo.</string>
+    <string name="processos_movimento_sem_nome">Movimento sem nome</string>
+    <string name="processos_timeline_title">Timeline: %1$d evento(s)</string>
+    <string name="processos_timeline_empty">Nenhum evento salvo para este processo.</string>
+    <string name="processos_timeline_tipo_publicacao">Publicação DJEN</string>
+    <string name="processos_timeline_tipo_movimento">Movimento DataJud</string>
+    <string name="processos_timeline_sigiloso">Sigiloso</string>
+    <string name="processos_timeline_texto_sigiloso">Texto omitido por sigilo.</string>
+    <string name="processos_status_pending">Pendente</string>
+    <string name="processos_status_synced">Sincronizado</string>
+    <string name="processos_status_not_found">Não encontrado</string>
+    <string name="processos_status_failed">Falha</string>
+    <string name="processos_status_stale">Desatualizado</string>
+
+    <!-- Filtros avançados de processos -->
+    <string name="processos_filtro_participante">Participante ou advogado</string>
+    <string name="processos_filtro_status">Status DataJud</string>
+    <string name="processos_filtro_limpar">Limpar</string>
+    <string name="processos_ordenacao_label">Ordenar por</string>
+    <string name="processos_ordem_recentes">Mais recentes</string>
+    <string name="processos_ordem_antigos">Mais antigos</string>
+    <string name="processos_ordem_tribunal">Tribunal</string>
+    <string name="processos_ordem_numero">Número</string>
+    <string name="processos_detalhe_participantes">Participantes</string>
+
+    <!-- Auditoria (Passo 5) -->
+    <string name="auditoria_title">Histórico de Sincronização</string>
+    <string name="auditoria_subtitle">%1$d execução(ões) registrada(s)</string>
+    <string name="auditoria_empty_title">Sem histórico</string>
+    <string name="auditoria_empty_body">Nenhuma sincronização foi executada ainda.</string>
+    <string name="auditoria_label_executado_em">Executado em</string>
+    <string name="auditoria_label_duracao">Duração</string>
+    <string name="auditoria_label_fonte">Fonte</string>
+    <string name="auditoria_label_novas">Novas publicações</string>
+    <string name="auditoria_label_processos">Processos sincronizados</string>
+    <string name="auditoria_label_erro">Erro</string>
+    <string name="auditoria_status_sucesso">Sucesso</string>
+    <string name="auditoria_status_falha">Falha</string>
+    <string name="auditoria_chip_djen">DJEN</string>
+    <string name="auditoria_chip_datajud">DataJud</string>
+    <string name="auditoria_action_ver_historico">Ver histórico</string>
+
+    <string name="aba_perfil">Perfil</string>
+    <string name="autenticacao_title">Minha conta</string>
+    <string name="autenticacao_subtitle">Backup, restauração e acesso entre dispositivos.</string>
+    <string name="autenticacao_subtitle_anonymous">Você está no modo convidado. Crie uma conta para manter seus dados acessíveis.</string>
+    <string name="autenticacao_subtitle_authenticated">Olá, %1$s! Seus dados estão sincronizados na nuvem.</string>
+    <string name="autenticacao_email_title">Acesso por e-mail</string>
+    <string name="autenticacao_google_title">Acesso com Google</string>
+    <string name="autenticacao_action_login_google">Entrar com Google</string>
+    <string name="autenticacao_action_login_email">Entrar com e-mail</string>
+    <string name="autenticacao_action_logout">Sair da conta</string>
+    <string name="autenticacao_action_loading">Aguarde...</string>
+    <string name="autenticacao_label_email">E-mail</string>
+    <string name="autenticacao_label_password">Senha</string>
+    <string name="autenticacao_action_signup">Criar conta</string>
+    <string name="autenticacao_separator_or">ou</string>
+    <string name="autenticacao_user_fallback">Usuário</string>
+    <string name="autenticacao_google_indisponivel">Login com Google indisponível neste build.</string>
+    <string name="autenticacao_sync_loading">Restaurando dados da nuvem...</string>
+    <string name="autenticacao_sync_success">%1$d registro(s) restaurado(s) da nuvem.</string>
+    <string name="autenticacao_sync_error">Não foi possível restaurar os dados da nuvem agora.</string>
+    <string name="autenticacao_error_required_fields">Informe e-mail e senha para continuar.</string>
+    <string name="autenticacao_error_login_email">Não foi possível entrar com esse e-mail e senha.</string>
+    <string name="autenticacao_error_signup">Não foi possível criar a conta agora.</string>
+    <string name="autenticacao_error_login_google">Não foi possível entrar com Google agora.</string>
+    <string name="autenticacao_error_logout">Não foi possível sair da conta agora.</string>
+    <string name="notification_channel_publicacoes">Publicações</string>
+    <string name="notification_publicacoes_title">Novas publicações encontradas</string>
+    <plurals name="notification_publicacoes_body">
+        <item quantity="one">%1$d nova publicação foi salva no ObiterJus.</item>
+        <item quantity="other">%1$d novas publicações foram salvas no ObiterJus.</item>
+    </plurals>
+
+    <!-- Canal: publicação com prazo -->
+    <string name="notification_channel_prazo">Prazos</string>
+    <string name="notification_channel_prazo_desc">Alertas de publicações com prazo identificado</string>
+    <string name="notification_prazo_title">Publicação com prazo identificado</string>
+    <string name="notification_prazo_body">Uma nova publicação com prazo foi salva. Verifique sua agenda.</string>
+
+    <!-- Canal: publicação sigilosa -->
+    <string name="notification_channel_sigilosa">Publicações sigilosas</string>
+    <string name="notification_channel_sigilosa_desc">Alertas de publicações marcadas como sigilosas</string>
+    <string name="notification_sigilosa_title">Publicação sigilosa recebida</string>
+    <string name="notification_sigilosa_body">Uma publicação sigilosa foi detectada. Acesse o app para verificar.</string>
+
+    <!-- Canal: processo novo -->
+    <string name="notification_channel_processo_novo">Novos processos</string>
+    <string name="notification_channel_processo_novo_desc">Alertas quando um processo inédito é encontrado nas publicações</string>
+    <plurals name="notification_processo_novo_title">
+        <item quantity="one">%1$d processo novo encontrado</item>
+        <item quantity="other">%1$d processos novos encontrados</item>
+    </plurals>
+    <string name="notification_processo_novo_body">Novos processos foram identificados nas publicações do DJEN.</string>
+
+    <!-- Canal: prazo vencendo -->
+    <string name="notification_channel_prazo_vencendo">Prazos vencendo</string>
+    <string name="notification_channel_prazo_vencendo_desc">Alertas de prazos próximos do vencimento</string>
+    <string name="notification_prazo_vencendo_title">Prazo próximo do vencimento</string>
+    <plurals name="notification_prazo_vencendo_body">
+        <item quantity="one">%1$d prazo vence em breve. Verifique sua agenda.</item>
+        <item quantity="other">%1$d prazos vencem em breve. Verifique sua agenda.</item>
+    </plurals>
+
+    <!-- Exportação -->
+    <string name="monitoramento_botao_exportar">Exportar Relatório</string>
+    <string name="monitoramento_exportar_escolher_app">Compartilhar Relatório ObiterJus</string>
 </resources>

@@ -4,6 +4,5 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowBackground">#1C1C1C</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>

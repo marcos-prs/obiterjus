@@ -36,6 +36,7 @@ data class ObiterDimens(
     val bottomBarHeight: Dp = 80.dp,
     val contentMaxWidth: Dp = 720.dp,
     val cardMinHeight: Dp = 72.dp,
+    val monitoramentoUfFieldWidth: Dp = 96.dp,
 )
 
 val LocalObiterDimens = staticCompositionLocalOf { ObiterDimens() }
