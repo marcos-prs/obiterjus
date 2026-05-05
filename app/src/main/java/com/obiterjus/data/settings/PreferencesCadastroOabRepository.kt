@@ -8,7 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.obiterjus.core.parser.CnjDateParser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.model.SincronizacaoStatus
@@ -19,10 +19,6 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-
-private val Context.obiterSettingsDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "obiter_settings",
-)
 
 class PreferencesCadastroOabRepository(
     context: Context,
@@ -35,6 +31,9 @@ class PreferencesCadastroOabRepository(
                 numero = prefs[KEY_OAB_NUMERO].orEmpty(),
                 uf = prefs[KEY_OAB_UF].orEmpty(),
                 nomeAdvogado = prefs[KEY_OAB_NOME].orEmpty(),
+                tipoInscricao = prefs[KEY_OAB_TIPO].orEmpty(),
+                nomeEscritorio = prefs[KEY_OAB_ESCRITORIO].orEmpty(),
+                areasAtuacao = prefs[KEY_OAB_AREAS]?.toList().orEmpty(),
                 dataInicio = prefs[KEY_OAB_DATA_INICIO]?.let(CnjDateParser::parseLocalDate),
                 dataFim = prefs[KEY_OAB_DATA_FIM]?.let(CnjDateParser::parseLocalDate),
             )
@@ -53,14 +52,20 @@ class PreferencesCadastroOabRepository(
     override suspend fun salvarCadastro(
         numero: String,
         uf: String,
-        nomeAdvogado: String,
+        nomeAdvogado: String?,
+        tipoInscricao: String?,
+        nomeEscritorio: String?,
+        areasAtuacao: List<String>?,
         dataInicio: LocalDate?,
         dataFim: LocalDate?,
     ) {
         dataStore.edit { prefs ->
             prefs[KEY_OAB_NUMERO] = numero.trim()
             prefs[KEY_OAB_UF] = uf.trim().uppercase().take(2)
-            prefs[KEY_OAB_NOME] = nomeAdvogado.trim()
+            nomeAdvogado?.let { prefs[KEY_OAB_NOME] = it.trim() }
+            tipoInscricao?.let { prefs[KEY_OAB_TIPO] = it.trim() }
+            nomeEscritorio?.let { prefs[KEY_OAB_ESCRITORIO] = it.trim() }
+            areasAtuacao?.let { prefs[KEY_OAB_AREAS] = it.map(String::trim).filter(String::isNotBlank).toSet() }
             dataInicio?.let { prefs[KEY_OAB_DATA_INICIO] = it.toString() }
                 ?: prefs.remove(KEY_OAB_DATA_INICIO)
             dataFim?.let { prefs[KEY_OAB_DATA_FIM] = it.toString() }
@@ -104,6 +109,9 @@ class PreferencesCadastroOabRepository(
         val KEY_OAB_NUMERO = stringPreferencesKey("oab_numero")
         val KEY_OAB_UF = stringPreferencesKey("oab_uf")
         val KEY_OAB_NOME = stringPreferencesKey("oab_nome")
+        val KEY_OAB_TIPO = stringPreferencesKey("oab_tipo")
+        val KEY_OAB_ESCRITORIO = stringPreferencesKey("oab_escritorio")
+        val KEY_OAB_AREAS = stringSetPreferencesKey("oab_areas")
         val KEY_OAB_DATA_INICIO = stringPreferencesKey("oab_data_inicio")
         val KEY_OAB_DATA_FIM = stringPreferencesKey("oab_data_fim")
         val KEY_ULTIMA_EXECUCAO_EM = longPreferencesKey("ultima_execucao_em")

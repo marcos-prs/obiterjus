@@ -1,5 +1,6 @@
 package com.obiterjus.data.agenda.remote
 
+import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CalendarSyncRepository
 import java.time.format.DateTimeFormatter
@@ -13,18 +14,18 @@ class CalendarSyncRepositoryImpl(
         prazo: PublicacaoPrazo,
         title: String,
         description: String,
-        provedor: String
+        provedor: ProvedorCalendario,
     ): Result<String> = try {
         val dateStr = prazo.dataLimiteEstimada?.format(DateTimeFormatter.ISO_LOCAL_DATE) 
             ?: return Result.failure(Exception("Prazo sem data limite"))
 
-        when (provedor.uppercase()) {
-            "GOOGLE" -> {
+        when (provedor) {
+            ProvedorCalendario.GOOGLE -> {
                 val event = GoogleEventDto(
                     summary = title,
                     description = description,
                     start = EventDateTime(date = dateStr),
-                    end = EventDateTime(date = dateStr) // All day event uses 'date' instead of 'dateTime'
+                    end = EventDateTime(date = dateStr),
                 )
                 val response = googleDataSource.createEvent(event)
                 if (response.isSuccessful && response.body() != null) {
@@ -33,7 +34,7 @@ class CalendarSyncRepositoryImpl(
                     Result.failure(Exception("Erro Google: ${response.code()}"))
                 }
             }
-            "OUTLOOK" -> {
+            ProvedorCalendario.OUTLOOK -> {
                 val event = OutlookEventDto(
                     subject = title,
                     body = OutlookBodyDto(content = description),
@@ -47,25 +48,25 @@ class CalendarSyncRepositoryImpl(
                     Result.failure(Exception("Erro Outlook: ${response.code()}"))
                 }
             }
-            else -> Result.failure(Exception("Provedor desconhecido: $provedor"))
+            ProvedorCalendario.LOCAL -> Result.failure(Exception("Provedor local não envia para calendário"))
         }
     } catch (e: Exception) {
         Result.failure(e)
     }
 
-    override suspend fun cancelPrazo(idExterno: String, provedor: String): Result<Unit> = try {
-        when (provedor.uppercase()) {
-            "GOOGLE" -> {
+    override suspend fun cancelPrazo(idExterno: String, provedor: ProvedorCalendario): Result<Unit> = try {
+        when (provedor) {
+            ProvedorCalendario.GOOGLE -> {
                 val response = googleDataSource.deleteEvent(idExterno)
                 if (response.isSuccessful) Result.success(Unit)
                 else Result.failure(Exception("Erro Google: ${response.code()}"))
             }
-            "OUTLOOK" -> {
+            ProvedorCalendario.OUTLOOK -> {
                 val response = outlookDataSource.deleteEvent(idExterno)
                 if (response.isSuccessful) Result.success(Unit)
                 else Result.failure(Exception("Erro Outlook: ${response.code()}"))
             }
-            else -> Result.failure(Exception("Provedor desconhecido: $provedor"))
+            ProvedorCalendario.LOCAL -> Result.failure(Exception("Provedor local não envia para calendário"))
         }
     } catch (e: Exception) {
         Result.failure(e)

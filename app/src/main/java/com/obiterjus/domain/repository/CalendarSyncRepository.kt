@@ -1,17 +1,18 @@
 package com.obiterjus.domain.repository
 
 import com.obiterjus.domain.model.PublicacaoPrazo
+import com.obiterjus.domain.model.ProvedorCalendario
 
 interface CalendarSyncRepository {
     suspend fun syncPrazo(
         prazo: PublicacaoPrazo,
         title: String,
         description: String,
-        provedor: String // "GOOGLE" ou "OUTLOOK"
-    ): Result<String> // Retorna o ID externo do evento
+        provedor: ProvedorCalendario,
+    ): Result<String>
 
     suspend fun cancelPrazo(
         idExterno: String,
-        provedor: String
+        provedor: ProvedorCalendario,
     ): Result<Unit>
 }

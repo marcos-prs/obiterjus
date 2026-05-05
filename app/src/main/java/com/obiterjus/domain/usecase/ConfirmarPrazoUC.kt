@@ -2,6 +2,8 @@ package com.obiterjus.domain.usecase
 
 import com.obiterjus.data.agenda.local.PrazoSugeridoDao
 import com.obiterjus.domain.model.PublicacaoPrazo
+import com.obiterjus.domain.model.ConfirmacaoPrazoResultado
+import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.repository.CalendarSyncRepository
 
 class ConfirmarPrazoUC(
@@ -13,39 +15,45 @@ class ConfirmarPrazoUC(
         prazo: PublicacaoPrazo,
         title: String,
         description: String,
-        provedor: String
-    ): Result<Unit> {
+        provedor: ProvedorCalendario,
+    ): Result<ConfirmacaoPrazoResultado> {
         return try {
-            // 1. Marcar como confirmado no banco local
             val entity = prazoSugeridoDao.getByPublicacaoId(publicacaoId)
-            if (entity != null) {
+                ?: return Result.failure(
+                    IllegalStateException("Prazo sugerido não encontrado para a publicação $publicacaoId"),
+                )
+
+            val entityConfirmada = entity.copy(
+                isConfirmado = true,
+                provedorCalendario = provedor.codigo,
+            )
+            prazoSugeridoDao.update(entityConfirmada)
+
+            if (provedor == ProvedorCalendario.LOCAL) {
+                return Result.success(ConfirmacaoPrazoResultado.ConfirmadoLocalmente)
+            }
+
+            val syncResult = calendarSyncRepository.syncPrazo(
+                prazo = prazo,
+                title = title,
+                description = description,
+                provedor = provedor,
+            )
+            return if (syncResult.isSuccess) {
+                val externalId = syncResult.getOrNull()
+                    ?: return Result.success(ConfirmacaoPrazoResultado.SincronizacaoPendente(provedor))
                 prazoSugeridoDao.update(
-                    entity.copy(
-                        isConfirmado = true,
-                        provedorCalendario = provedor
-                    )
+                    entityConfirmada.copy(idExternoCalendario = externalId),
+                )
+                Result.success(
+                    ConfirmacaoPrazoResultado.EventoCriado(
+                        provedor = provedor,
+                        idExterno = externalId,
+                    ),
                 )
             } else {
-                return Result.failure(Exception("Prazo sugerido não encontrado para a publicação $publicacaoId"))
+                Result.success(ConfirmacaoPrazoResultado.SincronizacaoPendente(provedor))
             }
-
-            // 2. Tenta sincronizar imediatamente
-            val syncResult = calendarSyncRepository.syncPrazo(prazo, title, description, provedor)
-            if (syncResult.isSuccess) {
-                // Se sucesso, guarda o ID externo
-                val externalId = syncResult.getOrNull()
-                prazoSugeridoDao.update(
-                    entity.copy(
-                        isConfirmado = true,
-                        provedorCalendario = provedor,
-                        idExternoCalendario = externalId
-                    )
-                )
-            }
-            // Se falhar a sincronização síncrona, a flag isConfirmado já está true, 
-            // então o CalendarSyncWorker pegará isso depois.
-
-            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

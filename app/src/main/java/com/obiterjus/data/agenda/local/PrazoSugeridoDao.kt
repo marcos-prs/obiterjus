@@ -18,8 +18,15 @@ interface PrazoSugeridoDao {
     @Query("SELECT * FROM prazos_sugeridos WHERE publicacaoId = :publicacaoId")
     suspend fun getByPublicacaoId(publicacaoId: Long): PrazoSugeridoEntity?
 
-    @Query("SELECT * FROM prazos_sugeridos WHERE isConfirmado = 1 AND idExternoCalendario IS NULL")
-    suspend fun getPrazosParaSincronizar(): List<PrazoSugeridoEntity>
+    @Query(
+        """
+        SELECT * FROM prazos_sugeridos
+        WHERE isConfirmado = 1
+          AND idExternoCalendario IS NULL
+          AND provedorCalendario IN (:provedores)
+        """
+    )
+    suspend fun getPrazosParaSincronizar(provedores: List<String>): List<PrazoSugeridoEntity>
 
     @Query("SELECT * FROM prazos_sugeridos")
     fun observeAll(): Flow<List<PrazoSugeridoEntity>>

@@ -24,6 +24,7 @@ import com.obiterjus.R
  * - [CHANNEL_SIGILOSA]      → publicação marcada como sigilosa
  * - [CHANNEL_PROCESSO_NOVO] → processo inédito descoberto via DJEN
  * - [CHANNEL_PRAZO_VENCENDO]→ prazo próximo do vencimento (PrazosWorker)
+ * - [CHANNEL_MOVIMENTACAO]  → movimentação processual em baixa prioridade
  */
 class PublicacaoNotificationHelper(
     private val context: Context,
@@ -112,6 +113,20 @@ class PublicacaoNotificationHelper(
         )
     }
 
+    @SuppressLint("MissingPermission")
+    fun notificarMovimentacaoProcessual() {
+        if (!hasPermission()) return
+        ensureAllChannels()
+
+        notify(
+            channelId = CHANNEL_MOVIMENTACAO,
+            notificationId = ID_MOVIMENTACAO,
+            title = context.getString(R.string.notification_movimentacao_title),
+            body = context.getString(R.string.notification_movimentacao_body),
+            priority = NotificationCompat.PRIORITY_LOW,
+        )
+    }
+
     // -------------------------------------------------------------------------
     // Internals
     // -------------------------------------------------------------------------
@@ -153,6 +168,11 @@ class PublicacaoNotificationHelper(
                 context.getString(R.string.notification_channel_prazo_vencendo),
                 NotificationManager.IMPORTANCE_HIGH,
             ),
+            Triple(
+                CHANNEL_MOVIMENTACAO,
+                context.getString(R.string.notification_channel_movimentacao),
+                NotificationManager.IMPORTANCE_LOW,
+            ),
         ).forEach { (id, name, importance) ->
             manager.createNotificationChannel(NotificationChannel(id, name, importance))
         }
@@ -179,7 +199,7 @@ class PublicacaoNotificationHelper(
         priority: Int = NotificationCompat.PRIORITY_DEFAULT,
     ) {
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -199,6 +219,7 @@ class PublicacaoNotificationHelper(
         const val CHANNEL_SIGILOSA = "publicacao_sigilosa"
         const val CHANNEL_PROCESSO_NOVO = "processo_novo"
         const val CHANNEL_PRAZO_VENCENDO = "prazo_vencendo"
+        const val CHANNEL_MOVIMENTACAO = "movimentacao_processual"
 
         const val REQUEST_CODE_MAIN = 101
 
@@ -207,5 +228,6 @@ class PublicacaoNotificationHelper(
         const val ID_PUBLICACAO_SIGILOSA = 20260432
         const val ID_PROCESSO_NOVO = 20260433
         const val ID_PRAZO_VENCENDO = 20260434
+        const val ID_MOVIMENTACAO = 20260435
     }
 }

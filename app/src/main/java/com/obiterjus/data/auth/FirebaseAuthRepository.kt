@@ -2,6 +2,7 @@ package com.obiterjus.data.auth
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.GoogleAuthProvider
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.repository.AuthRepository
@@ -16,6 +17,7 @@ class FirebaseAuthRepository(
 ) : AuthRepository {
 
     override val currentUser: Flow<AuthUser?> = callbackFlow {
+        trySend(auth.currentUser?.toAuthUser())
         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             trySend(firebaseAuth.currentUser?.toAuthUser())
         }
@@ -45,7 +47,13 @@ class FirebaseAuthRepository(
     }
 
     override suspend fun signUpWithEmail(email: String, password: String): Result<AuthUser> = executarComResultado {
-        val result = auth.createUserWithEmailAndPassword(email, password).await()
+        val currentUser = auth.currentUser
+        val result = if (currentUser != null && currentUser.isAnonymous) {
+            val credential = EmailAuthProvider.getCredential(email, password)
+            currentUser.linkWithCredential(credential).await()
+        } else {
+            auth.createUserWithEmailAndPassword(email, password).await()
+        }
         result.user?.toAuthUser() ?: throw IllegalStateException("Usuário nulo após cadastro com e-mail")
     }
 

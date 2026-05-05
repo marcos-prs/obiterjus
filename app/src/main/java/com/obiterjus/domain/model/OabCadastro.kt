@@ -7,11 +7,14 @@ data class OabCadastro(
     val numero: String = "",
     val uf: String = "",
     val nomeAdvogado: String = "",
+    val tipoInscricao: String = "",
+    val nomeEscritorio: String = "",
+    val areasAtuacao: List<String> = emptyList(),
     val dataInicio: LocalDate? = null,
     val dataFim: LocalDate? = null,
 ) {
     val isValid: Boolean
-        get() = numero.isNotBlank() && uf.length == 2
+        get() = nomeAdvogado.isNotBlank() && numero.isNotBlank() && uf.length == 2
 }
 
 data class SincronizacaoStatus(

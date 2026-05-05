@@ -1,21 +1,30 @@
 package com.obiterjus.domain.usecase
 
+import com.obiterjus.data.agenda.local.PrazoSugeridoDao
+import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
 import com.obiterjus.domain.model.PrazoAgendaItem
+import com.obiterjus.domain.model.PublicacaoPrazo
+import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.repository.RepositorioPublicacoes
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 class ObservarAgendaPrazos(
     private val repository: RepositorioPublicacoes,
+    private val prazoSugeridoDao: PrazoSugeridoDao,
 ) {
     operator fun invoke(): Flow<List<PrazoAgendaItem>> =
-        repository.observarPublicacoes().map { publicacoes ->
+        combine(
+            repository.observarPublicacoes(),
+            prazoSugeridoDao.observeAll(),
+        ) { publicacoes, prazosSugeridos ->
+            val prazosPorPublicacao = prazosSugeridos.associateBy { it.publicacaoId }
             publicacoes
                 .mapNotNull { publicacao ->
                     publicacao.prazo?.let { prazo ->
                         PrazoAgendaItem(
                             publicacao = publicacao,
-                            prazo = prazo,
+                            prazo = prazo.aplicarConfirmacao(prazosPorPublicacao[publicacao.id]),
                         )
                     }
                 }
@@ -36,3 +45,13 @@ class ObservarAgendaPrazos(
         }
     }
 }
+
+private fun PublicacaoPrazo.aplicarConfirmacao(
+    prazoSugerido: PrazoSugeridoEntity?,
+): PublicacaoPrazo =
+    copy(
+        isConfirmado = prazoSugerido?.isConfirmado ?: isConfirmado,
+        idExternoCalendario = prazoSugerido?.idExternoCalendario ?: idExternoCalendario,
+        provedorCalendario = ProvedorCalendario.fromCodigo(prazoSugerido?.provedorCalendario)?.codigo
+            ?: provedorCalendario,
+    )

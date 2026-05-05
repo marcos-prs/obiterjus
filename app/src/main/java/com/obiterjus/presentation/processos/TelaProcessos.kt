@@ -1,40 +1,36 @@
 package com.obiterjus.presentation.processos
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Source
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.ProcessoSyncStatus
 import com.obiterjus.domain.model.TimelineProcessoItem
 import com.obiterjus.domain.model.TimelineProcessoTipo
-import com.obiterjus.presentation.componentes.CabecalhoDetalhe
-import com.obiterjus.presentation.componentes.CabecalhoListagem
-import com.obiterjus.presentation.componentes.CampoDetalheListagem
-import com.obiterjus.presentation.componentes.CartaoDetalhe
-import com.obiterjus.presentation.componentes.CartaoFiltro
-import com.obiterjus.presentation.componentes.CartaoItemListagem
-import com.obiterjus.presentation.componentes.ChipInformativoListagem
-import com.obiterjus.presentation.componentes.ConteudoRolavelAba
-import com.obiterjus.presentation.componentes.EstadoVazioListagem
+import com.obiterjus.presentation.componentes.EstadoVazioObiter
+import com.obiterjus.presentation.componentes.ObiterIcones
+import com.obiterjus.presentation.componentes.barras.BarraBusca
+import com.obiterjus.presentation.componentes.cards.CardProcesso
+import com.obiterjus.presentation.componentes.chips.ChipFiltroRow
+import com.obiterjus.presentation.componentes.secoes.CabecalhoComarca
+import com.obiterjus.presentation.componentes.secoes.CabecalhoTribunal
 import com.obiterjus.ui.theme.ObiterTheme
 
 @Composable
@@ -43,319 +39,146 @@ fun TelaProcessos(
     aoAlterarFiltroTexto: (String) -> Unit,
     aoAlterarFiltroParticipante: (String) -> Unit,
     aoAlterarFiltroSyncStatus: (String) -> Unit,
-    aoAlterarOrdenacao: (OrdenacaoProcessos) -> Unit,
+    aoAlterarStatus: (FiltroStatusProcesso) -> Unit,
     aoLimparFiltros: () -> Unit,
     aoSelecionarProcesso: (String) -> Unit,
-    aoFecharDetalhe: () -> Unit,
+    aoAlternarTribunal: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = ObiterTheme.dimens
+    val statusTodos = stringResource(R.string.filtro_todos)
+    val statusAtivos = stringResource(R.string.filtro_ativos)
+    val statusArquivados = stringResource(R.string.filtro_arquivados)
 
-    ConteudoRolavelAba(modifier = modifier) {
-        CabecalhoListagem(
-            titulo = stringResource(R.string.processos_title),
-            subtitulo = stringResource(
-                R.string.processos_subtitle,
-                estado.processos.size,
-                estado.totalPersistidos,
-            ),
-        )
-
-        CartaoFiltro {
-            OutlinedTextField(
-                value = estado.filtros.texto,
-                onValueChange = aoAlterarFiltroTexto,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.processos_label_filtro)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = dimens.screenMargin),
+        verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
+    ) {
+        item {
+            BarraBusca(
+                consulta = estado.filtros.texto,
+                aoMudarConsulta = aoAlterarFiltroTexto,
+                placeholder = stringResource(R.string.busca_processos_placeholder),
+            )
+        }
+        item {
+            ChipFiltroRow(
+                chips = listOf(
+                    statusTodos,
+                    statusAtivos,
+                    statusArquivados,
+                ),
+                chipAtivo = stringResource(estado.filtros.status.rotuloResId()),
+                aoSelecionar = { chip ->
+                    aoAlterarStatus(
+                        when (chip) {
+                            statusAtivos -> FiltroStatusProcesso.ATIVOS
+                            statusArquivados -> FiltroStatusProcesso.ARQUIVADOS
+                            else -> FiltroStatusProcesso.GERAL
+                        },
                     )
                 },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Search,
-                ),
             )
+        }
 
-            OutlinedTextField(
-                value = estado.filtros.participante,
-                onValueChange = aoAlterarFiltroParticipante,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.processos_filtro_participante)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-
-            OutlinedTextField(
-                value = estado.filtros.syncStatus,
-                onValueChange = aoAlterarFiltroSyncStatus,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.processos_filtro_status)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Done,
-                ),
-            )
-
-            Text(
-                text = stringResource(R.string.processos_ordenacao_label),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(dimens.space2),
-                verticalArrangement = Arrangement.spacedBy(dimens.space2),
-            ) {
-                OrdenacaoProcessos.entries.forEach { ordem ->
-                    FilterChip(
-                        selected = estado.filtros.ordenacao == ordem,
-                        onClick = { aoAlterarOrdenacao(ordem) },
-                        label = { Text(stringResource(ordem.rotuloResId())) },
-                    )
-                }
-                OutlinedButton(
-                    onClick = aoLimparFiltros,
-                    enabled = estado.filtros.possuiFiltrosAtivos,
-                ) {
-                    Icon(imageVector = Icons.Default.Clear, contentDescription = null)
-                    Text(stringResource(R.string.processos_filtro_limpar))
-                }
+        if (estado.gruposTribunais.isEmpty()) {
+            item {
+                EstadoVazioObiter(
+                    titulo = stringResource(R.string.processos_empty_title),
+                    corpo = stringResource(R.string.processos_empty_body),
+                    icone = ObiterIcones.ProcessosInativo,
+                    modifier = Modifier.padding(horizontal = dimens.screenMargin),
+                )
             }
-        }
-
-        estado.processoSelecionado?.let { processo ->
-            DetalheProcesso(
-                processo = processo,
-                timeline = estado.timelineSelecionada,
-                aoFechar = aoFecharDetalhe,
-            )
-        }
-
-        if (estado.processos.isEmpty()) {
-            EstadoVazioListagem(
-                titulo = stringResource(R.string.processos_empty_title),
-                corpo = stringResource(R.string.processos_empty_body),
-            )
         } else {
-            estado.processos.forEach { processo ->
-                ItemProcesso(
-                    processo = processo,
-                    aoSelecionar = aoSelecionarProcesso,
+            items(
+                items = estado.gruposTribunais,
+                key = { it.tribunal },
+            ) { grupo ->
+                CabecalhoTribunal(
+                    siglaTribunal = grupo.tribunal.ifBlank { stringResource(R.string.processos_nao_informado) },
+                    contagem = grupo.quantidade,
+                    expandido = grupo.expandido,
+                    corFundoBadge = grupo.tribunal.corTribunal(ObiterTheme.colors),
+                    aoAlternar = { aoAlternarTribunal(grupo.tribunal) },
+                    modifier = Modifier.padding(horizontal = dimens.screenMargin),
                 )
+                AnimatedVisibility(
+                    visible = grupo.expandido,
+                    enter = expandVertically(),
+                    exit = shrinkVertically(),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(dimens.cardGap)) {
+                    grupo.comarcas.forEach { comarca ->
+                        CabecalhoComarca(
+                            nomeComarca = comarca.comarca.ifBlank { stringResource(R.string.processos_nao_informado) },
+                            modifier = Modifier.padding(horizontal = dimens.screenMargin),
+                        )
+                        comarca.processos.forEach { processo ->
+                            CardProcesso(
+                                numeroProcesso = processo.numeroProcesso,
+                                partes = processo.participantes.formatarPartes(),
+                                badges = processo.badges(),
+                                temPrazoAtivo = processo.syncStatus == ProcessoSyncStatus.PENDING,
+                                ultimaMovimentacao = processo.atualizadoEm.let(FormatadorData::formatarDataHora),
+                                fonte = processo.tribunal ?: stringResource(R.string.processos_nao_informado),
+                                aoClicar = { aoSelecionarProcesso(processo.numeroProcesso) },
+                                modifier = Modifier.padding(horizontal = dimens.screenMargin),
+                            )
+                        }
+                    }
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-private fun ItemProcesso(
-    processo: ProcessoMonitorado,
-    aoSelecionar: (String) -> Unit,
-) {
-    val dimens = ObiterTheme.dimens
-
-    CartaoItemListagem(
-        onClick = { aoSelecionar(processo.numeroProcesso) },
-    ) {
-            Text(
-                text = processo.numeroProcesso,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(dimens.space2),
-                verticalArrangement = Arrangement.spacedBy(dimens.space2),
-            ) {
-                ChipInformativoListagem(processo.tribunal ?: stringResource(R.string.processos_nao_informado))
-                ChipInformativoListagem(stringResource(processo.syncStatus.rotuloResId()))
-            }
-
-            processo.classeNome?.let { classe ->
-                Text(
-                    text = classe,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            processo.assuntos.firstOrNull()?.let { assunto ->
-                Text(
-                    text = assunto,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = stringResource(
-                    R.string.processos_atualizado_em,
-                    FormatadorData.formatarDataHora(processo.atualizadoEm),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+private fun FiltroStatusProcesso.rotuloResId(): Int =
+    when (this) {
+        FiltroStatusProcesso.GERAL -> R.string.filtro_todos
+        FiltroStatusProcesso.ATIVOS -> R.string.filtro_ativos
+        FiltroStatusProcesso.ARQUIVADOS -> R.string.filtro_arquivados
     }
-}
 
 @Composable
-private fun DetalheProcesso(
-    processo: ProcessoMonitorado,
-    timeline: List<TimelineProcessoItem>,
-    aoFechar: () -> Unit,
-) {
-    val dimens = ObiterTheme.dimens
-
-    CartaoDetalhe {
-        CabecalhoDetalhe(
-            titulo = stringResource(R.string.processos_detalhe_title),
-            subtitulo = processo.numeroProcesso,
-            fecharDescricao = stringResource(R.string.processos_detalhe_fechar),
-            aoFechar = aoFechar,
-        )
-
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_status),
-                valor = stringResource(processo.syncStatus.rotuloResId()),
-            )
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_tribunal),
-                valor = processo.tribunal ?: stringResource(R.string.processos_nao_informado),
-            )
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_grau),
-                valor = processo.grau ?: stringResource(R.string.processos_nao_informado),
-            )
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_classe),
-                valor = processo.classeNome ?: stringResource(R.string.processos_nao_informado),
-            )
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_assuntos),
-                valor = processo.assuntos.takeIf { it.isNotEmpty() }?.joinToString("\n")
-                    ?: stringResource(R.string.processos_nao_informado),
-            )
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_orgao),
-                valor = processo.orgaoJulgadorNome ?: stringResource(R.string.processos_nao_informado),
-            )
-            CampoDetalheListagem(
-                rotulo = stringResource(R.string.processos_detalhe_ajuizamento),
-                valor = processo.dataAjuizamento?.let(FormatadorData::formatarDataHora)
-                    ?: stringResource(R.string.processos_nao_informado),
-            )
-
-            if (processo.participantes.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.processos_detalhe_participantes),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                processo.participantes.forEach { participante ->
-                    CampoDetalheListagem(
-                        rotulo = participante.polo ?: stringResource(R.string.processos_nao_informado),
-                        valor = "${participante.nome} (${participante.tipoParticipacao ?: "Parte"})"
-                    )
-                }
-            }
-
-            Text(
-                text = stringResource(R.string.processos_timeline_title, timeline.size),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (timeline.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.processos_timeline_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                timeline.forEach { item ->
-                    ItemTimeline(item = item)
-                }
-            }
-    }
+private fun String.corTribunal(colors: com.obiterjus.ui.theme.ObiterExtendedColors): Color = when {
+    contains("TJMG", ignoreCase = true) -> MaterialTheme.colorScheme.primary
+    contains("TRT", ignoreCase = true) -> colors.mulledWine
+    contains("TRF", ignoreCase = true) -> colors.primaryDark
+    else -> MaterialTheme.colorScheme.primary
 }
+
+private fun List<com.obiterjus.domain.model.ParticipanteProcesso>.formatarPartes(): String? =
+    takeIf { it.isNotEmpty() }?.joinToString(separator = " · ") { participante ->
+        listOfNotNull(participante.polo, participante.nome)
+            .joinToString(separator = ": ")
+    }
+
+private fun ProcessoMonitorado.badges(): List<String> =
+    listOfNotNull(
+        grau,
+        classeNome,
+        orgaoJulgadorNome,
+    )
 
 @Composable
-private fun ItemTimeline(
-    item: TimelineProcessoItem,
+fun ConteudoProcessos(
+    viewModel: ModeloProcessos,
+    aoAbrirDetalhe: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val dimens = ObiterTheme.dimens
-
-    CartaoItemListagem(
-        isHighlighted = item.isImportante,
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(dimens.space1),
-        ) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(dimens.space2),
-                verticalArrangement = Arrangement.spacedBy(dimens.space2),
-            ) {
-                ChipInformativoListagem(
-                    texto = stringResource(item.tipo.rotuloResId()),
-                    icone = Icons.Default.Source,
-                )
-                ChipInformativoListagem(item.fonte)
-                if (item.isSigiloso) {
-                    ChipInformativoListagem(stringResource(R.string.processos_timeline_sigiloso))
-                }
-            }
-            Text(
-                text = item.titulo,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = item.dataHora?.let(FormatadorData::formatarDataHora)
-                    ?: stringResource(R.string.processos_nao_informado),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            item.descricao?.takeIf { it.isNotBlank() }?.let { descricao ->
-                Text(
-                    text = descricao,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (item.isSigiloso) {
-                Text(
-                    text = stringResource(R.string.processos_timeline_texto_sigiloso),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
+    val estado by viewModel.estado.collectAsStateWithLifecycle()
+    TelaProcessos(
+        estado = estado,
+        aoAlterarFiltroTexto = viewModel::aoAlterarFiltroTexto,
+        aoAlterarFiltroParticipante = viewModel::aoAlterarFiltroParticipante,
+        aoAlterarFiltroSyncStatus = viewModel::aoAlterarFiltroSyncStatus,
+        aoAlterarStatus = viewModel::aoAlterarStatus,
+        aoLimparFiltros = viewModel::aoLimparFiltros,
+        aoSelecionarProcesso = aoAbrirDetalhe,
+        aoAlternarTribunal = viewModel::aoAlternarTribunal,
+        modifier = modifier,
+    )
 }
-
-private fun TimelineProcessoTipo.rotuloResId(): Int =
-    when (this) {
-        TimelineProcessoTipo.PUBLICACAO_DJEN -> R.string.processos_timeline_tipo_publicacao
-        TimelineProcessoTipo.MOVIMENTO_DATAJUD -> R.string.processos_timeline_tipo_movimento
-    }
-
-private fun ProcessoSyncStatus.rotuloResId(): Int =
-    when (this) {
-        ProcessoSyncStatus.PENDING -> R.string.processos_status_pending
-        ProcessoSyncStatus.SYNCED -> R.string.processos_status_synced
-        ProcessoSyncStatus.NOT_FOUND -> R.string.processos_status_not_found
-        ProcessoSyncStatus.FAILED -> R.string.processos_status_failed
-        ProcessoSyncStatus.STALE -> R.string.processos_status_stale
-    }
-
-private fun OrdenacaoProcessos.rotuloResId(): Int =
-    when (this) {
-        OrdenacaoProcessos.MAIS_RECENTES -> R.string.processos_ordem_recentes
-        OrdenacaoProcessos.MAIS_ANTIGOS -> R.string.processos_ordem_antigos
-        OrdenacaoProcessos.TRIBUNAL -> R.string.processos_ordem_tribunal
-        OrdenacaoProcessos.NUMERO -> R.string.processos_ordem_numero
-    }

@@ -5,67 +5,99 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 
-private val LightColorScheme = lightColorScheme(
-    primary = Tiber,
-    onPrimary = CardWhite,
-    primaryContainer = BadgeLight,
-    onPrimaryContainer = Tiber,
+enum class TipoTema {
+    SISTEMA, CLARO, ESCURO
+}
+
+// ── Material 3 Color Schemes ────────────────────────────────
+
+val ObiterLightColorScheme = lightColorScheme(
+    primary = SanJuan,
+    onPrimary = Color.White,
+    primaryContainer = SanJuanPale,
+    onPrimaryContainer = SanJuanDark,
     secondary = Husk,
-    onSecondary = Ink,
-    secondaryContainer = BadgeLight,
-    onSecondaryContainer = Tiber,
-    tertiary = Husk,
-    onTertiary = Ink,
-    tertiaryContainer = BadgeLight,
-    onTertiaryContainer = Tiber,
+    onSecondary = Color.White,
+    secondaryContainer = HuskPale,
+    onSecondaryContainer = HuskDark,
+    tertiary = MulledWine,
+    onTertiary = Color.White,
+    tertiaryContainer = SanJuanPale,
+    onTertiaryContainer = MulledWine,
     background = CoolWhite,
-    onBackground = Ink,
+    onBackground = Grafite,
     surface = CardWhite,
-    onSurface = Ink,
-    surfaceVariant = BadgeLight,
-    onSurfaceVariant = MutedLight,
-    outline = OutlineLight,
-    outlineVariant = BadgeLight,
-    error = ErrorLight,
-    onError = CardWhite,
+    onSurface = Grafite,
+    surfaceVariant = CoolWhite,
+    onSurfaceVariant = SteelGray,
+    surfaceContainerHighest = ElevatedWhite,
+    outline = Border,
+    outlineVariant = Divider,
+    error = CherryRed,
+    onError = Color.White,
+    errorContainer = CherryRedPale,
+    onErrorContainer = CherryRed,
+    inverseSurface = Grafite,
+    inverseOnSurface = CoolWhite,
+    inversePrimary = SanJuanLight,
+    scrim = Color.Black,
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = OliveGreen,
-    onPrimary = Graphite,
-    primaryContainer = BadgeDark,
-    onPrimaryContainer = BadgeLight,
-    secondary = Husk,
-    onSecondary = Ink,
-    secondaryContainer = BadgeDark,
-    onSecondaryContainer = BadgeLight,
-    tertiary = Husk,
-    onTertiary = Ink,
-    tertiaryContainer = BadgeDark,
-    onTertiaryContainer = BadgeLight,
-    background = Graphite,
-    onBackground = Paper,
-    surface = CardGraphite,
-    onSurface = Paper,
-    surfaceVariant = BadgeDark,
-    onSurfaceVariant = MutedDark,
-    outline = OutlineDark,
-    outlineVariant = BadgeDark,
-    error = ErrorDark,
-    onError = Ink,
+val ObiterDarkColorScheme = darkColorScheme(
+    primary = SanJuanLight,
+    onPrimary = DarkCard,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = SanJuanLighter,
+    secondary = HuskLight,
+    onSecondary = DarkCard,
+    secondaryContainer = DarkWarningPale,
+    onSecondaryContainer = HuskLight,
+    tertiary = MulledWineLight,
+    onTertiary = DarkCard,
+    tertiaryContainer = MulledWineDark,
+    onTertiaryContainer = MulledWineLight,
+    background = DarkBackground,
+    onBackground = DarkText,
+    surface = DarkCard,
+    onSurface = DarkText,
+    surfaceVariant = DarkElevated,
+    onSurfaceVariant = DarkTextSecondary,
+    surfaceContainerHighest = DarkElevated,
+    outline = DarkBorder,
+    outlineVariant = DarkDivider,
+    error = CherryRedLight,
+    onError = DarkCard,
+    errorContainer = DarkDangerPale,
+    onErrorContainer = CherryRedLight,
+    inverseSurface = DarkText,
+    inverseOnSurface = DarkBackground,
+    inversePrimary = SanJuan,
+    scrim = Color.Black,
 )
+
+// ── Theme composable ────────────────────────────────────────
 
 @Composable
 fun ObiterJusTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    tema: TipoTema = TipoTema.SISTEMA,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val darkTheme = when (tema) {
+        TipoTema.SISTEMA -> isSystemInDarkTheme()
+        TipoTema.CLARO -> false
+        TipoTema.ESCURO -> true
+    }
+    val colorScheme = if (darkTheme) ObiterDarkColorScheme else ObiterLightColorScheme
+    val extendedColors = if (darkTheme) obiterDarkColors() else obiterLightColors()
 
-    CompositionLocalProvider(LocalObiterDimens provides ObiterDimens()) {
+    CompositionLocalProvider(
+        LocalObiterColors provides extendedColors,
+        LocalObiterDimens provides ObiterDimens(),
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = ObiterTypography,
@@ -74,9 +106,16 @@ fun ObiterJusTheme(
     }
 }
 
+// ── Accessor object ─────────────────────────────────────────
+
 object ObiterTheme {
     val dimens: ObiterDimens
         @Composable
         @ReadOnlyComposable
         get() = LocalObiterDimens.current
+
+    val colors: ObiterExtendedColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalObiterColors.current
 }

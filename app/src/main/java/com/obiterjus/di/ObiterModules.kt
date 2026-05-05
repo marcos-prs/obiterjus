@@ -34,6 +34,8 @@ import com.obiterjus.data.djen.ConfiguredDjenRepository
 import com.obiterjus.data.processo.local.LocalProcessoRepository
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.settings.PreferencesCadastroOabRepository
+import com.obiterjus.data.settings.DataStorePerfilPreferencesRepository
+import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.data.settings.DataStoreSyncPreferencesRepository
 import com.obiterjus.data.sincronizacao.FirestoreSincronizacaoRepository
@@ -56,10 +58,13 @@ import com.obiterjus.domain.usecase.ObservarPublicacoes
 import com.obiterjus.domain.usecase.ObservarTimelineProcesso
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
-import com.obiterjus.presentation.agenda.AgendaPrazosViewModel
+import com.obiterjus.presentation.detalheprocesso.ModeloDetalheProcesso
 import com.obiterjus.presentation.autenticacao.ModeloAutenticacao
+import com.obiterjus.presentation.inicio.ModeloInicio
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
+import com.obiterjus.presentation.perfil.ModeloPerfil
 import com.obiterjus.presentation.processos.ModeloProcessos
+import com.obiterjus.presentation.prazos.ModeloPrazos
 import com.obiterjus.presentation.publicacoes.PublicacoesViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.worker
@@ -95,6 +100,7 @@ private val dataModule = module {
     }
     single<AuthRepository> { FirebaseAuthRepository() }
     single<RepositorioCadastroOab> { PreferencesCadastroOabRepository(androidContext()) }
+    single<PerfilPreferencesRepository> { DataStorePerfilPreferencesRepository(androidContext()) }
     single<SyncPreferencesRepository> { DataStoreSyncPreferencesRepository(androidContext()) }
     single { LocalPublicacaoRepository(get()) } bind RepositorioPublicacoes::class
     single<GoogleCalendarDataSource> { CalendarRetrofitFactory.createGoogleApi() }
@@ -155,7 +161,7 @@ private val domainModule = module {
     factory { ClassificarPublicacaoUC(get()) }
     factory { ExportarRelatorioUC(get()) }
     factory { ObservarPublicacoes(get()) }
-    factory { ObservarAgendaPrazos(get()) }
+    factory { ObservarAgendaPrazos(get(), get()) }
     factory { ObterCertidaoDjen(get()) }
     factory { ObservarProcessos(get()) }
     factory { ObservarMovimentosProcesso(get()) }
@@ -180,10 +186,13 @@ private val presentationModule = module {
         )
     }
     viewModel { PublicacoesViewModel(get(), get()) }
-    viewModel { AgendaPrazosViewModel(get(), get()) }
+    viewModel { ModeloPrazos(androidContext(), get(), get(), get()) }
     viewModel { ModeloProcessos(get(), get()) }
-    viewModel { ModeloAutenticacao(get(), get()) }
     viewModel { AuditoriaViewModel(get()) }
+    viewModel { ModeloInicio(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloPerfil(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloAutenticacao(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloDetalheProcesso(get(), get(), get(), get()) }
 }
 
 private val workerModule = module {

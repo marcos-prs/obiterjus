@@ -3,7 +3,9 @@ package com.obiterjus.data.agenda.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.obiterjus.R
 import com.obiterjus.data.agenda.local.PrazoSugeridoDao
+import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.repository.CalendarSyncRepository
 import com.obiterjus.domain.model.PublicacaoPrazo
 import org.koin.core.component.KoinComponent
@@ -18,7 +20,12 @@ class CalendarSyncWorker(
     private val calendarSyncRepository: CalendarSyncRepository by inject()
 
     override suspend fun doWork(): Result {
-        val prazosPendentes = prazoSugeridoDao.getPrazosParaSincronizar()
+        val prazosPendentes = prazoSugeridoDao.getPrazosParaSincronizar(
+            provedores = listOf(
+                ProvedorCalendario.GOOGLE.codigo,
+                ProvedorCalendario.OUTLOOK.codigo,
+            ),
+        )
 
         if (prazosPendentes.isEmpty()) {
             return Result.success()
@@ -27,7 +34,7 @@ class CalendarSyncWorker(
         var hasFailures = false
 
         for (entity in prazosPendentes) {
-            val provedor = entity.provedorCalendario ?: continue
+            val provedor = ProvedorCalendario.fromCodigo(entity.provedorCalendario) ?: continue
             
             val prazoDomain = PublicacaoPrazo(
                 quantidade = entity.quantidade,
@@ -37,14 +44,15 @@ class CalendarSyncWorker(
                 dataLimiteEstimada = entity.dataLimite,
                 isConfirmado = entity.isConfirmado,
                 idExternoCalendario = entity.idExternoCalendario,
-                provedorCalendario = provedor
+                provedorCalendario = provedor.codigo
             )
 
-            // Idealmente buscaria o título/descrição reais da Publicação ligada, mas para MVP 
-            // assumimos strings fixas ou passamos info básica
             val syncResult = calendarSyncRepository.syncPrazo(
                 prazo = prazoDomain,
-                title = "Prazo ObiterJus",
+                title = applicationContext.getString(
+                    R.string.calendar_sync_event_title,
+                    entity.publicacaoId,
+                ),
                 description = entity.textoOriginal,
                 provedor = provedor
             )

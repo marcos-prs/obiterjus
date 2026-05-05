@@ -14,7 +14,10 @@ interface RepositorioCadastroOab {
     suspend fun salvarCadastro(
         numero: String,
         uf: String,
-        nomeAdvogado: String = "",
+        nomeAdvogado: String? = null,
+        tipoInscricao: String? = null,
+        nomeEscritorio: String? = null,
+        areasAtuacao: List<String>? = null,
         dataInicio: LocalDate? = null,
         dataFim: LocalDate? = null,
     )
