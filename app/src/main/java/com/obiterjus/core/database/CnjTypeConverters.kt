@@ -1,6 +1,7 @@
 package com.obiterjus.core.database
 
 import androidx.room.TypeConverter
+import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.ProcessoSyncStatus
 import java.time.Instant
 import java.time.LocalDate
@@ -24,4 +25,11 @@ class CnjTypeConverters {
     @TypeConverter
     fun stringToProcessoSyncStatus(value: String?): ProcessoSyncStatus? =
         value?.let(ProcessoSyncStatus::valueOf)
+
+    @TypeConverter
+    fun confiancaMatchToString(value: ConfiancaMatch?): String? = value?.name
+
+    @TypeConverter
+    fun stringToConfiancaMatch(value: String?): ConfiancaMatch? =
+        value?.let { runCatching { ConfiancaMatch.valueOf(it) }.getOrNull() }
 }

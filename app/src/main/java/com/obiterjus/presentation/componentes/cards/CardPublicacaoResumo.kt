@@ -50,5 +50,6 @@ fun CardPublicacaoResumo(
         mostrarBotaoDetalhes = true,
         modifier = modifier,
         badgeOrdem = badgeOrdem,
+        confianca = publicacao.confiancaMatch,
     )
 }

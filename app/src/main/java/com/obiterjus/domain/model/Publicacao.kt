@@ -19,6 +19,7 @@ data class Publicacao(
     val fonte: String,
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
+    val confiancaMatch: ConfiancaMatch = ConfiancaMatch.ALTA,
 )
 
 @Serializable

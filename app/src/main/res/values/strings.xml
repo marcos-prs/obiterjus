@@ -620,4 +620,9 @@
     <string name="detalhe_info_polo_passivo">Polo Passivo</string>
     <string name="cd_adicionar_participante">Adicionar participante</string>
     <string name="cd_remover_participante">Remover participante</string>
+    <string name="confianca_alta">Confirmado</string>
+    <string name="confianca_media">Provável</string>
+    <string name="confianca_baixa">Verificar</string>
+    <string name="confianca_filtro_titulo">Confiança do match</string>
+    <string name="confianca_filtro_todas">Todas</string>
 </resources>

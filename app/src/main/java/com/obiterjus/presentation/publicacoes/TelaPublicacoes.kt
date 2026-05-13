@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.logic.NormalizadorPublicacoes
+import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.TipoAto
 import com.obiterjus.domain.model.tipoAto
@@ -60,6 +61,7 @@ fun TelaPublicacoes(
     aoAlterarFiltroDataInicio: (String) -> Unit,
     aoAlterarFiltroDataFim: (String) -> Unit,
     aoAlternarSomenteSigilosas: () -> Unit,
+    aoAlterarFiltroConfianca: (ConfiancaMatch?) -> Unit,
     aoLimparFiltros: () -> Unit,
     aoSelecionarPublicacao: (Long) -> Unit,
     aoAbrirPublicacao: (Long) -> Unit,
@@ -182,6 +184,25 @@ fun TelaPublicacoes(
                 },
             )
         }
+        item {
+            val rotuloTodas = stringResource(R.string.confianca_filtro_todas)
+            val rotulosConfianca = listOf(
+                ConfiancaMatch.ALTA to stringResource(R.string.confianca_alta),
+                ConfiancaMatch.MEDIA to stringResource(R.string.confianca_media),
+                ConfiancaMatch.BAIXA to stringResource(R.string.confianca_baixa),
+            )
+            ChipFiltroRow(
+                chips = listOf(rotuloTodas) + rotulosConfianca.map { (_, rotulo) -> rotulo },
+                chipAtivo = rotulosConfianca
+                    .firstOrNull { (nivel, _) -> nivel == estado.filtros.confiancaSelecionada }
+                    ?.second
+                    ?: rotuloTodas,
+                aoSelecionar = { chip ->
+                    val nivel = rotulosConfianca.firstOrNull { (_, rotulo) -> rotulo == chip }?.first
+                    aoAlterarFiltroConfianca(nivel)
+                },
+            )
+        }
 
         if (publicacoesVisiveis.isEmpty()) {
             item {
@@ -282,6 +303,7 @@ fun ConteudoPublicacoes(
         aoAlterarFiltroDataInicio = viewModel::aoAlterarFiltroDataInicio,
         aoAlterarFiltroDataFim = viewModel::aoAlterarFiltroDataFim,
         aoAlternarSomenteSigilosas = viewModel::aoAlternarSomenteSigilosas,
+        aoAlterarFiltroConfianca = viewModel::aoAlterarFiltroConfianca,
         aoLimparFiltros = viewModel::aoLimparFiltros,
         aoSelecionarPublicacao = viewModel::aoSelecionarPublicacao,
         aoAbrirPublicacao = aoAbrirPublicacao,

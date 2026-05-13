@@ -3,15 +3,20 @@ package com.obiterjus.data.djen
 import android.util.Log
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
+import com.obiterjus.data.djen.remote.DjenFetchResult
 import com.obiterjus.data.djen.remote.DjenPaginationStopReason
 import com.obiterjus.data.djen.remote.DjenRemoteDataSource
+import com.obiterjus.data.djen.remote.dto.DjenComunicacaoDto
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
+import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
 import com.obiterjus.domain.model.ProcessoDataJudSyncRequest
 import com.obiterjus.domain.repository.DjenRepository
+import com.obiterjus.domain.usecase.matcher.NomeVariacoes
+import com.obiterjus.domain.usecase.matcher.PublicationMatcher
 import java.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -26,7 +31,11 @@ class DjenRepositoryImpl(
 ) : DjenRepository {
 
     override suspend fun monitorar(params: MonitorarDjenParams): MonitorarDjenResumo {
-        val (remoteResultOab, remoteResultName) = try {
+        val nomeVariacoes = params.nomeAdvogado
+            ?.let { NomeVariacoes.gerar(it) }
+            .orEmpty()
+
+        val (remoteResultOab, resultadosPorNome) = try {
             coroutineScope {
                 val oabJob = async {
                     remoteDataSource.buscarComunicacoes(
@@ -37,18 +46,18 @@ class DjenRepositoryImpl(
                         dataFim = params.dataFim,
                     )
                 }
-                val nameJob = async {
-                    if (!params.nomeAdvogado.isNullOrBlank()) {
+                val nameJobs = nomeVariacoes.map { variacao ->
+                    async {
                         remoteDataSource.buscarComunicacoes(
                             numeroOab = null,
                             ufOab = null,
-                            nomeAdvogado = params.nomeAdvogado,
+                            nomeAdvogado = variacao,
                             dataInicio = params.dataInicio,
                             dataFim = params.dataFim,
                         )
-                    } else null
+                    }
                 }
-                Pair(oabJob.await(), nameJob.await())
+                Pair(oabJob.await(), nameJobs.map { it.await() })
             }
         } catch (error: CancellationException) {
             throw error
@@ -58,25 +67,48 @@ class DjenRepositoryImpl(
 
         val capturedAt = clock.instant()
 
-        val allItems = (remoteResultOab.items + (remoteResultName?.items ?: emptyList()))
-            .distinctBy { it.id }
+        // Tagueia a origem para garantir ALTA em itens que vieram pela busca de OAB
+        // (a API já confirmou o vínculo pela sigla+número), mesmo que o corpo do
+        // texto não traga a OAB em formato legível.
+        data class DtoTagged(val dto: DjenComunicacaoDto, val veioDaBuscaOab: Boolean)
 
-        val publicacoes: List<PublicacaoEntity> = allItems.map { dto ->
+        val itensOab = remoteResultOab.items.map { DtoTagged(it, veioDaBuscaOab = true) }
+        val itensNome = resultadosPorNome.flatMap { result ->
+            result.items.map { DtoTagged(it, veioDaBuscaOab = false) }
+        }
+
+        // distinctBy preserva o primeiro — itensOab vem antes, então itens que
+        // aparecem em ambas as buscas são marcados como veioDaBuscaOab=true.
+        val itensUnicos = (itensOab + itensNome).distinctBy { it.dto.id }
+
+        val publicacoes: List<PublicacaoEntity> = itensUnicos.map { tagged ->
             val entity = djenMapper.toPublicacaoEntity(
-                dto = dto,
+                dto = tagged.dto,
                 capturedAt = capturedAt,
                 updatedAt = capturedAt,
             )
-            publicacaoPrazoMapper.comPrazoCalculado(entity)
+            val comPrazo = publicacaoPrazoMapper.comPrazoCalculado(entity)
+            val confianca = classificarConfianca(
+                texto = tagged.dto.texto,
+                veioDaBuscaOab = tagged.veioDaBuscaOab,
+                params = params,
+            )
+            comPrazo.copy(confiancaMatch = confianca)
         }
 
         Log.d(TAG, "Publicações recebidas da API (${publicacoes.size}):")
         publicacoes.forEach { pub ->
-            Log.d(TAG, "  id=${pub.id} | dataDisponibilizacao=${pub.dataDisponibilizacao} | tribunal=${pub.tribunal}")
+            Log.d(
+                TAG,
+                "  id=${pub.id} | dataDisponibilizacao=${pub.dataDisponibilizacao} | tribunal=${pub.tribunal} | confianca=${pub.confiancaMatch}",
+            )
         }
 
         val upsertResult = localPublicacaoRepository.upsertPublicacoes(publicacoes)
-        Log.d(TAG, "Upsert: novas=${upsertResult.novas} | atualizadas=${upsertResult.atualizadas} | novasIds=${upsertResult.novasIds}")
+        Log.d(
+            TAG,
+            "Upsert: novas=${upsertResult.novas} | atualizadas=${upsertResult.atualizadas} | novasIds=${upsertResult.novasIds}",
+        )
         val novasIds = upsertResult.novasIds.toSet()
         val publicacoesNovas = publicacoes.filter { it.id in novasIds }
 
@@ -93,19 +125,39 @@ class DjenRepositoryImpl(
             .distinctBy { it.numeroProcesso to it.tribunal?.uppercase() }
             .toList()
 
+        val paginasNome = resultadosPorNome.sumOf(DjenFetchResult::paginasConsultadas)
+        val totalRemotoNome = resultadosPorNome.firstNotNullOfOrNull { it.totalRemoto }
+
         return MonitorarDjenResumo(
-            totalRemoto = remoteResultOab.totalRemoto ?: remoteResultName?.totalRemoto,
+            totalRemoto = remoteResultOab.totalRemoto ?: totalRemotoNome,
             totalRecebidas = upsertResult.totalRecebidas,
             novas = upsertResult.novas,
             atualizadas = upsertResult.atualizadas,
             sigilosas = publicacoes.count { it.isSigiloso },
             processosNovos = processosParaSincronizar.map { it.numeroProcesso },
             processosParaSincronizar = processosParaSincronizar,
-            paginasConsultadas = remoteResultOab.paginasConsultadas + (remoteResultName?.paginasConsultadas ?: 0),
+            paginasConsultadas = remoteResultOab.paginasConsultadas + paginasNome,
             motivoParada = remoteResultOab.motivoParada.toDomain(),
             falhas = emptyList(),
             novasComPrazo = publicacoesNovas.count { it.prazoQuantidade != null },
             novasSigilosas = publicacoesNovas.count { it.isSigiloso },
+        )
+    }
+
+    private fun classificarConfianca(
+        texto: String?,
+        veioDaBuscaOab: Boolean,
+        params: MonitorarDjenParams,
+    ): ConfiancaMatch {
+        // Item devolvido via busca por OAB exata é, por definição, ALTA — a API
+        // já confirmou o vínculo pela sigla+número. Se veio só via busca por
+        // nome, deixa o classificador decidir a partir do corpo do texto.
+        if (veioDaBuscaOab) return ConfiancaMatch.ALTA
+        return PublicationMatcher.classificar(
+            textoPublicacao = texto,
+            numeroOab = params.numeroOab,
+            ufOab = params.ufOab,
+            nomeAdvogado = params.nomeAdvogado.orEmpty(),
         )
     }
 

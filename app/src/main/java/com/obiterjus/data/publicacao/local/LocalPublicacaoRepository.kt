@@ -134,6 +134,7 @@ private fun PublicacaoEntity.paraDominio(): Publicacao =
         fonte = fonte,
         capturadoEm = capturadoEm,
         atualizadoEm = atualizadoEm,
+        confiancaMatch = confiancaMatch,
     )
 
 private fun PublicacaoEntity.prazo(): PublicacaoPrazo? {

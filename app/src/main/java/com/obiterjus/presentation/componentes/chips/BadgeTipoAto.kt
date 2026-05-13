@@ -13,7 +13,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import com.obiterjus.ui.theme.ObiterTheme
 
-enum class VarianteBadge { URGENTE, SENTENCA, DECISAO, DESPACHO, FAVORAVEL, TRIBUNAL }
+enum class VarianteBadge {
+    URGENTE,
+    SENTENCA,
+    DECISAO,
+    DESPACHO,
+    FAVORAVEL,
+    TRIBUNAL,
+    CONFIANCA_ALTA,
+    CONFIANCA_MEDIA,
+    CONFIANCA_BAIXA,
+}
 
 @Composable
 fun BadgeTipoAto(
@@ -32,6 +42,9 @@ fun BadgeTipoAto(
         VarianteBadge.DESPACHO -> colors.divider to colorScheme.onSurfaceVariant
         VarianteBadge.FAVORAVEL -> colors.successPale to colors.success
         VarianteBadge.TRIBUNAL -> colorScheme.primary to Color.White
+        VarianteBadge.CONFIANCA_ALTA -> colors.successPale to colors.success
+        VarianteBadge.CONFIANCA_MEDIA -> colors.accentPale to colors.warning
+        VarianteBadge.CONFIANCA_BAIXA -> colors.dangerPale to colors.danger
     }
 
     Surface(

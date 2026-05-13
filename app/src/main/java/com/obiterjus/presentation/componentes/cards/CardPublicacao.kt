@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.obiterjus.core.texto.formatarCnj
+import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
 import com.obiterjus.ui.theme.ObiterTheme
@@ -58,6 +59,7 @@ fun CardPublicacao(
     badgeOrdem: String? = null,
     onVerDetalhes: () -> Unit = {},
     mostrarBotaoDetalhes: Boolean = false,
+    confianca: ConfiancaMatch? = null,
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
@@ -136,6 +138,12 @@ fun CardPublicacao(
                             texto = tribunal?.takeIf { it.isNotBlank() } ?: tipoAto,
                             variante = VarianteBadge.TRIBUNAL,
                         )
+                        if (confianca != null) {
+                            BadgeTipoAto(
+                                texto = confianca.rotuloCurto(),
+                                variante = confianca.varianteBadge(),
+                            )
+                        }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -241,4 +249,18 @@ private fun prioridadeParaVariante(prioridade: PrioridadeStripe): VarianteBadge 
         PrioridadeStripe.DECISAO -> VarianteBadge.DECISAO
         PrioridadeStripe.ROTINEIRO -> VarianteBadge.DESPACHO
         PrioridadeStripe.FAVORAVEL -> VarianteBadge.FAVORAVEL
+    }
+
+private fun ConfiancaMatch.varianteBadge(): VarianteBadge =
+    when (this) {
+        ConfiancaMatch.ALTA -> VarianteBadge.CONFIANCA_ALTA
+        ConfiancaMatch.MEDIA -> VarianteBadge.CONFIANCA_MEDIA
+        ConfiancaMatch.BAIXA -> VarianteBadge.CONFIANCA_BAIXA
+    }
+
+private fun ConfiancaMatch.rotuloCurto(): String =
+    when (this) {
+        ConfiancaMatch.ALTA -> "Confirmado"
+        ConfiancaMatch.MEDIA -> "Provável"
+        ConfiancaMatch.BAIXA -> "Verificar"
     }

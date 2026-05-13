@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.obiterjus.core.parser.CnjDateParser
 import com.obiterjus.core.texto.correspondeAoTermoBusca
 import com.obiterjus.domain.logic.NormalizadorPublicacoes
+import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.GeneroTribunal
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.TipoAto
@@ -88,6 +89,10 @@ class PublicacoesViewModel(
         filtros.update { it.copy(somenteSigilosas = !it.somenteSigilosas) }
     }
 
+    fun aoAlterarFiltroConfianca(valor: ConfiancaMatch?) {
+        filtros.update { it.copy(confiancaSelecionada = valor) }
+    }
+
     fun aoLimparFiltros() {
         filtros.value = FiltrosPublicacoes()
     }
@@ -147,7 +152,10 @@ class PublicacoesViewModel(
         val atendeTipo = atendeTipo(filtros.tipoComunicacao)
         val atendeTipoAto = filtros.tipoAto == null || tipoAto == filtros.tipoAto
         val atendePeriodo = atendePeriodo(filtros)
-        return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo && atendeTipoAto && atendePeriodo
+        val atendeConfianca = filtros.confiancaSelecionada == null ||
+            confiancaMatch == filtros.confiancaSelecionada
+        return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo && atendeTipoAto &&
+            atendePeriodo && atendeConfianca
     }
 
     private fun Publicacao.atendeTribunal(filtro: String): Boolean {
@@ -198,6 +206,7 @@ data class FiltrosPublicacoes(
     val dataInicio: String = "",
     val dataFim: String = "",
     val somenteSigilosas: Boolean = false,
+    val confiancaSelecionada: ConfiancaMatch? = null,
 ) {
     val possuiFiltrosAtivos: Boolean
         get() = texto.isNotBlank() ||
@@ -206,7 +215,8 @@ data class FiltrosPublicacoes(
             tipoAto != null ||
             dataInicio.isNotBlank() ||
             dataFim.isNotBlank() ||
-            somenteSigilosas
+            somenteSigilosas ||
+            confiancaSelecionada != null
 }
 
 private fun List<Publicacao>.tribunaisPorGenero(): Map<GeneroTribunal, List<String>> =

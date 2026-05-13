@@ -1,78 +1,86 @@
 package com.obiterjus.domain.usecase.matcher
 
+import com.obiterjus.domain.model.ConfiancaMatch
 import java.text.Normalizer
-import kotlin.math.min
 
 object PublicationMatcher {
 
     /**
-     * Valida se uma publicação pertence ao usuário através de múltiplas camadas de tolerância:
-     * 1. Match exato/sujo de OAB (Regex Anchor)
-     * 2. Match Estrutural Nominal (Tokenização + Abreviação)
-     * 3. Fuzzy Matching (Distância de Levenshtein - Opcional para nomes difíceis)
+     * Classifica a confiança de pertencimento da publicação ao usuário, sem nunca
+     * descartar item. Camadas (da mais forte para a mais fraca):
+     *   ALTA  → OAB do usuário aparece literalmente no corpo (regex tolerante).
+     *   MEDIA → nome do usuário aparece com forma estrutural (primeiro + último,
+     *           aceitando abreviação dos nomes do meio).
+     *   BAIXA → só bate por fuzzy (Levenshtein dentro de tolerância) OU nenhum
+     *           dos critérios casa no corpo. Significa: "veio da API mas o corpo
+     *           não corrobora — possível homônimo, recomenda verificação".
      */
-    fun matches(
+    fun classificar(
         textoPublicacao: String?,
         numeroOab: String,
         ufOab: String,
-        nomeAdvogado: String
-    ): Boolean {
-        if (textoPublicacao.isNullOrBlank()) return false
+        nomeAdvogado: String,
+    ): ConfiancaMatch {
+        if (textoPublicacao.isNullOrBlank()) return ConfiancaMatch.BAIXA
         val textoLimpo = normalizeText(textoPublicacao)
-        
-        // --- REGRA 1: Match de OAB (Âncora principal) ---
-        // Ex: "OAB MG 123456", "OAB/MG 123.456", "123456/MG"
-        val digitsRegex = numeroOab.toList().joinToString("[.\\\\-]?")
-        val regexOab = Regex("(?i)(OAB[\\s\\W]*${ufOab}[\\s\\W]*${digitsRegex}|${digitsRegex}[\\s\\W]*${ufOab})")
-        
-        if (regexOab.containsMatchIn(textoLimpo)) {
-            return true
+
+        if (numeroOab.isNotBlank() && ufOab.isNotBlank() && casaOab(textoLimpo, numeroOab, ufOab)) {
+            return ConfiancaMatch.ALTA
         }
 
-        // --- REGRA 2: Match Estrutural de Nome ---
         if (nomeAdvogado.isNotBlank()) {
-            val nomeTokens = tokenizeName(nomeAdvogado)
-            if (nomeTokens.size >= 2) {
-                val primeiroNome = nomeTokens.first()
-                val ultimoNome = nomeTokens.last()
-                
-                // Filtro rápido: exige pelo menos o primeiro nome exato para não rodar Levenshtein na publicação inteira à toa
+            val tokens = tokenizeName(nomeAdvogado)
+            if (tokens.size >= 2) {
+                val primeiroNome = tokens.first()
                 if (textoLimpo.contains(primeiroNome, ignoreCase = true)) {
-                    
-                    val regexName = buildNameRegex(nomeTokens)
-                    if (regexName.containsMatchIn(textoLimpo)) {
-                        return true
+                    if (buildNameRegex(tokens).containsMatchIn(textoLimpo)) {
+                        return ConfiancaMatch.MEDIA
                     }
-                    
-                    // --- REGRA 3: Fuzzy Matching (Levenshtein) ---
-                    // Usado apenas se a pessoa errou digitação (ex: Souza vs Sousa)
-                    val targetName = nomeTokens.joinToString(" ")
-                    val words = textoLimpo.split("\\s+".toRegex()).filter { it.isNotBlank() }
-                    
-                    for (i in 0..words.size - nomeTokens.size) {
-                        // Se a palavra atual é idêntica ao primeiro nome
-                        if (words[i].lowercase() == primeiroNome) {
-                            val window = words.subList(i, minOf(i + nomeTokens.size, words.size)).joinToString(" ").lowercase()
-                            val dist = levenshtein(window, targetName)
-                            
-                            // Tolerância: 1 erro a cada 5 caracteres, máximo 3
-                            val maxErros = minOf(3, targetName.length / 5)
-                            if (dist <= maxErros) {
-                                return true
-                            }
-                        }
+                    if (casaFuzzy(textoLimpo, tokens)) {
+                        return ConfiancaMatch.BAIXA
                     }
                 }
             }
         }
 
+        return ConfiancaMatch.BAIXA
+    }
+
+    /** Mantido para compatibilidade com testes legados. */
+    fun matches(
+        textoPublicacao: String?,
+        numeroOab: String,
+        ufOab: String,
+        nomeAdvogado: String,
+    ): Boolean = classificar(textoPublicacao, numeroOab, ufOab, nomeAdvogado) != ConfiancaMatch.BAIXA
+
+    private fun casaOab(textoLimpo: String, numeroOab: String, ufOab: String): Boolean {
+        val digitsRegex = numeroOab.toList().joinToString("[.\\\\-]?")
+        val regexOab = Regex(
+            "(?i)(OAB[\\s\\W]*${ufOab}[\\s\\W]*${digitsRegex}|${digitsRegex}[\\s\\W]*${ufOab})",
+        )
+        return regexOab.containsMatchIn(textoLimpo)
+    }
+
+    private fun casaFuzzy(textoLimpo: String, tokens: List<String>): Boolean {
+        val targetName = tokens.joinToString(" ")
+        val words = textoLimpo.split("\\s+".toRegex()).filter { it.isNotBlank() }
+        val primeiroNome = tokens.first()
+        for (i in 0..words.size - tokens.size) {
+            if (words[i].lowercase() == primeiroNome) {
+                val window = words.subList(i, minOf(i + tokens.size, words.size))
+                    .joinToString(" ").lowercase()
+                val dist = levenshtein(window, targetName)
+                val maxErros = minOf(3, targetName.length / 5)
+                if (dist <= maxErros) return true
+            }
+        }
         return false
     }
 
-    private fun normalizeText(text: String): String {
-        return Normalizer.normalize(text, Normalizer.Form.NFD)
+    private fun normalizeText(text: String): String =
+        Normalizer.normalize(text, Normalizer.Form.NFD)
             .replace("[\\p{InCombiningDiacriticalMarks}]".toRegex(), "")
-    }
 
     private fun tokenizeName(name: String): List<String> {
         val stopwords = setOf("de", "da", "do", "das", "dos", "e")
@@ -87,8 +95,7 @@ object PublicationMatcher {
         val first = tokens.first()
         val last = tokens.last()
         val middleRegex = if (tokens.size > 2) {
-            val middles = tokens.subList(1, tokens.size - 1)
-            middles.joinToString("") { middle ->
+            tokens.subList(1, tokens.size - 1).joinToString("") { middle ->
                 val initial = middle.first()
                 "(?:$initial\\w*\\.?\\s+)?"
             }

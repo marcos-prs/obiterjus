@@ -3,6 +3,7 @@ package com.obiterjus.data.publicacao.local
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.obiterjus.domain.model.ConfiancaMatch
 import java.time.Instant
 import java.time.LocalDate
 
@@ -15,6 +16,7 @@ import java.time.LocalDate
         Index("tribunal"),
         Index("tipoComunicacao"),
         Index("isSigiloso"),
+        Index("confiancaMatch"),
     ],
 )
 data class PublicacaoEntity(
@@ -42,4 +44,5 @@ data class PublicacaoEntity(
     val fonte: String,
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
+    val confiancaMatch: ConfiancaMatch = ConfiancaMatch.ALTA,
 )
