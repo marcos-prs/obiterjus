@@ -17,6 +17,21 @@ data class ProcessoMonitorado(
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
     val participantes: List<ParticipanteProcesso> = emptyList(),
+    // Campos expandidos
+    val dataDistribuicao: Instant? = null,
+    val comarcaSecao: String? = null,
+    val juizo: String? = null,
+    val prioridadeTramitacao: String? = null,
+    val gratuidadeJustica: String? = null,
+    val valorCausa: Double? = null,
+    val faseProcessual: String? = null,
+    val situacaoAtual: String? = null,
+    val tutelaAntecipadaLiminar: String? = null,
+    val advogadosAtivo: String? = null,
+    val advogadosPassivo: String? = null,
+    val defensoriaPublica: String? = null,
+    val ministerioPublico: String? = null,
+    val terceirosAuxiliares: String? = null,
 )
 
 data class ParticipanteProcesso(
@@ -26,6 +41,12 @@ data class ParticipanteProcesso(
     val nome: String?,
     val tipoPessoa: String?,
     val tipoParticipacao: String?,
+    // Qualificação completa
+    val cpfCnpj: String? = null,
+    val estadoCivil: String? = null,
+    val profissao: String? = null,
+    val endereco: String? = null,
+    val contatos: String? = null,
 )
 
 data class MovimentoProcesso(

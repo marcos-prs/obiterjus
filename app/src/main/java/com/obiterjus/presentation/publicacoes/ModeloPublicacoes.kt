@@ -4,9 +4,15 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.core.parser.CnjDateParser
+import com.obiterjus.core.texto.correspondeAoTermoBusca
+import com.obiterjus.domain.logic.NormalizadorPublicacoes
+import com.obiterjus.domain.model.GeneroTribunal
 import com.obiterjus.domain.model.Publicacao
+import com.obiterjus.domain.model.TipoAto
+import com.obiterjus.domain.model.tipoAto
 import com.obiterjus.domain.usecase.ObservarPublicacoes
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
+import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,10 +37,18 @@ class PublicacoesViewModel(
             publicacaoSelecionadaId,
             certidaoState,
         ) { publicacoes, filtrosAtuais, selecionadaId, certidao ->
+            val tribunaisPorGenero = publicacoes.tribunaisPorGenero()
             val filtradas = publicacoes
                 .filter { publicacao -> publicacao.atende(filtrosAtuais) }
+            val deduplicadas = NormalizadorPublicacoes.deduplicar(filtradas)
+            val agrupadas = NormalizadorPublicacoes.agruparPorData(deduplicadas)
+            val metadados = NormalizadorPublicacoes.calcularMetadadosOrdem(deduplicadas)
+
             EstadoPublicacoes(
-                publicacoes = filtradas,
+                publicacoes = deduplicadas,
+                publicacoesAgrupadas = agrupadas,
+                metadadosOrdem = metadados,
+                tribunaisPorGenero = tribunaisPorGenero,
                 totalPersistidas = publicacoes.size,
                 filtros = filtrosAtuais,
                 publicacaoSelecionada = publicacoes.firstOrNull { it.id == selecionadaId },
@@ -56,6 +70,10 @@ class PublicacoesViewModel(
 
     fun aoAlterarFiltroTipo(valor: String) {
         filtros.update { it.copy(tipoComunicacao = valor) }
+    }
+
+    fun aoAlterarFiltroTipoAto(tipo: TipoAto?) {
+        filtros.update { it.copy(tipoAto = tipo) }
     }
 
     fun aoAlterarFiltroDataInicio(valor: String) {
@@ -110,25 +128,39 @@ class PublicacoesViewModel(
 
     private fun Publicacao.atende(filtros: FiltrosPublicacoes): Boolean {
         val textoFiltro = filtros.texto.trim()
-        val atendeTexto = textoFiltro.isBlank() ||
+        val atendeTexto = when {
+            textoFiltro.isBlank() -> true
             listOfNotNull(
                 numeroProcesso,
                 tribunal,
                 tipoComunicacao,
                 nomeOrgao,
                 textoLimpo,
-            ).any { valor -> valor.contains(textoFiltro, ignoreCase = true) }
+            ).correspondeAoTermoBusca(textoFiltro) -> true
+            else -> participantes.any { participante ->
+                participante.camposBusca().correspondeAoTermoBusca(textoFiltro)
+            }
+        }
 
         val atendeSigilo = !filtros.somenteSigilosas || isSigiloso
-        val atendeTribunal = atendeCampoEstruturado(tribunal, filtros.tribunal)
-        val atendeTipo = atendeCampoEstruturado(tipoComunicacao, filtros.tipoComunicacao)
+        val atendeTribunal = atendeTribunal(filtros.tribunal)
+        val atendeTipo = atendeTipo(filtros.tipoComunicacao)
+        val atendeTipoAto = filtros.tipoAto == null || tipoAto == filtros.tipoAto
         val atendePeriodo = atendePeriodo(filtros)
-        return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo && atendePeriodo
+        return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo && atendeTipoAto && atendePeriodo
     }
 
-    private fun atendeCampoEstruturado(valor: String?, filtro: String): Boolean {
+    private fun Publicacao.atendeTribunal(filtro: String): Boolean {
         val termo = filtro.trim()
-        return termo.isBlank() || valor?.contains(termo, ignoreCase = true) == true
+        return termo.isBlank() || tribunal?.contains(termo, ignoreCase = true) == true
+    }
+
+    private fun Publicacao.atendeTipo(filtro: String): Boolean {
+        val termo = filtro.trim().lowercase()
+        if (termo.isBlank()) return true
+
+        return tipoComunicacao?.contains(termo, ignoreCase = true) == true ||
+            tipoAto.name.equals(termo, ignoreCase = true)
     }
 
     private fun Publicacao.atendePeriodo(filtros: FiltrosPublicacoes): Boolean {
@@ -143,6 +175,9 @@ class PublicacoesViewModel(
 
 data class EstadoPublicacoes(
     val publicacoes: List<Publicacao> = emptyList(),
+    val publicacoesAgrupadas: Map<LocalDate, List<Publicacao>> = emptyMap(),
+    val metadadosOrdem: Map<Long, Pair<Int, Int>> = emptyMap(),
+    val tribunaisPorGenero: Map<GeneroTribunal, List<String>> = emptyMap(),
     val totalPersistidas: Int = 0,
     val filtros: FiltrosPublicacoes = FiltrosPublicacoes(),
     val publicacaoSelecionada: Publicacao? = null,
@@ -159,6 +194,7 @@ data class FiltrosPublicacoes(
     val texto: String = "",
     val tribunal: String = "",
     val tipoComunicacao: String = "",
+    val tipoAto: TipoAto? = null,
     val dataInicio: String = "",
     val dataFim: String = "",
     val somenteSigilosas: Boolean = false,
@@ -167,7 +203,23 @@ data class FiltrosPublicacoes(
         get() = texto.isNotBlank() ||
             tribunal.isNotBlank() ||
             tipoComunicacao.isNotBlank() ||
+            tipoAto != null ||
             dataInicio.isNotBlank() ||
             dataFim.isNotBlank() ||
             somenteSigilosas
+}
+
+private fun List<Publicacao>.tribunaisPorGenero(): Map<GeneroTribunal, List<String>> =
+    mapNotNull { publicacao -> publicacao.tribunal?.trim()?.takeIf { it.isNotBlank() } }
+        .distinctBy { tribunal -> tribunal.uppercase() }
+        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+        .groupBy { tribunal -> GeneroTribunal.classificar(tribunal) }
+
+private fun com.obiterjus.domain.model.PublicacaoParticipante.camposBusca(): List<String?> {
+    val combinado = listOfNotNull(nome, documento).joinToString(" ").trim()
+    return listOfNotNull(
+        nome,
+        documento,
+        combinado.takeIf { it.isNotBlank() },
+    )
 }

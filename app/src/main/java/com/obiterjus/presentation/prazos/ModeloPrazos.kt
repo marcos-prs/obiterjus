@@ -1,12 +1,18 @@
 package com.obiterjus.presentation.prazos
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
+import com.obiterjus.core.time.FormatadorData
+import com.obiterjus.core.texto.correspondeAoTermoBusca
 import com.obiterjus.domain.model.ConfirmacaoPrazoResultado
+import com.obiterjus.domain.model.GeneroTribunal
 import com.obiterjus.domain.model.PrazoAgendaItem
 import com.obiterjus.domain.model.ProvedorCalendario
+import com.obiterjus.domain.model.Publicacao
+import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
 import java.time.Clock
@@ -20,12 +26,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ModeloPrazos(
-    private val context: Context,
+class ModeloPrazos internal constructor(
     observarAgendaPrazos: ObservarAgendaPrazos,
     private val confirmarPrazoUC: ConfirmarPrazoUC,
     private val clock: Clock,
+    private val textos: TextosPrazos,
 ) : ViewModel() {
+    constructor(
+        context: Context,
+        observarAgendaPrazos: ObservarAgendaPrazos,
+        confirmarPrazoUC: ConfirmarPrazoUC,
+        clock: Clock,
+    ) : this(
+        observarAgendaPrazos = observarAgendaPrazos,
+        confirmarPrazoUC = confirmarPrazoUC,
+        clock = clock,
+        textos = ContextTextosPrazos(context),
+    )
+
     private val filtros = MutableStateFlow(FiltrosPrazos())
     private val abaSelecionada = MutableStateFlow(AbaPrazos.TODOS)
     private val confirmandoPrazoId = MutableStateFlow<Long?>(null)
@@ -40,6 +58,7 @@ class ModeloPrazos(
         resultadoConfirmacao,
     ) { prazos, filtrosAtuais, abaAtiva, idConfirmando, resultado ->
         val hoje = LocalDate.now(clock)
+        val tribunaisPorGenero = prazos.tribunaisPorGenero()
         val filtrados = prazos
             .filter { it.atende(filtrosAtuais) }
             .map { prazo ->
@@ -54,6 +73,7 @@ class ModeloPrazos(
             itens = filtrados,
             itensExibidos = filtrados.itensDaAba(abaAtiva),
             filtros = filtrosAtuais,
+            tribunaisPorGenero = tribunaisPorGenero,
             abaSelecionada = abaAtiva,
             confirmandoPrazoId = idConfirmando,
             resultadoConfirmacao = resultado,
@@ -100,14 +120,14 @@ class ModeloPrazos(
                 }
 
             val prazo = item.item.prazo
-            val numeroProcesso = item.item.publicacao.numeroProcesso
-                ?: context.getString(R.string.prazos_sem_processo)
-            val title = context.getString(R.string.prazos_confirmacao_titulo, numeroProcesso)
-            val description = context.getString(
-                R.string.prazos_confirmacao_descricao,
-                prazo.quantidade,
-                prazo.unidade,
-                prazo.textoOriginal,
+            val pub = item.item.publicacao
+            val numeroProcesso = pub.numeroProcesso
+                ?: textos.get(R.string.prazos_sem_processo)
+            val title = textos.get(R.string.prazos_confirmacao_titulo, numeroProcesso)
+            val description = buildConfirmacaoDescricao(
+                prazo = prazo,
+                publicacao = pub,
+                textos = textos,
             )
 
             val result = confirmarPrazoUC.invoke(
@@ -138,7 +158,8 @@ class ModeloPrazos(
 
     private fun PrazoAgendaItem.atende(filtros: FiltrosPrazos): Boolean {
         val busca = filtros.busca.trim()
-        val atendeBusca = busca.isBlank() ||
+        val atendeBusca = when {
+            busca.isBlank() -> true
             listOfNotNull(
                 publicacao.numeroProcesso,
                 publicacao.tribunal,
@@ -146,8 +167,11 @@ class ModeloPrazos(
                 publicacao.nomeOrgao,
                 publicacao.textoLimpo,
                 prazo.textoOriginal,
-            ).any { it.contains(busca, ignoreCase = true) }
-
+            ).correspondeAoTermoBusca(busca) -> true
+            else -> publicacao.participantes.any { participante ->
+                participante.camposBusca().correspondeAoTermoBusca(busca)
+            }
+        }
         val atendeTribunal = filtros.tribunal.isBlank() ||
             publicacao.tribunal?.contains(filtros.tribunal, ignoreCase = true) == true
 
@@ -173,9 +197,8 @@ class ModeloPrazos(
             AbaPrazos.TODOS -> this
             AbaPrazos.VENCIDOS -> filter { it.grupo == GrupoPrazo.EXPIRADOS }
             AbaPrazos.PROXIMOS -> filter {
-                it.grupo == GrupoPrazo.URGENTE || it.grupo == GrupoPrazo.ESTA_SEMANA
+                it.grupo == GrupoPrazo.URGENTE || it.grupo == GrupoPrazo.ESTA_SEMANA || it.grupo == GrupoPrazo.PROXIMOS
             }
-            AbaPrazos.FUTUROS -> filter { it.grupo == GrupoPrazo.PROXIMOS }
             AbaPrazos.SEM_DATA -> filter { it.grupo == GrupoPrazo.SEM_DATA }
         }
 
@@ -189,6 +212,7 @@ data class EstadoPrazos(
     val itens: List<PrazoUiItem> = emptyList(),
     val itensExibidos: List<PrazoUiItem> = emptyList(),
     val filtros: FiltrosPrazos = FiltrosPrazos(),
+    val tribunaisPorGenero: Map<GeneroTribunal, List<String>> = emptyMap(),
     val abaSelecionada: AbaPrazos = AbaPrazos.TODOS,
     val confirmandoPrazoId: Long? = null,
     val resultadoConfirmacao: ConfirmacaoPrazoResultado? = null,
@@ -227,6 +251,54 @@ enum class AbaPrazos {
     TODOS,
     VENCIDOS,
     PROXIMOS,
-    FUTUROS,
     SEM_DATA,
+}
+
+internal interface TextosPrazos {
+    fun get(@StringRes resId: Int): String
+    fun get(@StringRes resId: Int, vararg args: Any): String
+}
+
+private class ContextTextosPrazos(
+    private val context: Context,
+) : TextosPrazos {
+    override fun get(resId: Int): String = context.getString(resId)
+
+    override fun get(resId: Int, vararg args: Any): String = context.getString(resId, *args)
+}
+
+private fun List<PrazoAgendaItem>.tribunaisPorGenero(): Map<GeneroTribunal, List<String>> =
+    mapNotNull { item -> item.publicacao.tribunal?.trim()?.takeIf { it.isNotBlank() } }
+        .distinctBy { tribunal -> tribunal.uppercase() }
+        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+        .groupBy { tribunal -> GeneroTribunal.classificar(tribunal) }
+
+private fun com.obiterjus.domain.model.PublicacaoParticipante.camposBusca(): List<String?> {
+    val combinado = listOfNotNull(nome, documento).joinToString(" ").trim()
+    return listOfNotNull(
+        nome,
+        documento,
+        combinado.takeIf { it.isNotBlank() },
+    )
+}
+
+private fun buildConfirmacaoDescricao(
+    prazo: PublicacaoPrazo,
+    publicacao: Publicacao,
+    textos: TextosPrazos,
+): String {
+    val sb = StringBuilder()
+    sb.appendLine("Processo: ${publicacao.numeroProcesso ?: "Não informado"}")
+    sb.appendLine("Prazo: ${prazo.quantidade} ${prazo.unidade} — ${prazo.textoOriginal}")
+    val dataLimite = prazo.dataLimiteEstimada?.let { FormatadorData.formatarData(it) }
+        ?: "Não estimada"
+    sb.appendLine("Data limite: $dataLimite")
+    val tipoAto = publicacao.tipoComunicacao ?: "Não informado"
+    sb.appendLine("Tipo do ato: $tipoAto")
+    val conteudo = publicacao.textoLimpo?.trim().orEmpty()
+    if (conteudo.isNotBlank()) {
+        sb.appendLine()
+        sb.append(conteudo)
+    }
+    return sb.toString()
 }

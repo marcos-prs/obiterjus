@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
+import com.obiterjus.domain.logic.NormalizadorPublicacoes
 import com.obiterjus.domain.model.PrazoAgendaItem
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.repository.RepositorioCadastroOab
@@ -34,6 +35,7 @@ data class EstadoInicio(
     val ultimaSincronizacao: Instant? = null,
     val ultimaSincronizacaoTexto: String? = null,
     val publicacoesRecentes: List<Publicacao> = emptyList(),
+    val metadadosOrdemPublicacoes: Map<Long, Pair<Int, Int>> = emptyMap(),
     val temPrazoUrgente: Boolean = false,
     val prazoUrgenteMensagem: String? = null,
 )
@@ -70,13 +72,14 @@ class ModeloInicio(
         val primeiroPrazoUrgente = prazosUrgentes.minByOrNull {
             it.prazo.dataLimiteEstimada ?: java.time.LocalDate.MAX
         }
+        val publicacoesDeduplicadas = NormalizadorPublicacoes.deduplicar(dados.publicacoes)
 
         EstadoInicio(
             nomeUsuario = cadastro.nomeAdvogado,
             oab = cadastro.numero,
             uf = cadastro.uf,
             totalProcessos = dados.totalProcessos,
-            totalPublicacoes = dados.publicacoes.size,
+            totalPublicacoes = publicacoesDeduplicadas.size,
             prazosUrgentes = prazosUrgentes.size,
             prazosVencidos = prazosVencidos,
             prazosProximos = prazosComVencimento.count { prazo ->
@@ -85,12 +88,13 @@ class ModeloInicio(
             },
             ultimaSincronizacao = status.ultimoSucessoEm,
             ultimaSincronizacaoTexto = status.ultimoSucessoEm?.formatarTempoRelativo(agora),
-            publicacoesRecentes = dados.publicacoes
+            publicacoesRecentes = publicacoesDeduplicadas
                 .sortedWith(
                     compareByDescending<Publicacao> { it.dataDisponibilizacao }
                         .thenByDescending { it.capturadoEm },
                 )
                 .take(QUANTIDADE_PUBLICACOES_RECENTES),
+            metadadosOrdemPublicacoes = NormalizadorPublicacoes.calcularMetadadosOrdem(publicacoesDeduplicadas),
             temPrazoUrgente = prazosUrgentes.isNotEmpty(),
             prazoUrgenteMensagem = primeiroPrazoUrgente?.mensagemUrgencia(java.time.LocalDate.now(clock)),
         )

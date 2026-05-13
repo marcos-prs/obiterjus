@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,7 +47,12 @@ fun BarraSuperiorPrincipal(
     val colors = ObiterTheme.colors
     val colorScheme = MaterialTheme.colorScheme
     val isDark = isSystemInDarkTheme()
-    val textColor = if (isDark) colorScheme.onSurface else colorScheme.onPrimary
+
+    // Cores específicas vindas do tema
+    val corSaudacao = colors.onTopAppBar
+    val corNome = colors.topAppBarAccent
+    val corBadge = colors.topAppBarAccent
+    val corDemaisDados = colors.onTopAppBar
 
     Surface(
         modifier = modifier
@@ -65,7 +71,7 @@ fun BarraSuperiorPrincipal(
                     Modifier
                 }
             ),
-        color = if (isDark) colorScheme.surface else colorScheme.primary,
+        color = colors.topAppBarBackground,
         shadowElevation = if (isDark) 0.dp else 2.dp,
     ) {
         Column(
@@ -85,28 +91,28 @@ fun BarraSuperiorPrincipal(
                     Text(
                         text = stringResource(saudacaoResId(horaAtual.hour)),
                         style = MaterialTheme.typography.bodySmall,
-                        color = textColor.copy(alpha = 0.70f),
+                        color = corSaudacao.copy(alpha = 0.75f),
                     )
                     Text(
                         text = nomeUsuario,
                         style = MaterialTheme.typography.titleLarge,
-                        color = colorScheme.secondary,
+                        color = corNome,
                     )
                 }
 
                 Surface(
                     shape = RoundedCornerShape(5.dp),
-                    color = textColor.copy(alpha = 0.12f),
+                    color = corBadge.copy(alpha = 0.12f),
                     modifier = Modifier.border(
                         width = 0.5.dp,
-                        color = textColor.copy(alpha = 0.20f),
+                        color = corBadge.copy(alpha = 0.25f),
                         shape = RoundedCornerShape(5.dp),
                     ),
                 ) {
                     Text(
                         text = stringResource(R.string.oab_chip_formato, ufOab, numeroOab),
                         style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.secondary,
+                        color = corBadge,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -133,7 +139,7 @@ fun BarraSuperiorPrincipal(
                         stringResource(R.string.sincronizado_formato, it)
                     } ?: stringResource(R.string.sincronizacao_pendente),
                     style = MaterialTheme.typography.bodySmall,
-                    color = textColor.copy(alpha = 0.40f),
+                    color = corDemaisDados.copy(alpha = 0.60f),
                 )
             }
         }

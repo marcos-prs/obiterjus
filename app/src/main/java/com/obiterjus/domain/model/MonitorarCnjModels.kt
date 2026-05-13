@@ -5,7 +5,7 @@ data class MonitorarCnjResumo(
     val dataJud: SincronizarProcessosDataJudResumo?,
 ) {
     val totalProcessosSincronizados: Int
-        get() = dataJud?.encontrados ?: 0
+        get() = (dataJud?.encontrados ?: 0) + (dataJud?.salvosPendentes ?: 0)
 
     val teveSincronizacaoDataJud: Boolean
         get() = dataJud != null

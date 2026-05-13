@@ -7,4 +7,5 @@ interface RepositorioPublicacoes {
     fun observarPublicacoes(): Flow<List<Publicacao>>
 
     fun observarPublicacoesProcesso(numeroProcesso: String): Flow<List<Publicacao>>
+    fun observarPublicacao(id: Long): Flow<Publicacao?>
 }

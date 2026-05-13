@@ -7,13 +7,16 @@ import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterList
@@ -68,6 +71,9 @@ object ObiterIcones {
     val Sincronizar: ImageVector get() = Icons.Default.Sync
     val Confirmar: ImageVector get() = Icons.Default.Check
     val ExpandirAbaixo: ImageVector get() = Icons.Default.KeyboardArrowDown
+    val Adicionar: ImageVector get() = Icons.Default.Add
+    val Editar: ImageVector get() = Icons.Default.Edit
+    val Excluir: ImageVector get() = Icons.Default.Delete
 
     // ── Status ───────────────────────────────────────────────
     val Sucesso: ImageVector get() = Icons.Default.CheckCircle
@@ -82,11 +88,16 @@ object ObiterIcones {
     val Artigo: ImageVector get() = Icons.AutoMirrored.Filled.Article
     val Fonte: ImageVector get() = Icons.Default.Source
     val Evento: ImageVector get() = Icons.Default.Event
+    val Agenda: ImageVector get() = Icons.Default.Event
     val Historico: ImageVector get() = Icons.Default.History
     val Notificacao: ImageVector get() = Icons.Default.Notifications
     val Conta: ImageVector get() = Icons.Default.AccountCircle
     val Login: ImageVector get() = Icons.AutoMirrored.Filled.Login
     val Pasta: ImageVector get() = Icons.Default.Folder
+
+    // ── UI Helpers ───────────────────────────────────────────
+    val Expandir: ImageVector get() = Icons.Default.Add
+    val Recolher: ImageVector get() = Icons.Default.Close
 
     // ── Sincronização na nuvem ───────────────────────────────
     val NuvemSincronizando: ImageVector get() = Icons.Default.CloudSync

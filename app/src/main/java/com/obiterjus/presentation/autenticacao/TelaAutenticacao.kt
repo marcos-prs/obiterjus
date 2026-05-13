@@ -67,6 +67,7 @@ import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.SnackbarErroEffect
 import com.obiterjus.presentation.componentes.ToggleObiter
 import com.obiterjus.presentation.componentes.barras.BarraSuperiorSecundaria
+import com.obiterjus.presentation.componentes.navegacao.NavegadorAbasSwipeable
 import com.obiterjus.ui.theme.ObiterTheme
 import java.text.Normalizer
 
@@ -125,69 +126,90 @@ fun TelaAutenticacao(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = dimens.screenMargin, vertical = dimens.cardGap),
-            verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
-        ) {
-            when (estado.modo) {
-                ModoAutenticacao.ENTRAR -> ConteudoLogin(
+        if (estado.modo == ModoAutenticacao.ENTRAR) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = dimens.screenMargin, vertical = dimens.cardGap),
+                verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
+            ) {
+                ConteudoLogin(
                     estado = estado,
                     aoAlterarEmail = viewModel::aoAlterarEmail,
                     aoAlterarSenha = viewModel::aoAlterarSenha,
                     aoEntrar = viewModel::aoEntrar,
                     aoIrParaCadastro = viewModel::aoIrParaCadastro,
                 )
+            }
+        } else {
+            NavegadorAbasSwipeable(
+                tabs = listOf(
+                    stringResource(R.string.perfil_aba_conta),
+                    stringResource(R.string.perfil_aba_oab),
+                    stringResource(R.string.autenticacao_step_verificacao),
+                    stringResource(R.string.perfil_aba_preferencias),
+                    stringResource(R.string.autenticacao_step_resumo)
+                ),
+                initialTabIndex = estado.etapaCadastro.ordinal,
+                onTabSelected = viewModel::aoSelecionarEtapa,
+                modifier = Modifier.padding(paddingValues)
+            ) { page ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = dimens.screenMargin, vertical = dimens.cardGap),
+                    verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
+                ) {
+                    when (EtapaCadastro.entries[page]) {
+                        EtapaCadastro.CONTA -> EtapaConta(
+                            estado = estado,
+                            aoAlterarNome = viewModel::aoAlterarNome,
+                            aoAlterarEmail = viewModel::aoAlterarEmail,
+                            aoAlterarSenha = viewModel::aoAlterarSenha,
+                            aoAlterarConfirmarSenha = viewModel::aoAlterarConfirmarSenha,
+                            aoAlternarTermos = viewModel::aoAlternarTermos,
+                            aoAlternarPrivacidade = viewModel::aoAlternarPrivacidade,
+                            aoAvancar = viewModel::aoAvancarCadastro,
+                        )
 
-                ModoAutenticacao.CADASTRAR -> when (estado.etapaCadastro) {
-                    EtapaCadastro.CONTA -> EtapaConta(
-                        estado = estado,
-                        aoAlterarNome = viewModel::aoAlterarNome,
-                        aoAlterarEmail = viewModel::aoAlterarEmail,
-                        aoAlterarSenha = viewModel::aoAlterarSenha,
-                        aoAlterarConfirmarSenha = viewModel::aoAlterarConfirmarSenha,
-                        aoAlternarTermos = viewModel::aoAlternarTermos,
-                        aoAlternarPrivacidade = viewModel::aoAlternarPrivacidade,
-                        aoAvancar = viewModel::aoAvancarCadastro,
-                    )
+                        EtapaCadastro.OAB -> EtapaOab(
+                            estado = estado,
+                            aoAlterarUf = viewModel::aoAlterarUf,
+                            aoAlterarNumeroOab = viewModel::aoAlterarNumeroOab,
+                            aoAlterarTipoInscricao = viewModel::aoAlterarTipoInscricao,
+                            aoAlterarNomeEscritorio = viewModel::aoAlterarNomeEscritorio,
+                            aoAlternarAreaAtuacao = viewModel::aoAlternarAreaAtuacao,
+                            aoAvancar = viewModel::aoAvancarCadastro,
+                            aoVoltar = viewModel::aoVoltarEtapaOuModo,
+                        )
 
-                    EtapaCadastro.OAB -> EtapaOab(
-                        estado = estado,
-                        aoAlterarUf = viewModel::aoAlterarUf,
-                        aoAlterarNumeroOab = viewModel::aoAlterarNumeroOab,
-                        aoAlterarTipoInscricao = viewModel::aoAlterarTipoInscricao,
-                        aoAlterarNomeEscritorio = viewModel::aoAlterarNomeEscritorio,
-                        aoAlternarAreaAtuacao = viewModel::aoAlternarAreaAtuacao,
-                        aoAvancar = viewModel::aoAvancarCadastro,
-                        aoVoltar = viewModel::aoVoltarEtapaOuModo,
-                    )
+                        EtapaCadastro.VERIFICACAO -> EtapaVerificacao(
+                            estado = estado,
+                            aoCorrigir = viewModel::aoVoltarEtapaOuModo,
+                            aoContinuarSemValidacao = viewModel::aoContinuarSemValidacao,
+                            aoAvancar = viewModel::aoAvancarCadastro,
+                        )
 
-                    EtapaCadastro.VERIFICACAO -> EtapaVerificacao(
-                        estado = estado,
-                        aoCorrigir = viewModel::aoVoltarEtapaOuModo,
-                        aoContinuarSemValidacao = viewModel::aoContinuarSemValidacao,
-                        aoAvancar = viewModel::aoAvancarCadastro,
-                    )
+                        EtapaCadastro.PREFERENCIAS -> EtapaPreferencias(
+                            estado = estado,
+                            aoAlterarJanelaBusca = viewModel::aoAlterarJanelaBusca,
+                            aoAlterarFrequencia = viewModel::aoAlterarFrequenciaSincronizacao,
+                            aoAlternarNotificarPublicacoes = viewModel::aoAlternarNotificarPublicacoes,
+                            aoAlternarNotificarPrazos = viewModel::aoAlternarNotificarPrazos,
+                            aoAlternarNotificarMovimentacoes = viewModel::aoAlternarNotificarMovimentacoes,
+                            aoAlternarTemaEscuro = viewModel::aoAlternarTemaEscuro,
+                            aoAvancar = viewModel::aoAvancarCadastro,
+                            aoVoltar = viewModel::aoVoltarEtapaOuModo,
+                        )
 
-                    EtapaCadastro.PREFERENCIAS -> EtapaPreferencias(
-                        estado = estado,
-                        aoAlterarJanelaBusca = viewModel::aoAlterarJanelaBusca,
-                        aoAlterarFrequencia = viewModel::aoAlterarFrequenciaSincronizacao,
-                        aoAlternarNotificarPublicacoes = viewModel::aoAlternarNotificarPublicacoes,
-                        aoAlternarNotificarPrazos = viewModel::aoAlternarNotificarPrazos,
-                        aoAlternarNotificarMovimentacoes = viewModel::aoAlternarNotificarMovimentacoes,
-                        aoAlternarTemaEscuro = viewModel::aoAlternarTemaEscuro,
-                        aoAvancar = viewModel::aoAvancarCadastro,
-                        aoVoltar = viewModel::aoVoltarEtapaOuModo,
-                    )
-
-                    EtapaCadastro.RESUMO -> EtapaResumo(
-                        estado = estado,
-                        aoFinalizar = viewModel::aoAvancarCadastro,
-                    )
+                        EtapaCadastro.RESUMO -> EtapaResumo(
+                            estado = estado,
+                            aoFinalizar = viewModel::aoAvancarCadastro,
+                        )
+                    }
                 }
             }
         }

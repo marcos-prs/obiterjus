@@ -29,6 +29,8 @@ import com.obiterjus.domain.repository.CalendarSyncRepository
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
 import com.obiterjus.data.agenda.worker.CalendarSyncWorker
 import com.obiterjus.data.djen.CertidaoDjenRepositoryImpl
+import com.obiterjus.data.djen.DjenSyncExecutor
+import com.obiterjus.data.djen.DjenSyncExecutorImpl
 import com.obiterjus.data.datajud.ConfiguredDataJudRepository
 import com.obiterjus.data.djen.ConfiguredDjenRepository
 import com.obiterjus.data.processo.local.LocalProcessoRepository
@@ -47,7 +49,9 @@ import com.obiterjus.domain.repository.RepositorioCadastroOab
 import com.obiterjus.domain.repository.RepositorioProcessos
 import com.obiterjus.domain.repository.RepositorioPublicacoes
 import com.obiterjus.domain.repository.RepositorioSincronizacao
+import com.obiterjus.domain.usecase.AdicionarProcessoUseCase
 import com.obiterjus.domain.usecase.ClassificarPublicacaoUC
+import com.obiterjus.domain.usecase.ExcluirProcessoUseCase
 import com.obiterjus.domain.usecase.ExportarRelatorioUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
@@ -56,13 +60,19 @@ import com.obiterjus.domain.usecase.ObservarMovimentosProcesso
 import com.obiterjus.domain.usecase.ObservarProcessos
 import com.obiterjus.domain.usecase.ObservarPublicacoes
 import com.obiterjus.domain.usecase.ObservarTimelineProcesso
+import com.obiterjus.domain.usecase.ObterPublicacaoPorId
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
+import com.obiterjus.domain.usecase.RessincronizarProcessoUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
+import com.obiterjus.presentation.adicionarprocesso.ModeloAdicionarProcesso
 import com.obiterjus.presentation.detalheprocesso.ModeloDetalheProcesso
+import com.obiterjus.presentation.detalhepublicacao.ModeloDetalhePublicacao
 import com.obiterjus.presentation.autenticacao.ModeloAutenticacao
+import com.obiterjus.presentation.editarprocesso.ModeloEditarProcesso
 import com.obiterjus.presentation.inicio.ModeloInicio
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
 import com.obiterjus.presentation.perfil.ModeloPerfil
+import com.obiterjus.presentation.perfil.ModeloEditarPerfil
 import com.obiterjus.presentation.processos.ModeloProcessos
 import com.obiterjus.presentation.prazos.ModeloPrazos
 import com.obiterjus.presentation.publicacoes.PublicacoesViewModel
@@ -145,6 +155,19 @@ private val dataModule = module {
         FirestoreSincronizacaoRepository(
             localProcessoRepository = get(),
             localPublicacaoRepository = get(),
+            repositorioCadastroOab = get(),
+            perfilPreferencesRepository = get(),
+            syncPreferencesRepository = get(),
+        )
+    }
+    single<DjenSyncExecutor> {
+        DjenSyncExecutorImpl(
+            appConfigRepository = get(),
+            perfilPreferencesRepository = get(),
+            repositorioCadastroOab = get(),
+            monitorarCnjUseCase = get(),
+            syncLogDao = get(),
+            clock = get(),
         )
     }
 }
@@ -161,6 +184,7 @@ private val domainModule = module {
     factory { ClassificarPublicacaoUC(get()) }
     factory { ExportarRelatorioUC(get()) }
     factory { ObservarPublicacoes(get()) }
+    factory { ObterPublicacaoPorId(get()) }
     factory { ObservarAgendaPrazos(get(), get()) }
     factory { ObterCertidaoDjen(get()) }
     factory { ObservarProcessos(get()) }
@@ -172,6 +196,9 @@ private val domainModule = module {
         )
     }
     factory { ConfirmarPrazoUC(get(), get()) }
+    factory { AdicionarProcessoUseCase(get()) }
+    factory { ExcluirProcessoUseCase(get()) }
+    factory { RessincronizarProcessoUseCase(get()) }
 }
 
 private val presentationModule = module {
@@ -190,9 +217,13 @@ private val presentationModule = module {
     viewModel { ModeloProcessos(get(), get()) }
     viewModel { AuditoriaViewModel(get()) }
     viewModel { ModeloInicio(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloPerfil(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloAutenticacao(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloPerfil(androidContext(), get(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloAutenticacao(androidContext(), get(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloEditarPerfil(get(), get(), get(), get(), get(), androidContext()) }
     viewModel { ModeloDetalheProcesso(get(), get(), get(), get()) }
+    viewModel { ModeloDetalhePublicacao(get(), get()) }
+    viewModel { ModeloAdicionarProcesso(get()) }
+    viewModel { ModeloEditarProcesso(get(), get(), get()) }
 }
 
 private val workerModule = module {
@@ -200,11 +231,9 @@ private val workerModule = module {
         DjenSyncWorker(
             appContext = params.get<Context>(),
             workerParams = params.get<WorkerParameters>(),
-            appConfigRepository = get(),
+            djenSyncExecutor = get(),
             repositorioCadastroOab = get(),
-            monitorarCnjUseCase = get(),
             notificationHelper = get(),
-            syncLogDao = get(),
         )
     }
     worker { params ->

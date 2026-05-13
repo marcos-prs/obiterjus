@@ -17,8 +17,14 @@ interface PublicacaoDao {
     @Query("SELECT id FROM publicacoes WHERE id IN (:ids)")
     suspend fun getExistingIds(ids: List<Long>): List<Long>
 
+    @Query("SELECT * FROM publicacoes WHERE hash IN (:hashes)")
+    suspend fun getByHashes(hashes: List<String>): List<PublicacaoEntity>
+
     @Query("SELECT * FROM publicacoes WHERE id = :id")
     suspend fun getById(id: Long): PublicacaoEntity?
+
+    @Query("SELECT * FROM publicacoes WHERE id = :id")
+    fun observeById(id: Long): Flow<PublicacaoEntity?>
 
     @Query("SELECT * FROM publicacoes WHERE id IN (:ids)")
     suspend fun getByIds(ids: List<Long>): List<PublicacaoEntity>

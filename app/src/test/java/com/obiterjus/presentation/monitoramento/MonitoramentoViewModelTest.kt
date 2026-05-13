@@ -21,12 +21,15 @@ import com.obiterjus.domain.usecase.ExportarRelatorioUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -90,6 +93,68 @@ class MonitoramentoViewModelTest {
         assertEquals("MG", viewModel.uiState.value.ufOab)
     }
 
+    @Test
+    fun savedStartDateIsLoadedAndSavedEndDateIsIgnoredWhenLoadingCadastro() = runTest {
+        val viewModel = MonitoramentoViewModel(
+            monitorarCnjUseCase = monitorarCnjUseCase(FakeDjenRepository()),
+            authRepository = FakeAuthRepository(),
+            repositorioSincronizacao = FakeRepositorioSincronizacao(),
+            repositorioCadastroOab = FakeRepositorioCadastroOab(
+                initialCadastro = OabCadastro(
+                    numero = "12345",
+                    uf = "MG",
+                    nomeAdvogado = "Advogada Teste",
+                    dataInicio = LocalDate.of(2026, 4, 1),
+                    dataFim = LocalDate.of(2026, 4, 30),
+                ),
+            ),
+            syncPreferencesRepository = FakeSyncPreferencesRepository(),
+            exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
+            clock = Clock.fixed(
+                Instant.parse("2026-05-07T12:00:00Z"),
+                ZoneId.of("America/Sao_Paulo"),
+            ),
+            ioDispatcher = dispatcher,
+        )
+
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals("01/04/2026", viewModel.uiState.value.dataInicio)
+        assertEquals("07/05/2026", viewModel.uiState.value.dataFim)
+    }
+
+    @Test
+    fun syncUsesTodayAsEndDateEvenIfUiStateHasStaleEndDate() = runTest {
+        val djenRepository = FakeDjenRepository()
+        val cadastroRepository = FakeRepositorioCadastroOab()
+        val viewModel = MonitoramentoViewModel(
+            monitorarCnjUseCase = monitorarCnjUseCase(djenRepository),
+            authRepository = FakeAuthRepository(),
+            repositorioSincronizacao = FakeRepositorioSincronizacao(),
+            repositorioCadastroOab = cadastroRepository,
+            syncPreferencesRepository = FakeSyncPreferencesRepository(),
+            exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
+            clock = Clock.fixed(
+                Instant.parse("2026-05-07T12:00:00Z"),
+                ZoneId.of("America/Sao_Paulo"),
+            ),
+            ioDispatcher = dispatcher,
+        )
+
+        viewModel.onNumeroOabChange("12345")
+        viewModel.onUfOabChange("MG")
+        viewModel.onDataInicioChange("01/04/2026")
+        viewModel.onDataFimChange("30/04/2026")
+        viewModel.sincronizar()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("07/05/2026", viewModel.uiState.value.dataFim)
+        assertEquals(LocalDate.of(2026, 4, 1), djenRepository.lastParams?.dataInicio)
+        assertEquals(LocalDate.of(2026, 5, 7), djenRepository.lastParams?.dataFim)
+        assertEquals(LocalDate.of(2026, 4, 1), cadastroRepository.cadastro.value.dataInicio)
+        assertEquals(null, cadastroRepository.cadastro.value.dataFim)
+    }
+
     private fun monitorarCnjUseCase(
         djenRepository: DjenRepository,
     ): MonitorarCnjUseCase =
@@ -115,9 +180,11 @@ class MonitoramentoViewModelTest {
 
     private class FakeDjenRepository : DjenRepository {
         var calls = 0
+        var lastParams: MonitorarDjenParams? = null
 
         override suspend fun monitorar(params: MonitorarDjenParams): MonitorarDjenResumo {
             calls += 1
+            lastParams = params
             return MonitorarDjenResumo(
                 totalRemoto = 0,
                 totalRecebidas = 0,
@@ -152,6 +219,11 @@ class MonitoramentoViewModelTest {
         override suspend fun signUpWithEmail(email: String, password: String): Result<AuthUser> =
             Result.success(user.copy(email = email, isAnonymous = false))
 
+        override suspend fun updatePassword(
+            currentPassword: String,
+            newPassword: String,
+        ): Result<Unit> = Result.success(Unit)
+
         override suspend fun signOut() = Unit
     }
 
@@ -161,23 +233,35 @@ class MonitoramentoViewModelTest {
 
         override suspend fun restaurarTudo(userId: String): SincronizacaoNuvemResumo =
             SincronizacaoNuvemResumo()
+
+        override suspend fun enviarPerfil(userId: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun restaurarPerfil(userId: String): Result<Unit> = Result.success(Unit)
     }
 
-    private class FakeRepositorioCadastroOab : RepositorioCadastroOab {
-        override val cadastro = MutableStateFlow(OabCadastro())
+    private class FakeRepositorioCadastroOab(
+        initialCadastro: OabCadastro = OabCadastro(),
+    ) : RepositorioCadastroOab {
+        override val cadastro = MutableStateFlow(initialCadastro)
         override val status = MutableStateFlow(SincronizacaoStatus())
 
         override suspend fun salvarCadastro(
             numero: String,
             uf: String,
-            nomeAdvogado: String,
+            nomeAdvogado: String?,
+            tipoInscricao: String?,
+            nomeEscritorio: String?,
+            areasAtuacao: List<String>?,
             dataInicio: LocalDate?,
             dataFim: LocalDate?,
         ) {
             cadastro.value = OabCadastro(
                 numero = numero,
                 uf = uf,
-                nomeAdvogado = nomeAdvogado,
+                nomeAdvogado = nomeAdvogado.orEmpty(),
+                tipoInscricao = tipoInscricao.orEmpty(),
+                nomeEscritorio = nomeEscritorio.orEmpty(),
+                areasAtuacao = areasAtuacao.orEmpty(),
                 dataInicio = dataInicio,
                 dataFim = dataFim,
             )
@@ -221,5 +305,8 @@ class MonitoramentoViewModelTest {
 
         override fun observarPublicacoesProcesso(numeroProcesso: String): Flow<List<Publicacao>> =
             publicacoes
+
+        override fun observarPublicacao(id: Long): Flow<Publicacao?> =
+            publicacoes.map { itens -> itens.firstOrNull { it.id == id } }
     }
 }

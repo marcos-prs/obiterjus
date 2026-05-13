@@ -6,4 +6,8 @@ interface RepositorioSincronizacao {
     suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo
 
     suspend fun restaurarTudo(userId: String): SincronizacaoNuvemResumo
+
+    suspend fun enviarPerfil(userId: String): Result<Unit>
+
+    suspend fun restaurarPerfil(userId: String): Result<Unit>
 }

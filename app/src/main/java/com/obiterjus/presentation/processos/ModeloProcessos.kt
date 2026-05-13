@@ -36,6 +36,7 @@ class ModeloProcessos(
             numeroSelecionado,
             tribunaisExpandidos,
         ) { processos, timeline, filtrosAtuais, numeroAtual, tribunaisAtuais ->
+            val tribunaisPorGenero = processos.tribunaisPorGenero()
             val filtrados = processos
                 .filter { processo -> processo.atende(filtrosAtuais) }
                 .ordenar(filtrosAtuais)
@@ -67,6 +68,7 @@ class ModeloProcessos(
                 timelineSelecionada = timeline,
                 gruposTribunais = grupos,
                 tribunaisExpandidos = tribunaisAtuais,
+                tribunaisPorGenero = tribunaisPorGenero,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -80,6 +82,10 @@ class ModeloProcessos(
 
     fun aoAlterarFiltroParticipante(valor: String) {
         filtros.update { it.copy(participante = valor) }
+    }
+
+    fun aoAlterarFiltroTribunal(valor: String) {
+        filtros.update { it.copy(tribunal = valor) }
     }
 
     fun aoAlterarFiltroSyncStatus(valor: String) {
@@ -128,8 +134,10 @@ class ModeloProcessos(
             FiltroStatusProcesso.ATIVOS -> syncStatus != com.obiterjus.domain.model.ProcessoSyncStatus.STALE
             FiltroStatusProcesso.ARQUIVADOS -> syncStatus == com.obiterjus.domain.model.ProcessoSyncStatus.STALE
         }
+        val atendeTribunal = filtros.tribunal.isBlank() ||
+            tribunal?.contains(filtros.tribunal.trim(), ignoreCase = true) == true
 
-        return atendeTexto && atendeParticipante && atendeSyncStatus && atendeStatus
+        return atendeTexto && atendeParticipante && atendeSyncStatus && atendeStatus && atendeTribunal
     }
 
     private fun List<ProcessoMonitorado>.ordenar(filtros: FiltrosProcessos): List<ProcessoMonitorado> =
@@ -149,6 +157,7 @@ data class EstadoProcessos(
     val timelineSelecionada: List<TimelineProcessoItem> = emptyList(),
     val gruposTribunais: List<GrupoTribunalProcesso> = emptyList(),
     val tribunaisExpandidos: Set<String> = emptySet(),
+    val tribunaisPorGenero: Map<com.obiterjus.domain.model.GeneroTribunal, List<String>> = emptyMap(),
 )
 
 data class FiltrosProcessos(
@@ -157,13 +166,15 @@ data class FiltrosProcessos(
     val syncStatus: String = "",
     val ordenacao: OrdenacaoProcessos = OrdenacaoProcessos.MAIS_RECENTES,
     val status: FiltroStatusProcesso = FiltroStatusProcesso.GERAL,
+    val tribunal: String = "",
 ) {
     val possuiFiltrosAtivos: Boolean
         get() = texto.isNotBlank() ||
             participante.isNotBlank() ||
             syncStatus.isNotBlank() ||
             ordenacao != OrdenacaoProcessos.MAIS_RECENTES ||
-            status != FiltroStatusProcesso.GERAL
+            status != FiltroStatusProcesso.GERAL ||
+            tribunal.isNotBlank()
 }
 
 enum class OrdenacaoProcessos {
@@ -193,3 +204,9 @@ data class GrupoComarcaProcesso(
 
 private const val TRIBUNAL_SEM_NOME = ""
 private const val COMARCA_SEM_NOME = ""
+
+private fun List<ProcessoMonitorado>.tribunaisPorGenero(): Map<com.obiterjus.domain.model.GeneroTribunal, List<String>> =
+    mapNotNull { processo -> processo.tribunal?.trim()?.takeIf { it.isNotBlank() } }
+        .distinctBy { tribunal -> tribunal.uppercase() }
+        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+        .groupBy { tribunal -> com.obiterjus.domain.model.GeneroTribunal.classificar(tribunal) }

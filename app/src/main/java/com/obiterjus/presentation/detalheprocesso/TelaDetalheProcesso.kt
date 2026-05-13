@@ -1,6 +1,7 @@
 package com.obiterjus.presentation.detalheprocesso
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,10 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,8 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
+import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.presentation.componentes.EstadoVazioObiter
 import com.obiterjus.presentation.componentes.ObiterIcones
@@ -35,15 +38,16 @@ import com.obiterjus.presentation.componentes.cards.CardPublicacao
 import com.obiterjus.presentation.componentes.cards.PrioridadeStripe
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
-import com.obiterjus.presentation.componentes.timeline.CorPontoTimeline
 import com.obiterjus.presentation.componentes.timeline.ItemTimeline
 import com.obiterjus.ui.theme.ObiterTheme
+import com.obiterjus.ui.theme.Tiber
 
 @Composable
 fun TelaDetalheProcesso(
     viewModel: ModeloDetalheProcesso,
     numeroProcesso: String,
     onVoltar: () -> Unit,
+    aoEditarProcesso: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(numeroProcesso) {
@@ -52,10 +56,13 @@ fun TelaDetalheProcesso(
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
+    val isDark = isSystemInDarkTheme()
+    val barraCor = if (isDark) MaterialTheme.colorScheme.surface else Tiber
+    val textoCor = if (isDark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
 
     Column(modifier = modifier.fillMaxSize()) {
         Surface(
-            color = MaterialTheme.colorScheme.primary,
+            color = barraCor,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
@@ -70,21 +77,29 @@ fun TelaDetalheProcesso(
                         androidx.compose.material3.Icon(
                             imageVector = ObiterIcones.Voltar,
                             contentDescription = stringResource(R.string.cd_voltar),
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = textoCor,
                         )
                     }
                     Text(
-                        text = estado.numeroProcesso.truncarNumero(),
+                        text = estado.numeroProcesso.formatarCnj(),
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = textoCor,
+                        modifier = Modifier.weight(1f),
                     )
+                    androidx.compose.material3.IconButton(onClick = aoEditarProcesso) {
+                        androidx.compose.material3.Icon(
+                            imageVector = ObiterIcones.Editar,
+                            contentDescription = stringResource(R.string.cd_editar_processo),
+                            tint = textoCor.copy(alpha = 0.70f),
+                        )
+                    }
                 }
                 Text(
                     text = listOf(estado.tribunal, estado.orgaoJulgador)
                         .filter(String::isNotBlank)
                         .joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
+                    color = textoCor.copy(alpha = 0.5f),
                 )
             }
         }
@@ -98,21 +113,22 @@ fun TelaDetalheProcesso(
         ) {
             HeaderDetalhe(estado = estado)
 
-            TabRow(
+            SecondaryScrollableTabRow(
                 selectedTabIndex = estado.abaSelecionada,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(dimens.cardRadius)),
                 containerColor = MaterialTheme.colorScheme.surface,
+                edgePadding = 0.dp,
                 divider = {
                     HorizontalDivider(
                         color = colors.divider,
                         thickness = dimens.borderWidth,
                     )
                 },
-                indicator = { tabs ->
-                    TabRowDefaults.SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabs[estado.abaSelecionada]),
+                indicator = {
+                    SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(estado.abaSelecionada),
                         color = colors.accent,
                     )
                 },
@@ -144,6 +160,7 @@ fun TelaDetalheProcesso(
         when (estado.abaSelecionada) {
             0 -> ConteudoTimeline(
                 timeline = estado.timeline,
+                ultimaAtualizacao = estado.ultimaAtualizacao,
                 modifier = Modifier.weight(1f),
             )
             1 -> ConteudoPublicacoes(
@@ -167,35 +184,46 @@ private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
 
-    Surface(
-        shape = RoundedCornerShape(dimens.cardRadius),
-        color = colors.surfacePergaminho,
-        border = BorderStroke(dimens.borderWidth, colors.border),
-        modifier = Modifier.fillMaxWidth(),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(dimens.cardPaddingH),
+        verticalArrangement = Arrangement.spacedBy(dimens.space1),
     ) {
-        Column(
-            modifier = Modifier.padding(dimens.cardPaddingH),
-            verticalArrangement = Arrangement.spacedBy(dimens.space1),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap)) {
-                BadgeTipoAto(
-                    texto = estado.tribunal.ifBlank { stringResource(R.string.processos_nao_informado) },
-                    variante = VarianteBadge.TRIBUNAL,
-                )
-                BadgeTipoAto(
-                    texto = estado.classeProcessual.ifBlank { stringResource(R.string.processos_nao_informado) },
-                    variante = VarianteBadge.DESPACHO,
-                )
-                BadgeTipoAto(
-                    texto = estado.status,
-                    variante = VarianteBadge.FAVORAVEL,
-                )
-            }
-            Text(
-                text = estado.orgaoJulgador.ifBlank { stringResource(R.string.processos_nao_informado) },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
+        Row(horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap)) {
+            BadgeTipoAto(
+                texto = estado.tribunal.ifBlank { stringResource(R.string.processos_nao_informado) },
+                variante = VarianteBadge.TRIBUNAL,
             )
+            BadgeTipoAto(
+                texto = estado.classeProcessual.ifBlank { stringResource(R.string.processos_nao_informado) },
+                variante = VarianteBadge.DESPACHO,
+            )
+            BadgeTipoAto(
+                texto = estado.status,
+                variante = VarianteBadge.FAVORAVEL,
+            )
+        }
+        Text(
+            text = estado.orgaoJulgador.ifBlank { stringResource(R.string.processos_nao_informado) },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        if (estado.poloAtivo.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.detalhe_info_polo_ativo) + ": " + estado.poloAtivo.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textMuted,
+            )
+        }
+        if (estado.poloPassivo.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.detalhe_info_polo_passivo) + ": " + estado.poloPassivo.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textMuted,
+            )
+        }
+        if (estado.poloAtivo.isEmpty() && estado.poloPassivo.isEmpty()) {
             Text(
                 text = estado.partes ?: stringResource(R.string.detalhe_partes_indisponiveis),
                 style = MaterialTheme.typography.bodySmall,
@@ -208,6 +236,7 @@ private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
 @Composable
 private fun ConteudoTimeline(
     timeline: List<com.obiterjus.domain.model.TimelineProcessoItem>,
+    ultimaAtualizacao: java.time.Instant?,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -221,18 +250,11 @@ private fun ConteudoTimeline(
     ) {
         items(timeline, key = { it.id }) { item ->
             ItemTimeline(
-                data = item.dataHora?.let(FormatadorData::formatarDataHora)
-                    ?: stringResource(R.string.processos_nao_informado),
+                data = FormatadorData.formatarDataPorExtenso(item.dataHora),
                 titulo = item.titulo,
                 detalhe = item.descricao,
-                corPonto = when {
-                    item.isSigiloso -> CorPontoTimeline.DANGER
-                    item.isImportante -> CorPontoTimeline.PRIMARY
-                    item.tipo == com.obiterjus.domain.model.TimelineProcessoTipo.MOVIMENTO_DATAJUD ->
-                        CorPontoTimeline.ACCENT
-                    else -> CorPontoTimeline.MUTED
-                },
-                mostrarLinha = true,
+                corPonto = item.corPonto,
+                mostrarLinha = item != timeline.last(),
             )
         }
         if (timeline.isEmpty()) {
@@ -246,12 +268,19 @@ private fun ConteudoTimeline(
             }
         }
         item {
-            Text(
-                text = stringResource(R.string.detalhe_fonte_timeline),
-                style = MaterialTheme.typography.bodySmall,
-                color = ObiterTheme.colors.textMuted,
-                modifier = Modifier.padding(top = ObiterTheme.dimens.sectionGap),
-            )
+            Surface(
+                color = ObiterTheme.colors.surfacePergaminho.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth().padding(top = ObiterTheme.dimens.sectionGap),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Fonte: DataJud (CNJ) · Sync: ${FormatadorData.formatarDataHora(ultimaAtualizacao)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ObiterTheme.colors.textMuted,
+                    modifier = Modifier.padding(8.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -276,14 +305,17 @@ private fun ConteudoPublicacoes(
                 tipoAto = publicacao.tipoComunicacao ?: stringResource(R.string.publicacoes_sem_tipo),
                 data = publicacao.dataDisponibilizacao?.let(FormatadorData::formatarData)
                     ?: stringResource(R.string.publicacoes_sem_data),
+                tribunal = publicacao.tribunal ?: stringResource(R.string.publicacoes_sem_tribunal),
+                juizo = publicacao.nomeOrgao,
                 numeroProcesso = publicacao.numeroProcesso
-                    ?: stringResource(R.string.publicacoes_sem_numero_processo),
+                    ?.formatarCnj() ?: stringResource(R.string.publicacoes_sem_numero_processo),
                 prazoDias = publicacao.prazo?.quantidade?.let { dias ->
                     stringResource(R.string.prazos_badge_dias, dias)
                 },
                 trechoTexto = publicacao.textoLimpo,
                 prioridade = publicacao.prioridadeStripe(),
                 aoClicar = {},
+                onVerDetalhes = {},
             )
         }
         if (publicacoes.isEmpty()) {
@@ -320,12 +352,15 @@ private fun ConteudoPrazos(
                 tipoAto = prazo.publicacao.tipoComunicacao ?: stringResource(R.string.publicacoes_sem_tipo),
                 data = prazo.publicacao.dataDisponibilizacao?.let(FormatadorData::formatarData)
                     ?: stringResource(R.string.publicacoes_sem_data),
+                tribunal = prazo.publicacao.tribunal ?: stringResource(R.string.publicacoes_sem_tribunal),
+                juizo = prazo.publicacao.nomeOrgao,
                 numeroProcesso = prazo.publicacao.numeroProcesso
-                    ?: stringResource(R.string.prazos_sem_processo),
+                    ?.formatarCnj() ?: stringResource(R.string.prazos_sem_processo),
                 prazoDias = prazo.diasBadge(),
                 trechoTexto = prazo.prazo.textoOriginal,
                 prioridade = prioridadePrazo(prazo),
                 aoClicar = {},
+                onVerDetalhes = {},
             )
         }
         if (prazos.isEmpty()) {
@@ -359,7 +394,7 @@ private fun ConteudoInformacoes(
                 text = stringResource(R.string.detalhe_info_numero),
                 style = MaterialTheme.typography.labelMedium,
             )
-            Text(text = informacoes?.numeroProcesso.orEmpty())
+            Text(text = informacoes?.numeroProcesso.orEmpty().formatarCnj())
             Text(
                 text = stringResource(R.string.detalhe_info_classe),
                 style = MaterialTheme.typography.labelMedium,
@@ -375,11 +410,20 @@ private fun ConteudoInformacoes(
                 style = MaterialTheme.typography.labelMedium,
             )
             Text(text = informacoes?.status.orEmpty())
-            Text(
-                text = stringResource(R.string.detalhe_info_partes),
-                style = MaterialTheme.typography.labelMedium,
-            )
-            Text(text = informacoes?.partes?.joinToString(" · ").orEmpty())
+            if (informacoes?.poloAtivo?.isNotEmpty() == true) {
+                Text(
+                    text = stringResource(R.string.detalhe_info_polo_ativo),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(text = informacoes.poloAtivo.joinToString(" · "))
+            }
+            if (informacoes?.poloPassivo?.isNotEmpty() == true) {
+                Text(
+                    text = stringResource(R.string.detalhe_info_polo_passivo),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(text = informacoes.poloPassivo.joinToString(" · "))
+            }
             Text(
                 text = stringResource(R.string.detalhe_info_fonte),
                 style = MaterialTheme.typography.labelMedium,
@@ -400,11 +444,8 @@ private fun AbaDetalhe.rotulo(): String =
         AbaDetalhe.TIMELINE -> stringResource(R.string.detalhe_aba_timeline)
         AbaDetalhe.PUBLICACOES -> stringResource(R.string.detalhe_aba_publicacoes)
         AbaDetalhe.PRAZOS -> stringResource(R.string.detalhe_aba_prazos)
-        AbaDetalhe.INFORMACOES -> stringResource(R.string.detalhe_aba_informacoes)
+        AbaDetalhe.INFORMACOES -> stringResource(R.string.detalhe_aba_info)
     }
-
-private fun String.truncarNumero(): String =
-    if (length > 14) take(14) + "..." else this
 
 private fun com.obiterjus.domain.model.Publicacao.prioridadeStripe(): PrioridadeStripe =
     when {

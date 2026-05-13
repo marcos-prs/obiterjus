@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.time.Instant
+import com.obiterjus.presentation.participantes.resolverPartesProcesso
+import com.obiterjus.presentation.participantes.formatarConfronto
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ModeloDetalheProcesso(
@@ -82,6 +84,7 @@ class ModeloDetalheProcesso(
             capturadoEm = Instant.EPOCH,
             atualizadoEm = Instant.EPOCH,
         )
+        val partesResolvidas = dados.partesResolvidas
 
         EstadoDetalheProcesso(
             numeroProcesso = processoSeguro.numeroProcesso,
@@ -90,10 +93,9 @@ class ModeloDetalheProcesso(
             classeProcessual = processoSeguro.classeNome.orEmpty(),
             grau = processoSeguro.grau.orEmpty(),
             status = processoSeguro.syncStatus.name,
-            partes = processoSeguro.participantes.takeIf { it.isNotEmpty() }
-                ?.joinToString(separator = " · ") { participante ->
-                    listOfNotNull(participante.polo, participante.nome).joinToString(": ")
-                },
+            partes = partesResolvidas.formatarConfronto(),
+            poloAtivo = partesResolvidas.ativa?.nomes ?: emptyList(),
+            poloPassivo = partesResolvidas.passiva?.nomes ?: emptyList(),
             abas = listOf(
                 AbaDetalhe.TIMELINE,
                 AbaDetalhe.PUBLICACOES,
@@ -111,10 +113,12 @@ class ModeloDetalheProcesso(
                 classeProcessual = processoSeguro.classeNome,
                 grau = processoSeguro.grau,
                 status = processoSeguro.syncStatus.name,
-                partes = processoSeguro.participantes.mapNotNull { it.nome },
+                poloAtivo = partesResolvidas.ativa?.nomes ?: emptyList(),
+                poloPassivo = partesResolvidas.passiva?.nomes ?: emptyList(),
                 fonte = processoSeguro.tribunal ?: "",
                 ultimaAtualizacao = processoSeguro.atualizadoEm,
             ),
+            ultimaAtualizacao = processoSeguro.atualizadoEm,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -139,12 +143,15 @@ data class EstadoDetalheProcesso(
     val grau: String = "",
     val status: String = "",
     val partes: String? = null,
+    val poloAtivo: List<String> = emptyList(),
+    val poloPassivo: List<String> = emptyList(),
     val abas: List<AbaDetalhe> = emptyList(),
     val abaSelecionada: Int = 0,
     val timeline: List<TimelineProcessoItem> = emptyList(),
     val publicacoes: List<Publicacao> = emptyList(),
     val prazos: List<PrazoAgendaItem> = emptyList(),
     val informacoes: InformacoesProcesso? = null,
+    val ultimaAtualizacao: Instant? = null,
 )
 
 enum class AbaDetalhe {
@@ -161,7 +168,8 @@ data class InformacoesProcesso(
     val classeProcessual: String?,
     val grau: String?,
     val status: String,
-    val partes: List<String>,
+    val poloAtivo: List<String>,
+    val poloPassivo: List<String>,
     val fonte: String,
     val ultimaAtualizacao: Instant,
 )
@@ -172,3 +180,6 @@ private data class DadosDetalhe(
     val publicacoes: List<Publicacao>,
     val prazos: List<PrazoAgendaItem>,
 )
+
+private val DadosDetalhe.partesResolvidas
+    get() = processo?.participantes.orEmpty().resolverPartesProcesso()

@@ -29,4 +29,7 @@ interface ProcessoDao {
 
     @Query("SELECT * FROM processos WHERE numeroProcesso IN (:numerosProcesso)")
     suspend fun getByNumeros(numerosProcesso: List<String>): List<ProcessoEntity>
+
+    @Query("DELETE FROM processos WHERE numeroProcesso = :numeroProcesso")
+    suspend fun deleteByNumeroProcesso(numeroProcesso: String)
 }

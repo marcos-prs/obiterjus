@@ -214,6 +214,23 @@ fun ParticipanteFirestoreDto.toEntity(): ParticipanteEntity? =
         )
     }
 
+data class PerfilFirestoreDto(
+    val nomeAdvogado: String = "",
+    val numeroOab: String = "",
+    val ufOab: String = "",
+    val tipoInscricao: String = "",
+    val nomeEscritorio: String = "",
+    val areasAtuacao: List<String> = emptyList(),
+    val intervaloBuscaDias: Int = 7,
+    val sincronizacaoAutomatica: Boolean = true,
+    val frequenciaSyncHoras: Int = 24,
+    val notificarPublicacoes: Boolean = true,
+    val notificarPrazosUrgentes: Boolean = true,
+    val notificarMovimentacoes: Boolean = true,
+    val tema: String = "",
+    val atualizadoEm: Timestamp? = null,
+)
+
 private fun Instant.toTimestamp(): Timestamp =
     Timestamp(epochSecond, (nano / FIRESTORE_NANOS_STEP) * FIRESTORE_NANOS_STEP)
 

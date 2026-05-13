@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 
 import com.obiterjus.data.datajud.local.ParticipanteDao
 import com.obiterjus.data.datajud.local.ParticipanteEntity
+import com.obiterjus.data.publicacao.local.toAssuntosJsonOrNull
 
 class LocalProcessoRepository(
     private val processoDao: ProcessoDao,
@@ -57,6 +58,29 @@ class LocalProcessoRepository(
         if (processos.isNotEmpty()) {
             processoDao.upsertAll(processos)
         }
+    }
+
+    override suspend fun obterProcesso(numeroProcesso: String): ProcessoMonitorado? {
+        val entity = processoDao.getByNumero(numeroProcesso) ?: return null
+        val participantes = participanteDao.getByNumeroProcesso(numeroProcesso)
+            .map(ParticipanteEntity::paraDominio)
+        return entity.paraDominio(participantes)
+    }
+
+    override suspend fun salvarProcesso(processo: ProcessoMonitorado) {
+        processoDao.upsert(processo.paraEntidade())
+        if (processo.participantes.isNotEmpty()) {
+            replaceParticipantes(
+                numeroProcesso = processo.numeroProcesso,
+                participantes = processo.participantes.map { it.paraEntidade() },
+            )
+        }
+    }
+
+    override suspend fun excluirProcesso(numeroProcesso: String) {
+        movimentoDao.deleteByProcesso(numeroProcesso)
+        participanteDao.deleteByNumeroProcesso(numeroProcesso)
+        processoDao.deleteByNumeroProcesso(numeroProcesso)
     }
 
     suspend fun getProcesso(numeroProcesso: String): ProcessoEntity? =
@@ -130,6 +154,20 @@ private fun ProcessoEntity.paraDominio(
         capturadoEm = capturadoEm,
         atualizadoEm = atualizadoEm,
         participantes = participantes,
+        dataDistribuicao = dataDistribuicao,
+        comarcaSecao = comarcaSecao,
+        juizo = juizo,
+        prioridadeTramitacao = prioridadeTramitacao,
+        gratuidadeJustica = gratuidadeJustica,
+        valorCausa = valorCausa,
+        faseProcessual = faseProcessual,
+        situacaoAtual = situacaoAtual,
+        tutelaAntecipadaLiminar = tutelaAntecipadaLiminar,
+        advogadosAtivo = advogadosAtivo,
+        advogadosPassivo = advogadosPassivo,
+        defensoriaPublica = defensoriaPublica,
+        ministerioPublico = ministerioPublico,
+        terceirosAuxiliares = terceirosAuxiliares,
     )
 
 private fun MovimentoEntity.paraDominio(): MovimentoProcesso =
@@ -150,4 +188,55 @@ private fun ParticipanteEntity.paraDominio(): com.obiterjus.domain.model.Partici
         nome = nome,
         tipoPessoa = tipoPessoa,
         tipoParticipacao = tipoParticipacao,
+        cpfCnpj = cpfCnpj,
+        estadoCivil = estadoCivil,
+        profissao = profissao,
+        endereco = endereco,
+        contatos = contatos,
+    )
+
+private fun ProcessoMonitorado.paraEntidade(): ProcessoEntity =
+    ProcessoEntity(
+        numeroProcesso = numeroProcesso,
+        tribunal = tribunal,
+        grau = grau,
+        classeCodigo = classeCodigo,
+        classeNome = classeNome,
+        assuntosJson = assuntos.toAssuntosJsonOrNull(),
+        orgaoJulgadorCodigo = orgaoJulgadorCodigo,
+        orgaoJulgadorNome = orgaoJulgadorNome,
+        nivelSigilo = nivelSigilo,
+        dataAjuizamento = dataAjuizamento,
+        syncStatus = syncStatus,
+        capturadoEm = capturadoEm,
+        atualizadoEm = atualizadoEm,
+        dataDistribuicao = dataDistribuicao,
+        comarcaSecao = comarcaSecao,
+        juizo = juizo,
+        prioridadeTramitacao = prioridadeTramitacao,
+        gratuidadeJustica = gratuidadeJustica,
+        valorCausa = valorCausa,
+        faseProcessual = faseProcessual,
+        situacaoAtual = situacaoAtual,
+        tutelaAntecipadaLiminar = tutelaAntecipadaLiminar,
+        advogadosAtivo = advogadosAtivo,
+        advogadosPassivo = advogadosPassivo,
+        defensoriaPublica = defensoriaPublica,
+        ministerioPublico = ministerioPublico,
+        terceirosAuxiliares = terceirosAuxiliares,
+    )
+
+private fun com.obiterjus.domain.model.ParticipanteProcesso.paraEntidade(): ParticipanteEntity =
+    ParticipanteEntity(
+        idLocal = idLocal,
+        numeroProcesso = numeroProcesso,
+        polo = polo,
+        nome = nome,
+        tipoPessoa = tipoPessoa,
+        tipoParticipacao = tipoParticipacao,
+        cpfCnpj = cpfCnpj,
+        estadoCivil = estadoCivil,
+        profissao = profissao,
+        endereco = endereco,
+        contatos = contatos,
     )

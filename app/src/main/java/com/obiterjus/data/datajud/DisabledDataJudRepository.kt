@@ -7,7 +7,7 @@ import com.obiterjus.domain.model.SincronizarProcessosDataJudResumo
 import com.obiterjus.domain.repository.DataJudRepository
 
 class DisabledDataJudRepository(
-    private val reason: String = "DataJud ainda nao configurado: informe DATAJUD_API_KEY.",
+    private val reason: String,
 ) : DataJudRepository {
     override suspend fun sincronizar(
         params: SincronizarProcessosDataJudParams,

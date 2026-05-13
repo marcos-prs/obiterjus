@@ -35,6 +35,7 @@ import com.obiterjus.R
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
+import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.ui.theme.ObiterTheme
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -86,7 +87,7 @@ fun CardProcesso(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = numeroProcesso,
+                    text = numeroProcesso.formatarCnj(),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = colorScheme.onSurface,
                     maxLines = 1,

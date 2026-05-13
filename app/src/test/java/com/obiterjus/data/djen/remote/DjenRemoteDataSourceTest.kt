@@ -74,8 +74,9 @@ class DjenRemoteDataSourceTest {
         var lastUf: String? = null
 
         override suspend fun buscarComunicacoes(
-            numeroOab: String,
-            ufOab: String,
+            numeroOab: String?,
+            ufOab: String?,
+            nomeAdvogado: String?,
             dataDisponibilizacaoInicio: String,
             dataDisponibilizacaoFim: String,
             pagina: Int,

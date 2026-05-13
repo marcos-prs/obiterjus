@@ -1,5 +1,6 @@
 package com.obiterjus.data.djen
 
+import com.obiterjus.core.config.AppConfig
 import com.obiterjus.core.config.AppConfigRepository
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
@@ -19,28 +20,35 @@ class ConfiguredDjenRepository(
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
     private val clock: Clock = Clock.systemUTC(),
 ) : DjenRepository {
+
+    private var cachedRepository: DjenRepositoryImpl? = null
+    private var cachedConfigKey: DjenConfigCacheKey? = null
+
     override suspend fun monitorar(params: MonitorarDjenParams): MonitorarDjenResumo {
         val config = appConfigRepository.refresh()
+
         if (!config.djenEnabled) {
-            return MonitorarDjenResumo(
-                totalRemoto = null,
-                totalRecebidas = 0,
-                novas = 0,
-                atualizadas = 0,
-                sigilosas = 0,
-                processosNovos = emptyList(),
-                processosParaSincronizar = emptyList(),
-                paginasConsultadas = 0,
-                motivoParada = MonitorarDjenStopReason.UNKNOWN,
-                falhas = listOf("DJEN desabilitado pela configuração remota."),
-            )
+            return disabledResumo()
         }
 
+        return repositoryFor(config).monitorar(params)
+    }
+
+    private fun repositoryFor(config: AppConfig): DjenRepositoryImpl {
+        val key = DjenConfigCacheKey(
+            baseUrl = config.djenBaseUrl,
+            timeoutSeconds = config.requestTimeoutSeconds,
+            itensPorPagina = config.djenDefaultItemsPerPage,
+        )
+        if (key == cachedConfigKey) {
+            return cachedRepository!!
+        }
         val repository = DjenRepositoryImpl(
             remoteDataSource = DjenRemoteDataSource(
                 api = DjenRetrofitFactory.createApi(
                     baseUrl = config.djenBaseUrl,
                     timeoutSeconds = config.requestTimeoutSeconds,
+                    // sem okHttpClient: endpoint de consulta é público
                 ),
                 itensPorPagina = config.djenDefaultItemsPerPage,
             ),
@@ -49,7 +57,27 @@ class ConfiguredDjenRepository(
             publicacaoPrazoMapper = publicacaoPrazoMapper,
             clock = clock,
         )
-
-        return repository.monitorar(params)
+        cachedRepository = repository
+        cachedConfigKey = key
+        return repository
     }
+
+    private fun disabledResumo() = MonitorarDjenResumo(
+        totalRemoto = null,
+        totalRecebidas = 0,
+        novas = 0,
+        atualizadas = 0,
+        sigilosas = 0,
+        processosNovos = emptyList(),
+        processosParaSincronizar = emptyList(),
+        paginasConsultadas = 0,
+        motivoParada = MonitorarDjenStopReason.UNKNOWN,
+        falhas = listOf("DJEN desabilitado pela configuração remota."),
+    )
+
+    private data class DjenConfigCacheKey(
+        val baseUrl: String,
+        val timeoutSeconds: Long,
+        val itensPorPagina: Int,
+    )
 }

@@ -22,8 +22,6 @@ import com.obiterjus.R
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.ProcessoSyncStatus
-import com.obiterjus.domain.model.TimelineProcessoItem
-import com.obiterjus.domain.model.TimelineProcessoTipo
 import com.obiterjus.presentation.componentes.EstadoVazioObiter
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.barras.BarraBusca
@@ -31,7 +29,10 @@ import com.obiterjus.presentation.componentes.cards.CardProcesso
 import com.obiterjus.presentation.componentes.chips.ChipFiltroRow
 import com.obiterjus.presentation.componentes.secoes.CabecalhoComarca
 import com.obiterjus.presentation.componentes.secoes.CabecalhoTribunal
+import com.obiterjus.presentation.componentes.filtros.DropdownTribunal
 import com.obiterjus.ui.theme.ObiterTheme
+import com.obiterjus.presentation.participantes.resolverPartesProcesso
+import com.obiterjus.presentation.participantes.formatarConfronto
 
 @Composable
 fun TelaProcessos(
@@ -43,6 +44,7 @@ fun TelaProcessos(
     aoLimparFiltros: () -> Unit,
     aoSelecionarProcesso: (String) -> Unit,
     aoAlternarTribunal: (String) -> Unit,
+    aoAlterarFiltroTribunal: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = ObiterTheme.dimens
@@ -60,6 +62,14 @@ fun TelaProcessos(
                 consulta = estado.filtros.texto,
                 aoMudarConsulta = aoAlterarFiltroTexto,
                 placeholder = stringResource(R.string.busca_processos_placeholder),
+            )
+        }
+        item {
+            DropdownTribunal(
+                tribunalSelecionado = estado.filtros.tribunal,
+                tribunaisPorGenero = estado.tribunaisPorGenero,
+                aoSelecionarTribunal = aoAlterarFiltroTribunal,
+                modifier = Modifier.padding(horizontal = dimens.screenMargin),
             )
         }
         item {
@@ -110,24 +120,24 @@ fun TelaProcessos(
                     exit = shrinkVertically(),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(dimens.cardGap)) {
-                    grupo.comarcas.forEach { comarca ->
-                        CabecalhoComarca(
-                            nomeComarca = comarca.comarca.ifBlank { stringResource(R.string.processos_nao_informado) },
-                            modifier = Modifier.padding(horizontal = dimens.screenMargin),
-                        )
-                        comarca.processos.forEach { processo ->
-                            CardProcesso(
-                                numeroProcesso = processo.numeroProcesso,
-                                partes = processo.participantes.formatarPartes(),
-                                badges = processo.badges(),
-                                temPrazoAtivo = processo.syncStatus == ProcessoSyncStatus.PENDING,
-                                ultimaMovimentacao = processo.atualizadoEm.let(FormatadorData::formatarDataHora),
-                                fonte = processo.tribunal ?: stringResource(R.string.processos_nao_informado),
-                                aoClicar = { aoSelecionarProcesso(processo.numeroProcesso) },
+                        grupo.comarcas.forEach { comarca ->
+                            CabecalhoComarca(
+                                nomeComarca = comarca.comarca.ifBlank { stringResource(R.string.processos_nao_informado) },
                                 modifier = Modifier.padding(horizontal = dimens.screenMargin),
                             )
+                            comarca.processos.forEach { processo ->
+                                CardProcesso(
+                                    numeroProcesso = processo.numeroProcesso,
+                                    partes = processo.participantes.resolverPartesProcesso().formatarConfronto(),
+                                    badges = processo.badges(),
+                                    temPrazoAtivo = processo.syncStatus == ProcessoSyncStatus.PENDING,
+                                    ultimaMovimentacao = processo.atualizadoEm.let(FormatadorData::formatarDataHora),
+                                    fonte = processo.tribunal ?: stringResource(R.string.processos_nao_informado),
+                                    aoClicar = { aoSelecionarProcesso(processo.numeroProcesso) },
+                                    modifier = Modifier.padding(horizontal = dimens.screenMargin),
+                                )
+                            }
                         }
-                    }
                     }
                 }
             }
@@ -149,12 +159,6 @@ private fun String.corTribunal(colors: com.obiterjus.ui.theme.ObiterExtendedColo
     contains("TRF", ignoreCase = true) -> colors.primaryDark
     else -> MaterialTheme.colorScheme.primary
 }
-
-private fun List<com.obiterjus.domain.model.ParticipanteProcesso>.formatarPartes(): String? =
-    takeIf { it.isNotEmpty() }?.joinToString(separator = " · ") { participante ->
-        listOfNotNull(participante.polo, participante.nome)
-            .joinToString(separator = ": ")
-    }
 
 private fun ProcessoMonitorado.badges(): List<String> =
     listOfNotNull(
@@ -179,6 +183,7 @@ fun ConteudoProcessos(
         aoLimparFiltros = viewModel::aoLimparFiltros,
         aoSelecionarProcesso = aoAbrirDetalhe,
         aoAlternarTribunal = viewModel::aoAlternarTribunal,
+        aoAlterarFiltroTribunal = viewModel::aoAlterarFiltroTribunal,
         modifier = modifier,
     )
 }

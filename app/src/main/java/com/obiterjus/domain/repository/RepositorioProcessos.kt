@@ -11,4 +11,10 @@ interface RepositorioProcessos {
     fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>>
 
     fun observarParticipantes(numeroProcesso: String): Flow<List<ParticipanteProcesso>>
+
+    suspend fun obterProcesso(numeroProcesso: String): ProcessoMonitorado?
+
+    suspend fun salvarProcesso(processo: ProcessoMonitorado)
+
+    suspend fun excluirProcesso(numeroProcesso: String)
 }

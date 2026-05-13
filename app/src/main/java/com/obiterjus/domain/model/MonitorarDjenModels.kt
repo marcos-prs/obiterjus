@@ -5,6 +5,7 @@ import java.time.LocalDate
 data class MonitorarDjenParams(
     val numeroOab: String,
     val ufOab: String,
+    val nomeAdvogado: String? = null,
     val dataInicio: LocalDate,
     val dataFim: LocalDate,
     val modo: MonitorarDjenModo,

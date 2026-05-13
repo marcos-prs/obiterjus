@@ -2,6 +2,7 @@ package com.obiterjus.presentation.autenticacao
 
 import com.obiterjus.ui.theme.TipoTema
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
@@ -11,6 +12,7 @@ import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.RepositorioCadastroOab
+import com.obiterjus.domain.repository.RepositorioSincronizacao
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
@@ -130,14 +132,33 @@ data class EstadoAutenticacao(
         get() = uf.length == 2 && numeroOab.isNotBlank()
 }
 
-class ModeloAutenticacao(
-    private val context: Context,
+class ModeloAutenticacao internal constructor(
     private val authRepository: AuthRepository,
     private val repositorioCadastroOab: RepositorioCadastroOab,
+    private val repositorioSincronizacao: RepositorioSincronizacao,
     private val monitorarCnjUseCase: MonitorarCnjUseCase,
     private val syncPreferencesRepository: SyncPreferencesRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val textos: TextosAutenticacao,
 ) : ViewModel() {
+    constructor(
+        context: Context,
+        authRepository: AuthRepository,
+        repositorioCadastroOab: RepositorioCadastroOab,
+        repositorioSincronizacao: RepositorioSincronizacao,
+        monitorarCnjUseCase: MonitorarCnjUseCase,
+        syncPreferencesRepository: SyncPreferencesRepository,
+        perfilPreferencesRepository: PerfilPreferencesRepository,
+    ) : this(
+        authRepository = authRepository,
+        repositorioCadastroOab = repositorioCadastroOab,
+        repositorioSincronizacao = repositorioSincronizacao,
+        monitorarCnjUseCase = monitorarCnjUseCase,
+        syncPreferencesRepository = syncPreferencesRepository,
+        perfilPreferencesRepository = perfilPreferencesRepository,
+        textos = ContextTextosAutenticacao(context),
+    )
+
     private val _estado = MutableStateFlow(EstadoAutenticacao())
     val estado: StateFlow<EstadoAutenticacao> = combine(
         _estado,
@@ -152,7 +173,6 @@ class ModeloAutenticacao(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = EstadoAutenticacao(),
     )
-
     fun aoSelecionarModo(modo: ModoAutenticacao) {
         _estado.update { current ->
             current.copy(
@@ -162,6 +182,13 @@ class ModeloAutenticacao(
                 mensagemSucesso = null,
                 carregando = false,
             )
+        }
+    }
+
+    fun aoSelecionarEtapa(index: Int) {
+        val etapas = EtapaCadastro.entries
+        if (index in etapas.indices) {
+            _estado.update { it.copy(etapaCadastro = etapas[index]) }
         }
     }
 
@@ -201,18 +228,19 @@ class ModeloAutenticacao(
         val email = estadoAtual.email.trim()
         val senha = estadoAtual.senha
         if (email.isBlank() || senha.isBlank()) {
-            _estado.update { it.copy(mensagemErro = context.getString(R.string.autenticacao_error_required_fields)) }
+            _estado.update { it.copy(mensagemErro = textos.get(R.string.autenticacao_error_required_fields)) }
             return
         }
 
         viewModelScope.launch {
             _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
             authRepository.signInWithEmail(email, senha).fold(
-                onSuccess = {
+                onSuccess = { authUser ->
+                    repositorioSincronizacao.restaurarPerfil(authUser.uid)
                     _estado.update {
                         it.copy(
                             carregando = false,
-                            mensagemSucesso = context.getString(R.string.autenticacao_sucesso_login),
+                            mensagemSucesso = textos.get(R.string.autenticacao_sucesso_login),
                         )
                     }
                 },
@@ -220,7 +248,7 @@ class ModeloAutenticacao(
                     _estado.update {
                         it.copy(
                             carregando = false,
-                            mensagemErro = context.getString(R.string.autenticacao_error_login_email),
+                            mensagemErro = textos.get(R.string.autenticacao_error_login_email),
                         )
                     }
                 },
@@ -250,7 +278,7 @@ class ModeloAutenticacao(
             EtapaCadastro.CONTA -> if (estadoAtual.contaValida) {
                 _estado.update { it.copy(etapaCadastro = EtapaCadastro.OAB, mensagemErro = null) }
             } else {
-                _estado.update { it.copy(mensagemErro = context.getString(R.string.autenticacao_error_conta_invalida)) }
+                _estado.update { it.copy(mensagemErro = textos.get(R.string.autenticacao_error_conta_invalida)) }
             }
 
             EtapaCadastro.OAB -> if (estadoAtual.oabValida) {
@@ -267,7 +295,7 @@ class ModeloAutenticacao(
                     executarVerificacaoAutomatica()
                 }
             } else {
-                _estado.update { it.copy(mensagemErro = context.getString(R.string.autenticacao_error_oab_invalida)) }
+                _estado.update { it.copy(mensagemErro = textos.get(R.string.autenticacao_error_oab_invalida)) }
             }
 
             EtapaCadastro.VERIFICACAO -> {
@@ -324,11 +352,12 @@ class ModeloAutenticacao(
         viewModelScope.launch {
             _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
             authRepository.signUpWithEmail(estadoAtual.email.trim(), estadoAtual.senha).fold(
-                onSuccess = {
+                onSuccess = { authUser ->
+                    repositorioSincronizacao.enviarPerfil(authUser.uid)
                     _estado.update {
                         it.copy(
                             carregando = false,
-                            mensagemSucesso = context.getString(R.string.autenticacao_sucesso_cadastro),
+                            mensagemSucesso = textos.get(R.string.autenticacao_sucesso_cadastro),
                         )
                     }
                 },
@@ -336,7 +365,7 @@ class ModeloAutenticacao(
                     _estado.update {
                         it.copy(
                             carregando = false,
-                            mensagemErro = context.getString(R.string.autenticacao_error_signup),
+                            mensagemErro = textos.get(R.string.autenticacao_error_signup),
                         )
                     }
                 },
@@ -361,12 +390,13 @@ class ModeloAutenticacao(
 
             val resultado = runCatching {
                 withContext(Dispatchers.IO) {
+                    val hoje = LocalDate.now()
                     monitorarCnjUseCase(
                         MonitorarDjenParams(
                             numeroOab = estadoAtual.numeroOab,
                             ufOab = estadoAtual.uf,
-                            dataInicio = LocalDate.now().minusDays(30),
-                            dataFim = LocalDate.now(),
+                            dataInicio = hoje.minusDays(estadoAtual.janelaBuscaDias.toLong()),
+                            dataFim = hoje,
                             modo = MonitorarDjenModo.MANUAL,
                         ),
                     )
@@ -380,27 +410,27 @@ class ModeloAutenticacao(
                         it.copy(
                             verificacaoDjen = it.verificacaoDjen.copy(
                                 status = StatusVerificacao.SUCESSO,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_djen_ok),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_djen_ok),
                             ),
                             verificacaoOab = it.verificacaoOab.copy(
                                 status = if (encontrou) StatusVerificacao.SUCESSO else StatusVerificacao.OPCIONAL,
                                 detalhe = if (encontrou) {
-                                    context.getString(R.string.autenticacao_verificacao_oab_ok)
+                                    textos.get(R.string.autenticacao_verificacao_oab_ok)
                                 } else {
-                                    context.getString(R.string.autenticacao_verificacao_oab_nao_encontrada)
+                                    textos.get(R.string.autenticacao_verificacao_oab_nao_encontrada)
                                 },
                             ),
                             verificacaoBusca = it.verificacaoBusca.copy(
                                 status = StatusVerificacao.SUCESSO,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_busca_ok, resumo.djen.novas),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_busca_ok, resumo.djen.novas),
                             ),
                             verificacaoDataJud = it.verificacaoDataJud.copy(
                                 status = StatusVerificacao.OPCIONAL,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_datajud_ok),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_datajud_ok),
                             ),
                             verificacaoIndexacao = it.verificacaoIndexacao.copy(
                                 status = StatusVerificacao.OPCIONAL,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_indexacao_ok),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_indexacao_ok),
                             ),
                             resumoBuscaPublicacoes = resumo.djen.novas,
                         )
@@ -411,25 +441,25 @@ class ModeloAutenticacao(
                         it.copy(
                             verificacaoDjen = it.verificacaoDjen.copy(
                                 status = StatusVerificacao.ERRO,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_djen_erro),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_djen_erro),
                             ),
                             verificacaoOab = it.verificacaoOab.copy(
                                 status = StatusVerificacao.ERRO,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_oab_nao_encontrada),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_oab_nao_encontrada),
                             ),
                             verificacaoBusca = it.verificacaoBusca.copy(
                                 status = StatusVerificacao.OPCIONAL,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_busca_indisponivel),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_busca_indisponivel),
                             ),
                             verificacaoDataJud = it.verificacaoDataJud.copy(
                                 status = StatusVerificacao.PENDENTE,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_datajud),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_datajud),
                             ),
                             verificacaoIndexacao = it.verificacaoIndexacao.copy(
                                 status = StatusVerificacao.PENDENTE,
-                                detalhe = context.getString(R.string.autenticacao_verificacao_indexacao),
+                                detalhe = textos.get(R.string.autenticacao_verificacao_indexacao),
                             ),
-                            mensagemErro = context.getString(R.string.autenticacao_verificacao_erro),
+                            mensagemErro = textos.get(R.string.autenticacao_verificacao_erro),
                         )
                     }
                 },
@@ -452,3 +482,16 @@ class ModeloAutenticacao(
 }
 
 private fun AuthUser?.naoAnonimo(): Boolean = this != null && !isAnonymous
+
+internal interface TextosAutenticacao {
+    fun get(@StringRes resId: Int): String
+    fun get(@StringRes resId: Int, vararg args: Any): String
+}
+
+private class ContextTextosAutenticacao(
+    private val context: Context,
+) : TextosAutenticacao {
+    override fun get(resId: Int): String = context.getString(resId)
+
+    override fun get(resId: Int, vararg args: Any): String = context.getString(resId, *args)
+}

@@ -1,5 +1,6 @@
 package com.obiterjus.data.sincronizacao
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -9,8 +10,13 @@ import com.obiterjus.data.processo.local.LocalProcessoRepository
 import com.obiterjus.data.processo.local.ProcessoEntity
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
+import com.obiterjus.data.settings.PerfilPreferencesRepository
+import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.model.SincronizacaoNuvemResumo
+import com.obiterjus.domain.repository.RepositorioCadastroOab
 import com.obiterjus.domain.repository.RepositorioSincronizacao
+import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 
@@ -18,6 +24,9 @@ class FirestoreSincronizacaoRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val localProcessoRepository: LocalProcessoRepository,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
+    private val repositorioCadastroOab: RepositorioCadastroOab,
+    private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val syncPreferencesRepository: SyncPreferencesRepository,
 ) : RepositorioSincronizacao {
 
     override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo {
@@ -101,6 +110,64 @@ class FirestoreSincronizacaoRepository(
         )
     }
 
+    override suspend fun enviarPerfil(userId: String): Result<Unit> = runCatching {
+        val cadastro = repositorioCadastroOab.cadastro.first()
+        val preferencias = perfilPreferencesRepository.preferencias.first()
+        val frequenciaHoras = syncPreferencesRepository.syncFrequencyHours.first()
+
+        val dto = PerfilFirestoreDto(
+            nomeAdvogado = cadastro.nomeAdvogado,
+            numeroOab = cadastro.numero,
+            ufOab = cadastro.uf,
+            tipoInscricao = cadastro.tipoInscricao,
+            nomeEscritorio = cadastro.nomeEscritorio,
+            areasAtuacao = cadastro.areasAtuacao,
+            intervaloBuscaDias = preferencias.intervaloBuscaDias,
+            sincronizacaoAutomatica = preferencias.sincronizacaoAutomatica,
+            frequenciaSyncHoras = frequenciaHoras,
+            notificarPublicacoes = preferencias.notificarPublicacoes,
+            notificarPrazosUrgentes = preferencias.notificarPrazosUrgentes,
+            notificarMovimentacoes = preferencias.notificarMovimentacoes,
+            tema = preferencias.tema.name,
+            atualizadoEm = Timestamp.now(),
+        )
+
+        firestore.usuarioRef(userId)
+            .collection(COLECAO_PERFIL)
+            .document(DOC_PERFIL)
+            .set(dto, SetOptions.merge())
+            .await()
+    }
+
+    override suspend fun restaurarPerfil(userId: String): Result<Unit> = runCatching {
+        val snapshot = firestore.usuarioRef(userId)
+            .collection(COLECAO_PERFIL)
+            .document(DOC_PERFIL)
+            .get()
+            .await()
+
+        val dto = snapshot.toObject(PerfilFirestoreDto::class.java) ?: return@runCatching
+
+        repositorioCadastroOab.salvarCadastro(
+            numero = dto.numeroOab,
+            uf = dto.ufOab,
+            nomeAdvogado = dto.nomeAdvogado,
+            tipoInscricao = dto.tipoInscricao,
+            nomeEscritorio = dto.nomeEscritorio,
+            areasAtuacao = dto.areasAtuacao,
+        )
+        perfilPreferencesRepository.saveIntervaloBuscaDias(dto.intervaloBuscaDias)
+        perfilPreferencesRepository.saveSincronizacaoAutomatica(dto.sincronizacaoAutomatica)
+        perfilPreferencesRepository.saveNotificarPublicacoes(dto.notificarPublicacoes)
+        perfilPreferencesRepository.saveNotificarPrazosUrgentes(dto.notificarPrazosUrgentes)
+        perfilPreferencesRepository.saveNotificarMovimentacoes(dto.notificarMovimentacoes)
+        perfilPreferencesRepository.saveTema(
+            runCatching { com.obiterjus.ui.theme.TipoTema.valueOf(dto.tema) }
+                .getOrDefault(com.obiterjus.ui.theme.TipoTema.SISTEMA)
+        )
+        syncPreferencesRepository.saveSyncFrequencyHours(dto.frequenciaSyncHoras)
+    }
+
     private suspend fun mergeProcessos(processosNuvem: List<ProcessoEntity>): Int {
         val processosLocais = localProcessoRepository
             .getProcessos(processosNuvem.map(ProcessoEntity::numeroProcesso))
@@ -166,5 +233,7 @@ class FirestoreSincronizacaoRepository(
         const val COLECAO_PUBLICACOES = "publicacoes"
         const val COLECAO_MOVIMENTOS = "movimentos"
         const val COLECAO_PARTICIPANTES = "participantes"
+        const val COLECAO_PERFIL = "perfil"
+        const val DOC_PERFIL = "profile"
     }
 }

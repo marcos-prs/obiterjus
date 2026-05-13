@@ -138,6 +138,17 @@ class TesteModeloProcessos {
         override fun observarParticipantes(numeroProcesso: String): Flow<List<ParticipanteProcesso>> =
             participantes.map { it[numeroProcesso].orEmpty() }
 
+        override suspend fun obterProcesso(numeroProcesso: String): ProcessoMonitorado? =
+            processos.value.firstOrNull { it.numeroProcesso == numeroProcesso }
+
+        override suspend fun salvarProcesso(processo: ProcessoMonitorado) {
+            processos.value = processos.value.filterNot { it.numeroProcesso == processo.numeroProcesso } + processo
+        }
+
+        override suspend fun excluirProcesso(numeroProcesso: String) {
+            processos.value = processos.value.filterNot { it.numeroProcesso == numeroProcesso }
+        }
+
         private companion object {
             fun processo(
                 numeroProcesso: String,
@@ -190,5 +201,8 @@ class TesteModeloProcessos {
             publicacoes.map { itens ->
                 itens.filter { it.numeroProcesso == numeroProcesso }
             }
+
+        override fun observarPublicacao(id: Long): Flow<Publicacao?> =
+            publicacoes.map { itens -> itens.firstOrNull { it.id == id } }
     }
 }

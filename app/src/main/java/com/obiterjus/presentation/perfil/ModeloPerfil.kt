@@ -1,25 +1,28 @@
 package com.obiterjus.presentation.perfil
-import com.obiterjus.ui.theme.TipoTema
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
+import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
+import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.SincronizacaoStatus
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.RepositorioCadastroOab
 import com.obiterjus.domain.repository.RepositorioSincronizacao
+import com.obiterjus.ui.theme.TipoTema
+import java.util.concurrent.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
@@ -30,6 +33,7 @@ data class EstadoPerfil(
     val email: String? = null,
     val oab: String = "",
     val uf: String = "",
+    val tipoInscricao: String = "",
     val intervaloBuscaDias: Int = 0,
     val sincronizacaoAutomatica: Boolean = true,
     val frequenciaSincronizacao: String = "",
@@ -48,14 +52,18 @@ class ModeloPerfil(
     private val context: Context,
     private val authRepository: AuthRepository,
     repositorioCadastroOab: RepositorioCadastroOab,
-    private val repositorioSincronizacao: RepositorioSincronizacao,
+    private val djenSyncExecutor: DjenSyncExecutor,
     syncPreferencesRepository: SyncPreferencesRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val repositorioSincronizacao: RepositorioSincronizacao,
 ) : ViewModel() {
     private val _sincronizando = MutableStateFlow(false)
     private val _mensagemSucesso = MutableStateFlow<String?>(null)
     private val _mensagemErro = MutableStateFlow<String?>(null)
     private val _statusNuvemOverride = MutableStateFlow<String?>(null)
+
+    private val _mostrarMenuConta = MutableStateFlow(false)
+    val mostrarMenuConta: StateFlow<Boolean> = _mostrarMenuConta.asStateFlow()
 
     val mensagemSucesso: StateFlow<String?> = _mensagemSucesso.asStateFlow()
     val mensagemErro: StateFlow<String?> = _mensagemErro.asStateFlow()
@@ -85,6 +93,7 @@ class ModeloPerfil(
             autenticado = autenticado,
             oab = cadastro.numero,
             uf = cadastro.uf,
+            tipoInscricao = cadastro.tipoInscricao,
             intervaloBuscaDias = preferencias.intervaloBuscaDias,
             sincronizacaoAutomatica = preferencias.sincronizacaoAutomatica,
             frequenciaSincronizacao = rotuloFrequencia(frequencia),
@@ -94,8 +103,8 @@ class ModeloPerfil(
             fontePrincipal = context.getString(R.string.perfil_fonte_djen),
             enriquecimento = context.getString(R.string.perfil_enriquecimento_datajud),
             statusSincronizacaoNuvem = statusOverride ?: when {
-                status.ultimoSucessoEm != null -> context.getString(R.string.perfil_status_nuvem_ok)
                 status.ultimaFalha != null -> status.ultimaFalha
+                status.ultimoSucessoEm != null -> context.getString(R.string.perfil_status_nuvem_ok)
                 autenticado -> context.getString(R.string.perfil_status_nuvem_ok)
                 else -> context.getString(R.string.perfil_status_nuvem_anonimo)
             },
@@ -111,30 +120,35 @@ class ModeloPerfil(
     fun aoAlternarSincronizacaoAutomatica(ativo: Boolean) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveSincronizacaoAutomatica(ativo)
+            syncPerfilToCloud()
         }
     }
 
     fun aoAlternarNotificarPublicacoes(ativo: Boolean) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveNotificarPublicacoes(ativo)
+            syncPerfilToCloud()
         }
     }
 
     fun aoAlternarNotificarPrazos(ativo: Boolean) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveNotificarPrazosUrgentes(ativo)
+            syncPerfilToCloud()
         }
     }
 
     fun aoAlternarNotificarMovimentacoes(ativo: Boolean) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveNotificarMovimentacoes(ativo)
+            syncPerfilToCloud()
         }
     }
 
     fun aoAlterarTema(tema: TipoTema) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveTema(tema)
+            syncPerfilToCloud()
         }
     }
 
@@ -146,36 +160,22 @@ class ModeloPerfil(
             _mensagemErro.value = null
             _mensagemSucesso.value = null
 
-            val usuario = authRepository.currentUser.firstOrNull()
-                ?: authRepository.signInAnonymously().getOrNull()
-
-            if (usuario == null) {
-                _sincronizando.value = false
-                _mensagemErro.value = context.getString(R.string.perfil_sync_falha)
-                return@launch
-            }
-
-            val resultado = runCatching {
-                withContext(Dispatchers.IO) {
-                    repositorioSincronizacao.enviarTudo(usuario.uid)
+            try {
+                val resumo = withContext(Dispatchers.IO) {
+                    djenSyncExecutor.executar(MonitorarDjenModo.MANUAL)
                 }
+                _mensagemSucesso.value = context.getString(
+                    R.string.perfil_sync_sucesso,
+                    resumo.totalProcessosSincronizados,
+                    resumo.djen.novas,
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _mensagemErro.value = context.getString(R.string.perfil_sync_falha)
+            } finally {
+                _sincronizando.value = false
             }
-
-            resultado.fold(
-                onSuccess = { resumo ->
-                    _statusNuvemOverride.value = context.getString(R.string.perfil_status_nuvem_ok)
-                    _mensagemSucesso.value = context.getString(
-                        R.string.perfil_sync_sucesso,
-                        resumo.processos,
-                        resumo.publicacoes,
-                    )
-                },
-                onFailure = {
-                    _mensagemErro.value = context.getString(R.string.perfil_sync_falha)
-                },
-            )
-
-            _sincronizando.value = false
         }
     }
 
@@ -202,12 +202,26 @@ class ModeloPerfil(
         _mensagemErro.value = null
     }
 
+    fun aoAbrirMenu() {
+        _mostrarMenuConta.value = true
+    }
+
+    fun aoFecharMenu() {
+        _mostrarMenuConta.value = false
+    }
+
     private fun nomeExibicao(usuario: AuthUser?): String? =
         usuario?.email?.substringBefore("@")?.replaceFirstChar(Char::uppercaseChar)
+
+    private suspend fun syncPerfilToCloud() {
+        val user = authRepository.currentUser.first() ?: return
+        if (user.isAnonymous) return
+        repositorioSincronizacao.enviarPerfil(user.uid)
+    }
 
     private fun rotuloFrequencia(horas: Int): String =
         when (horas) {
             24 -> context.getString(R.string.perfil_frequencia_diaria)
-            else -> context.getString(R.string.perfil_frequencia_horas, horas)
+            else -> context.getString(R.string.perfil_frequencia_a_cada_horas, horas)
         }
 }

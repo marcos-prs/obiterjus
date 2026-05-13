@@ -57,6 +57,14 @@ class FirebaseAuthRepository(
         result.user?.toAuthUser() ?: throw IllegalStateException("Usuário nulo após cadastro com e-mail")
     }
 
+    override suspend fun updatePassword(currentPassword: String, newPassword: String): Result<Unit> = executarComResultado {
+        val user = auth.currentUser ?: throw IllegalStateException("Nenhum usuário autenticado")
+        val email = user.email ?: throw IllegalStateException("Usuário sem e-mail")
+        val credential = EmailAuthProvider.getCredential(email, currentPassword)
+        user.reauthenticate(credential).await()
+        user.updatePassword(newPassword).await()
+    }
+
     override suspend fun signOut() {
         auth.signOut()
     }

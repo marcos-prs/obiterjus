@@ -20,6 +20,7 @@ data class ObiterExtendedColors(
     val successPale: Color,
     val warning: Color,
     val warningPale: Color,
+    val despacho: Color,
     val surfacePergaminho: Color,
     val primaryDark: Color,
     val primaryPale: Color,
@@ -29,6 +30,9 @@ data class ObiterExtendedColors(
     val mulledWine: Color,
     val tribunalBadgeBackground: Color,
     val tribunalBadgeText: Color,
+    val topAppBarBackground: Color,
+    val onTopAppBar: Color,
+    val topAppBarAccent: Color,
 )
 
 fun obiterLightColors(): ObiterExtendedColors = ObiterExtendedColors(
@@ -39,6 +43,7 @@ fun obiterLightColors(): ObiterExtendedColors = ObiterExtendedColors(
     success = Tiber,
     successPale = TiberPale,
     warning = HuskDark,
+    despacho = OliveGreen,
     warningPale = WarningPale,
     surfacePergaminho = Pergaminho,
     primaryDark = SanJuanDark,
@@ -49,6 +54,9 @@ fun obiterLightColors(): ObiterExtendedColors = ObiterExtendedColors(
     mulledWine = MulledWine,
     tribunalBadgeBackground = SanJuan,
     tribunalBadgeText = Color.White,
+    topAppBarBackground = SanJuan,
+    onTopAppBar = Color.White,
+    topAppBarAccent = Husk,
 )
 
 fun obiterDarkColors(): ObiterExtendedColors = ObiterExtendedColors(
@@ -60,6 +68,7 @@ fun obiterDarkColors(): ObiterExtendedColors = ObiterExtendedColors(
     successPale = DarkSuccessPale,
     warning = HuskLight,
     warningPale = DarkWarningPale,
+    despacho = OliveGreen,
     surfacePergaminho = DarkPergaminho,
     primaryDark = SanJuanLighter,
     primaryPale = DarkPrimaryContainer,
@@ -69,6 +78,9 @@ fun obiterDarkColors(): ObiterExtendedColors = ObiterExtendedColors(
     mulledWine = MulledWineLight,
     tribunalBadgeBackground = DarkPrimaryContainer,
     tribunalBadgeText = DarkTribunalBadgeText,
+    topAppBarBackground = Tiber,
+    onTopAppBar = Color.White,
+    topAppBarAccent = Husk,
 )
 
 val LocalObiterColors = staticCompositionLocalOf { obiterLightColors() }

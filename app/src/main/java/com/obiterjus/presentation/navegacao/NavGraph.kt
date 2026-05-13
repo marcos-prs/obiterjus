@@ -13,10 +13,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.obiterjus.presentation.autenticacao.TelaAutenticacao
 import com.obiterjus.presentation.autenticacao.ModoAutenticacao
+import com.obiterjus.presentation.adicionarprocesso.TelaAdicionarProcesso
 import com.obiterjus.presentation.auditoria.TelaAuditoria
 import com.obiterjus.presentation.detalheprocesso.TelaDetalheProcesso
+import com.obiterjus.presentation.detalhepublicacao.TelaDetalhePublicacao
+import com.obiterjus.presentation.editarprocesso.TelaEditarProcesso
 import com.obiterjus.presentation.inicio.TelaInicio
 import com.obiterjus.presentation.perfil.TelaPerfil
+import com.obiterjus.presentation.perfil.TelaEditarPerfil
 import com.obiterjus.presentation.prazos.TelaPrazos
 import com.obiterjus.presentation.principal.ObiterViewModels
 import com.obiterjus.presentation.processos.ConteudoProcessos
@@ -65,24 +69,42 @@ fun ObiterNavGraph(
             TelaInicio(
                 viewModel = viewModels.inicio,
                 aoNavegarParaPrazos = {
-                    navController.navigate(ObiterRota.Prazos) {
+                    navegarParaAbaPrincipal(navController, ObiterRota.Prazos)
+                },
+                aoVerTodasPublicacoes = {
+                    navegarParaAbaPrincipal(navController, ObiterRota.Publicacoes)
+                },
+                aoAbrirPublicacao = { publicacaoId ->
+                    navController.navigate(ObiterRota.DetalhePublicacao(publicacaoId)) {
                         launchSingleTop = true
                     }
                 },
-                aoVerTodasPublicacoes = {
-                    navController.navigate(ObiterRota.Publicacoes) {
+                aoNavegarParaProcessos = {
+                    navegarParaAbaPrincipal(navController, ObiterRota.Processos)
+                },
+            )
+        }
+
+        composable<ObiterRota.Publicacoes> {
+            ConteudoPublicacoes(
+                viewModel = viewModels.publicacoes,
+                aoAbrirPublicacao = { publicacaoId ->
+                    navController.navigate(ObiterRota.DetalhePublicacao(publicacaoId)) {
                         launchSingleTop = true
                     }
                 },
             )
         }
 
-        composable<ObiterRota.Publicacoes> {
-            ConteudoPublicacoes(viewModel = viewModels.publicacoes)
-        }
-
         composable<ObiterRota.Prazos> {
-            TelaPrazos(viewModel = viewModels.prazos)
+            TelaPrazos(
+                viewModel = viewModels.prazos,
+                aoAbrirPublicacao = { publicacaoId ->
+                    navController.navigate(ObiterRota.DetalhePublicacao(publicacaoId)) {
+                        launchSingleTop = true
+                    }
+                },
+            )
         }
 
         composable<ObiterRota.Processos> {
@@ -115,9 +137,7 @@ fun ObiterNavGraph(
                     }
                 },
                 aoEditarPerfil = {
-                    // Por enquanto navega para Autenticacao/Cadastro para permitir ajuste de dados
-                    viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
-                    navController.navigate(ObiterRota.Autenticacao) {
+                    navController.navigate(ObiterRota.EditarPerfil) {
                         launchSingleTop = true
                     }
                 },
@@ -140,6 +160,13 @@ fun ObiterNavGraph(
             )
         }
 
+        composable<ObiterRota.EditarPerfil> {
+            TelaEditarPerfil(
+                viewModel = org.koin.androidx.compose.koinViewModel(),
+                aoVoltar = { navController.popBackStack() }
+            )
+        }
+
         composable<ObiterRota.Auditoria> {
             TelaAuditoria(viewModel = viewModels.auditoria)
         }
@@ -150,7 +177,59 @@ fun ObiterNavGraph(
                 viewModel = viewModels.detalheProcesso,
                 numeroProcesso = rota.numeroProcesso,
                 onVoltar = { navController.popBackStack() },
+                aoEditarProcesso = {
+                    navController.navigate(ObiterRota.EditarProcesso(rota.numeroProcesso)) {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
+
+        composable<ObiterRota.DetalhePublicacao> { backStackEntry ->
+            val rota = backStackEntry.toRoute<ObiterRota.DetalhePublicacao>()
+            TelaDetalhePublicacao(
+                viewModel = viewModels.detalhePublicacao,
+                publicacaoId = rota.publicacaoId,
+                onVoltar = { navController.popBackStack() }
+            )
+        }
+
+        composable<ObiterRota.AdicionarProcesso> {
+            TelaAdicionarProcesso(
+                viewModel = viewModels.adicionarProcesso,
+                onVoltar = { navController.popBackStack() },
+                onProcessoAdicionado = { numero ->
+                    navController.navigate(ObiterRota.DetalheProcesso(numero)) {
+                        popUpTo(ObiterRota.AdicionarProcesso) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
+        composable<ObiterRota.EditarProcesso> { backStackEntry ->
+            val rota = backStackEntry.toRoute<ObiterRota.EditarProcesso>()
+            TelaEditarProcesso(
+                viewModel = viewModels.editarProcesso,
+                numeroProcesso = rota.numeroProcesso,
+                onVoltar = { navController.popBackStack() },
+                onExcluido = {
+                    navController.popBackStack(ObiterRota.Processos, inclusive = false)
+                },
+            )
+        }
+    }
+}
+
+private fun navegarParaAbaPrincipal(
+    navController: NavHostController,
+    rota: ObiterRota,
+) {
+    navController.navigate(rota) {
+        popUpTo(navController.graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
     }
 }

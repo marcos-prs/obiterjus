@@ -11,9 +11,9 @@ import kotlinx.coroutines.tasks.await
 
 class FirebaseRemoteAppConfigRepository(
     private val remoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance(),
-    private val fallbackDataJudApiKey: String = "",
+    private val fallbackDataJudApiKey: String = AppConfig.DEFAULT_DATAJUD_API_KEY,
 ) : AppConfigRepository {
-    private val fallbackConfig = AppConfig(dataJudApiKey = fallbackDataJudApiKey)
+    private val fallbackConfig = AppConfig(dataJudApiKey = fallbackDataJudApiKey.ifBlank { AppConfig.DEFAULT_DATAJUD_API_KEY })
     private val _config = MutableStateFlow(fallbackConfig)
     override val config: Flow<AppConfig> = _config
 
@@ -53,6 +53,7 @@ class FirebaseRemoteAppConfigRepository(
     private fun AppConfig.toRemoteDefaults(): Map<String, Any> =
         mapOf(
             KEY_DJEN_BASE_URL to djenBaseUrl,
+            KEY_DJEN_TOKEN to djenToken,
             KEY_DATAJUD_BASE_URL to dataJudBaseUrl,
             KEY_DATAJUD_API_KEY to dataJudApiKey,
             KEY_DJEN_DEFAULT_ITEMS_PER_PAGE to djenDefaultItemsPerPage,
@@ -69,6 +70,7 @@ class FirebaseRemoteAppConfigRepository(
         val remoteApiKey = getString(KEY_DATAJUD_API_KEY).trim()
         return AppConfig(
             djenBaseUrl = getString(KEY_DJEN_BASE_URL).trim().ifBlank { fallback.djenBaseUrl },
+            djenToken = getString(KEY_DJEN_TOKEN).trim().ifBlank { fallback.djenToken },
             dataJudBaseUrl = getString(KEY_DATAJUD_BASE_URL).trim().ifBlank { fallback.dataJudBaseUrl },
             dataJudApiKey = remoteApiKey.ifBlank { fallback.dataJudApiKey },
             djenDefaultItemsPerPage = getPositiveLongOrFallback(
@@ -107,6 +109,7 @@ class FirebaseRemoteAppConfigRepository(
 
     private companion object {
         const val KEY_DJEN_BASE_URL = "djen_base_url"
+        const val KEY_DJEN_TOKEN = "djen_token"
         const val KEY_DATAJUD_BASE_URL = "datajud_base_url"
         const val KEY_DATAJUD_API_KEY = "datajud_api_key"
         const val KEY_DJEN_DEFAULT_ITEMS_PER_PAGE = "djen_default_items_per_page"

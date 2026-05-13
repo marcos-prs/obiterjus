@@ -1,5 +1,6 @@
 package com.obiterjus.data.djen.remote
 
+import android.util.Log
 import com.obiterjus.data.djen.remote.dto.DjenComunicacaoDto
 import java.time.LocalDate
 
@@ -9,10 +10,11 @@ class DjenRemoteDataSource(
     private val maxPaginas: Int = DEFAULT_MAX_PAGES,
 ) {
     suspend fun buscarComunicacoes(
-        numeroOab: String,
-        ufOab: String,
         dataInicio: LocalDate,
         dataFim: LocalDate,
+        numeroOab: String? = null,
+        ufOab: String? = null,
+        nomeAdvogado: String? = null,
     ): DjenFetchResult {
         require(itensPorPagina > 0) { "itensPorPagina deve ser maior que zero." }
         require(maxPaginas > 0) { "maxPaginas deve ser maior que zero." }
@@ -23,9 +25,11 @@ class DjenRemoteDataSource(
         var previousPageIds = emptyList<Long>()
 
         while (pagina <= maxPaginas) {
+            Log.d(TAG, "buscarComunicacoes: OAB=$numeroOab/$ufOab | NOME=$nomeAdvogado | $dataInicio .. $dataFim | página=$pagina/$maxPaginas")
             val response = api.buscarComunicacoes(
-                numeroOab = numeroOab.trim(),
-                ufOab = ufOab.trim().uppercase(),
+                numeroOab = numeroOab?.trim(),
+                ufOab = ufOab?.trim()?.uppercase(),
+                nomeAdvogado = nomeAdvogado?.trim(),
                 dataDisponibilizacaoInicio = dataInicio.toString(),
                 dataDisponibilizacaoFim = dataFim.toString(),
                 pagina = pagina,
@@ -36,8 +40,10 @@ class DjenRemoteDataSource(
             if (totalRemoto == null && response.count != null && response.count >= 0) {
                 totalRemoto = response.count
             }
+            Log.d(TAG, "  → página=$pagina | itens retornados=${items.size} | totalRemoto=$totalRemoto")
 
             if (items.isEmpty()) {
+                Log.d(TAG, "  → STOP: EMPTY_PAGE na página=$pagina | total acumulado=${allItems.size}")
                 return allItems.toFetchResult(
                     totalRemoto = totalRemoto,
                     paginasConsultadas = pagina,
@@ -46,6 +52,7 @@ class DjenRemoteDataSource(
             }
 
             if (pageIds == previousPageIds) {
+                Log.w(TAG, "  → STOP: REPEATED_PAGE na página=$pagina | IDs repetidos: $pageIds")
                 return allItems.toFetchResult(
                     totalRemoto = totalRemoto,
                     paginasConsultadas = pagina,
@@ -56,6 +63,7 @@ class DjenRemoteDataSource(
             allItems += items
 
             if (items.size < itensPorPagina) {
+                Log.d(TAG, "  → STOP: PARTIAL_PAGE na página=$pagina | itens=${items.size} < $itensPorPagina | total acumulado=${allItems.size}")
                 return allItems.toFetchResult(
                     totalRemoto = totalRemoto,
                     paginasConsultadas = pagina,
@@ -65,6 +73,7 @@ class DjenRemoteDataSource(
 
             val total = totalRemoto
             if (total != null && allItems.size >= total) {
+                Log.d(TAG, "  → STOP: COUNT_CONSUMED | acumulado=${allItems.size} >= totalRemoto=$total")
                 return allItems.toFetchResult(
                     totalRemoto = totalRemoto,
                     paginasConsultadas = pagina,
@@ -76,6 +85,7 @@ class DjenRemoteDataSource(
             pagina += 1
         }
 
+        Log.d(TAG, "  → STOP: PAGE_LIMIT atingido ($maxPaginas páginas) | total acumulado=${allItems.size}")
         return allItems.toFetchResult(
             totalRemoto = totalRemoto,
             paginasConsultadas = maxPaginas,
@@ -98,6 +108,7 @@ class DjenRemoteDataSource(
     companion object {
         const val DEFAULT_ITEMS_PER_PAGE = 100
         const val DEFAULT_MAX_PAGES = 100
+        private const val TAG = "DjenRemoteDataSource"
     }
 }
 

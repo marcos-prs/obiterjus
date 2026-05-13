@@ -1,5 +1,6 @@
 package com.obiterjus.data.datajud
 
+import android.util.Log
 import com.obiterjus.core.parser.NumeroProcessoNormalizer
 import com.obiterjus.data.datajud.mapper.toMovimentoEntities
 import com.obiterjus.data.datajud.mapper.toParticipanteEntities
@@ -39,10 +40,12 @@ class DataJudRepositoryImpl(
         for (request in requests) {
             val syncedAt = clock.instant()
             try {
+                Log.d(TAG, "DataJud: buscando processo=${request.numeroProcesso} tribunal=${request.tribunal}")
                 val remoteResult = remoteDataSource.buscarProcesso(
                     numeroProcesso = request.numeroProcesso,
                     tribunal = request.tribunal,
                 )
+                Log.d(TAG, "  → indexName=${remoteResult.indexName} | processo=${if (remoteResult.processo != null) "FOUND" else "NOT_FOUND"}")
                 val processoDto = remoteResult.processo
                 if (processoDto == null) {
                     localProcessoRepository.upsertProcesso(
@@ -69,6 +72,7 @@ class DataJudRepositoryImpl(
                     )
                     val movimentos = processoDto.toMovimentoEntities(processo.numeroProcesso)
                     val participantes = processoDto.toParticipanteEntities(processo.numeroProcesso)
+                    Log.d(TAG, "  → FOUND: classe=${processo.classeNome} | movimentos=${movimentos.size} | participantes=${participantes.size} | sigilo=${processo.nivelSigilo}")
 
                     localProcessoRepository.upsertProcesso(processo)
                     localProcessoRepository.replaceMovimentos(processo.numeroProcesso, movimentos)
@@ -84,6 +88,7 @@ class DataJudRepositoryImpl(
                     )
                 }
             } catch (error: UnknownDataJudTribunalException) {
+                Log.e(TAG, "  → FAILED (tribunal desconhecido): ${error.message}")
                 localProcessoRepository.upsertProcesso(
                     processoStatusEntity(
                         numeroProcesso = request.numeroProcesso,
@@ -101,7 +106,7 @@ class DataJudRepositoryImpl(
                 )
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-
+                Log.e(TAG, "  → FAILED (excecao): ${error::class.java.simpleName}: ${error.message}")
                 localProcessoRepository.upsertProcesso(
                     processoStatusEntity(
                         numeroProcesso = request.numeroProcesso,
@@ -152,4 +157,7 @@ class DataJudRepositoryImpl(
             capturadoEm = syncedAt,
             atualizadoEm = syncedAt,
         )
+    companion object {
+        private const val TAG = "DataJudRepository"
+    }
 }

@@ -2,6 +2,7 @@ package com.obiterjus.presentation.publicacoes
 
 import android.net.Uri
 import com.obiterjus.domain.model.Publicacao
+import com.obiterjus.domain.model.PublicacaoParticipante
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CertidaoDjenRepository
 import com.obiterjus.domain.repository.RepositorioPublicacoes
@@ -116,6 +117,40 @@ class TesteModeloPublicacoes {
     }
 
     @Test
+    fun filtersByParticipantNameDocumentAndCombinedText() = runTest {
+        val repositorio = FakeRepositorioPublicacoes(
+            publicacoes = listOf(
+                publicacao(
+                    id = 1L,
+                    tribunal = "TJMG",
+                    isSigiloso = false,
+                    participantes = listOf(
+                        participante("Advogado", "João Silva", "OAB/SP 12345"),
+                    ),
+                ),
+                publicacao(
+                    id = 2L,
+                    tribunal = "TJMG",
+                    isSigiloso = false,
+                ),
+            ),
+        )
+        val viewModel = PublicacoesViewModel(
+            observarPublicacoes = ObservarPublicacoes(repositorio),
+            obterCertidaoDjen = ObterCertidaoDjen(FakeCertidaoDjenRepository()),
+        )
+        advanceUntilIdle()
+
+        viewModel.aoAlterarFiltroTexto("João Silva OAB/SP 12345")
+        advanceUntilIdle()
+        assertEquals(listOf(1L), viewModel.estado.value.publicacoes.map { it.id })
+
+        viewModel.aoAlterarFiltroTexto("OABSP12345")
+        advanceUntilIdle()
+        assertEquals(listOf(1L), viewModel.estado.value.publicacoes.map { it.id })
+    }
+
+    @Test
     fun selectsAndClosesPublicationDetail() = runTest {
         val repositorio = FakeRepositorioPublicacoes(
             publicacoes = listOf(
@@ -166,12 +201,13 @@ class TesteModeloPublicacoes {
         dataDisponibilizacao: LocalDate = LocalDate.of(2026, 4, 29),
         hash: String? = "hash-$id",
         prazo: PublicacaoPrazo? = null,
+        participantes: List<PublicacaoParticipante> = emptyList(),
     ): Publicacao =
         Publicacao(
             id = id,
             hash = hash,
             numeroProcesso = "50110879520258130245",
-            participantes = emptyList(),
+            participantes = participantes,
             prazo = prazo,
             dataDisponibilizacao = dataDisponibilizacao,
             tribunal = tribunal,
@@ -182,6 +218,17 @@ class TesteModeloPublicacoes {
             fonte = "DJEN",
             capturadoEm = Instant.parse("2026-04-29T12:00:00Z"),
             atualizadoEm = Instant.parse("2026-04-29T12:00:00Z"),
+        )
+
+    private fun participante(
+        tipo: String,
+        nome: String,
+        documento: String? = null,
+    ): PublicacaoParticipante =
+        PublicacaoParticipante(
+            tipo = tipo,
+            nome = nome,
+            documento = documento,
         )
 
     private class FakeCertidaoDjenRepository : CertidaoDjenRepository {
@@ -200,5 +247,8 @@ class TesteModeloPublicacoes {
             fluxo.map { publicacoes ->
                 publicacoes.filter { it.numeroProcesso == numeroProcesso }
             }
+
+        override fun observarPublicacao(id: Long): Flow<Publicacao?> =
+            fluxo.map { publicacoes -> publicacoes.firstOrNull { it.id == id } }
     }
 }

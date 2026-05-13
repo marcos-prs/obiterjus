@@ -16,6 +16,7 @@ data class SincronizarProcessosDataJudResumo(
     val naoEncontrados: Int,
     val falhas: Int,
     val movimentosSalvos: Int,
+    val salvosPendentes: Int = 0,
     val resultados: List<ProcessoDataJudSyncResultado>,
 )
 
@@ -31,4 +32,5 @@ enum class ProcessoDataJudSyncStatus {
     FOUND,
     NOT_FOUND,
     FAILED,
+    PENDING,
 }

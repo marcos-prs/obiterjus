@@ -25,15 +25,22 @@ object DjenRetrofitFactory {
             .build()
 
         return Retrofit.Builder()
-            .baseUrl(baseUrl.withTrailingSlash())
+            .baseUrl(baseUrl.withApiV1BasePath())
             .client(client)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(DjenApi::class.java)
     }
 
-    private fun String.withTrailingSlash(): String =
-        if (endsWith("/")) this else "$this/"
+    private fun String.withApiV1BasePath(): String {
+        val trimmed = trim().trimEnd('/')
+        val apiBase = if (trimmed.endsWith("/api/v1", ignoreCase = true)) {
+            trimmed
+        } else {
+            "$trimmed/api/v1"
+        }
+        return "$apiBase/"
+    }
 
     private const val DEFAULT_TIMEOUT_SECONDS = 30L
 }

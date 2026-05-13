@@ -9,6 +9,7 @@ data class TimelineProcessoItem(
     val titulo: String,
     val dataHora: Instant?,
     val descricao: String?,
+    val corPonto: CorPontoTimeline,
     val isSigiloso: Boolean = false,
     val isImportante: Boolean = false,
 )

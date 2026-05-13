@@ -1,8 +1,13 @@
-package com.obiterjus.presentation.agenda
+package com.obiterjus.presentation.prazos
 
+import com.obiterjus.data.agenda.local.PrazoSugeridoDao
+import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
+import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
+import com.obiterjus.domain.repository.CalendarSyncRepository
 import com.obiterjus.domain.repository.RepositorioPublicacoes
+import com.obiterjus.domain.usecase.ConfirmarPrazoUC
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
 import java.time.Clock
 import java.time.Instant
@@ -39,6 +44,7 @@ class AgendaPrazosViewModelTest {
 
     @Test
     fun classifiesDeadlineAgendaItems() = runTest {
+        val prazoSugeridoDao = FakePrazoSugeridoDao()
         val repositorio = FakeRepositorioPublicacoes(
             publicacoes = listOf(
                 publicacao(id = 1L, dataLimite = LocalDate.of(2026, 4, 29)),
@@ -47,23 +53,28 @@ class AgendaPrazosViewModelTest {
                 publicacao(id = 4L, prazo = null),
             ),
         )
-        val viewModel = AgendaPrazosViewModel(
-            observarAgendaPrazos = ObservarAgendaPrazos(repositorio),
+        val viewModel = ModeloPrazos(
+            observarAgendaPrazos = ObservarAgendaPrazos(repositorio, prazoSugeridoDao),
+            confirmarPrazoUC = ConfirmarPrazoUC(
+                prazoSugeridoDao = prazoSugeridoDao,
+                calendarSyncRepository = FakeCalendarSyncRepository(),
+            ),
             clock = Clock.fixed(
                 Instant.parse("2026-04-30T12:00:00Z"),
                 ZoneOffset.UTC,
             ),
+            textos = TextosPrazosFake,
         )
 
         advanceUntilIdle()
 
-        assertEquals(3, viewModel.estado.value.total)
-        assertEquals(1, viewModel.estado.value.vencidos)
-        assertEquals(1, viewModel.estado.value.proximos)
-        assertEquals(1, viewModel.estado.value.semData)
+        assertEquals(3, viewModel.estado.value.itens.size)
+        assertEquals(1, viewModel.estado.value.expirados.size)
+        assertEquals(1, viewModel.estado.value.urgente.size)
+        assertEquals(1, viewModel.estado.value.semData.size)
         assertEquals(
             listOf(1L, 2L, 3L),
-            viewModel.estado.value.itens.map { it.item.publicacao.id },
+            viewModel.estado.value.itens.map { prazo -> prazo.item.publicacao.id },
         )
     }
 
@@ -106,5 +117,37 @@ class AgendaPrazosViewModelTest {
             fluxo.map { publicacoes ->
                 publicacoes.filter { it.numeroProcesso == numeroProcesso }
             }
+
+        override fun observarPublicacao(id: Long): Flow<Publicacao?> =
+            fluxo.map { publicacoes -> publicacoes.firstOrNull { it.id == id } }
+    }
+
+    private class FakePrazoSugeridoDao : PrazoSugeridoDao {
+        private val prazos = MutableStateFlow(emptyList<PrazoSugeridoEntity>())
+
+        override suspend fun insert(prazoSugerido: PrazoSugeridoEntity): Long = prazoSugerido.id
+        override suspend fun update(prazoSugerido: PrazoSugeridoEntity) = Unit
+        override suspend fun getByPublicacaoId(publicacaoId: Long): PrazoSugeridoEntity? = null
+        override suspend fun getPrazosParaSincronizar(provedores: List<String>): List<PrazoSugeridoEntity> = emptyList()
+        override fun observeAll(): Flow<List<PrazoSugeridoEntity>> = prazos
+    }
+
+    private class FakeCalendarSyncRepository : CalendarSyncRepository {
+        override suspend fun syncPrazo(
+            prazo: PublicacaoPrazo,
+            title: String,
+            description: String,
+            provedor: ProvedorCalendario,
+        ): Result<String> = Result.success("evento")
+
+        override suspend fun cancelPrazo(
+            idExterno: String,
+            provedor: ProvedorCalendario,
+        ): Result<Unit> = Result.success(Unit)
+    }
+
+    private object TextosPrazosFake : TextosPrazos {
+        override fun get(resId: Int): String = resId.toString()
+        override fun get(resId: Int, vararg args: Any): String = get(resId)
     }
 }

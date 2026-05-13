@@ -35,7 +35,6 @@ class PreferencesCadastroOabRepository(
                 nomeEscritorio = prefs[KEY_OAB_ESCRITORIO].orEmpty(),
                 areasAtuacao = prefs[KEY_OAB_AREAS]?.toList().orEmpty(),
                 dataInicio = prefs[KEY_OAB_DATA_INICIO]?.let(CnjDateParser::parseLocalDate),
-                dataFim = prefs[KEY_OAB_DATA_FIM]?.let(CnjDateParser::parseLocalDate),
             )
         }
 
@@ -68,8 +67,7 @@ class PreferencesCadastroOabRepository(
             areasAtuacao?.let { prefs[KEY_OAB_AREAS] = it.map(String::trim).filter(String::isNotBlank).toSet() }
             dataInicio?.let { prefs[KEY_OAB_DATA_INICIO] = it.toString() }
                 ?: prefs.remove(KEY_OAB_DATA_INICIO)
-            dataFim?.let { prefs[KEY_OAB_DATA_FIM] = it.toString() }
-                ?: prefs.remove(KEY_OAB_DATA_FIM)
+            prefs.remove(KEY_OAB_DATA_FIM)
         }
     }
 

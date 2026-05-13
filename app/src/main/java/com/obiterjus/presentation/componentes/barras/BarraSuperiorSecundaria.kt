@@ -3,6 +3,7 @@ package com.obiterjus.presentation.componentes.barras
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -12,6 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.obiterjus.R
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.ui.theme.ObiterTheme
+import com.obiterjus.ui.theme.Tiber
 
 @Composable
 fun BarraSuperiorSecundaria(
@@ -29,6 +32,10 @@ fun BarraSuperiorSecundaria(
     subtitulo: String? = null,
     onVoltar: () -> Unit,
     modifier: Modifier = Modifier,
+    acoes: @Composable RowScope.() -> Unit = {},
+    mostrarVoltar: Boolean = true,
+    corFundo: Color = ObiterTheme.colors.topAppBarBackground,
+    corConteudo: Color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
@@ -53,34 +60,36 @@ fun BarraSuperiorSecundaria(
                     Modifier
                 }
             ),
-        color = if (isDark) colorScheme.surface else colorScheme.primary,
-        shadowElevation = if (isDark) 0.dp else 2.dp,
+        color = corFundo,
+        shadowElevation = if (isSystemInDarkTheme()) 0.dp else if (corFundo == Color.Transparent) 0.dp else 2.dp,
     ) {
         Row(
             modifier = Modifier
                 .statusBarsPadding()
                 .padding(
-                    start = dimens.space1,
+                    start = if (mostrarVoltar) dimens.space1 else dimens.topAppBarPaddingH,
                     end = dimens.topAppBarPaddingH,
                     top = dimens.cardPaddingV,
                     bottom = dimens.cardPaddingV,
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onVoltar) {
-                Icon(
-                    imageVector = ObiterIcones.Voltar,
-                    contentDescription = stringResource(R.string.cd_voltar),
-                    tint = textColor.copy(alpha = 0.60f),
-                    modifier = Modifier.size(dimens.iconBackSize),
-                )
+            if (mostrarVoltar) {
+                IconButton(onClick = onVoltar) {
+                    Icon(
+                        imageVector = ObiterIcones.Voltar,
+                        contentDescription = stringResource(R.string.cd_voltar),
+                        tint = corConteudo.copy(alpha = 0.60f),
+                        modifier = Modifier.size(dimens.iconBackSize),
+                    )
+                }
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = titulo,
                     style = MaterialTheme.typography.titleLarge,
-                    color = textColor,
+                    color = corConteudo,
                 )
                 if (subtitulo != null) {
                     Text(
@@ -90,6 +99,8 @@ fun BarraSuperiorSecundaria(
                     )
                 }
             }
+
+            acoes()
         }
     }
 }

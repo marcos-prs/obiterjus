@@ -15,9 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.obiterjus.presentation.adicionarprocesso.ModeloAdicionarProcesso
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
 import com.obiterjus.presentation.autenticacao.ModeloAutenticacao
 import com.obiterjus.presentation.detalheprocesso.ModeloDetalheProcesso
+import com.obiterjus.presentation.detalhepublicacao.ModeloDetalhePublicacao
+import com.obiterjus.presentation.editarprocesso.ModeloEditarProcesso
 import com.obiterjus.presentation.inicio.ModeloInicio
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
 import com.obiterjus.presentation.perfil.ModeloPerfil
@@ -48,7 +51,10 @@ class MainActivity : ComponentActivity() {
                     val modeloAutenticacao: ModeloAutenticacao = koinViewModel()
                     val monitoramentoViewModel: MonitoramentoViewModel = koinViewModel()
                     val detalheProcessoViewModel: ModeloDetalheProcesso = koinViewModel()
+                    val detalhePublicacaoViewModel: ModeloDetalhePublicacao = koinViewModel()
                     val auditoriaViewModel: AuditoriaViewModel = koinViewModel()
+                    val adicionarProcessoViewModel: ModeloAdicionarProcesso = koinViewModel()
+                    val editarProcessoViewModel: ModeloEditarProcesso = koinViewModel()
 
                     val estadoPublicacoes by publicacoesViewModel.estado.collectAsStateWithLifecycle()
                     val exportTextoPendente by monitoramentoViewModel.exportTextoPendente.collectAsStateWithLifecycle()
@@ -63,7 +69,10 @@ class MainActivity : ComponentActivity() {
                         autenticacao = modeloAutenticacao,
                         monitoramento = monitoramentoViewModel,
                         detalheProcesso = detalheProcessoViewModel,
+                        detalhePublicacao = detalhePublicacaoViewModel,
                         auditoria = auditoriaViewModel,
+                        adicionarProcesso = adicionarProcessoViewModel,
+                        editarProcesso = editarProcessoViewModel,
                     )
 
                     val notificationPermissionLauncher = rememberLauncherForActivityResult(

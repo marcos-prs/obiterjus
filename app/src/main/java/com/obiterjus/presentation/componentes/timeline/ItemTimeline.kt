@@ -18,9 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.obiterjus.domain.model.CorPontoTimeline
 import com.obiterjus.ui.theme.ObiterTheme
-
-enum class CorPontoTimeline { DANGER, ACCENT, PRIMARY, MUTED, SUCCESS }
 
 @Composable
 fun ItemTimeline(
@@ -37,10 +36,12 @@ fun ItemTimeline(
 
     val dotColor = when (corPonto) {
         CorPontoTimeline.DANGER -> colors.danger
-        CorPontoTimeline.ACCENT -> colorScheme.secondary
+        CorPontoTimeline.WARNING -> colors.warning
         CorPontoTimeline.PRIMARY -> colorScheme.primary
-        CorPontoTimeline.MUTED -> colors.textMuted
+        CorPontoTimeline.DESPACHO -> colors.despacho
         CorPontoTimeline.SUCCESS -> colors.success
+        CorPontoTimeline.ACCENT -> colorScheme.secondary
+        CorPontoTimeline.MUTED -> colors.textMuted
     }
     val lineColor = colors.divider
     val dotRadius = dimens.timelineDotSize / 2
@@ -48,43 +49,46 @@ fun ItemTimeline(
     Row(
         modifier = modifier.height(IntrinsicSize.Min),
     ) {
-        // Coluna data
-        Text(
-            text = data,
-            style = MaterialTheme.typography.bodySmall,
-            color = colors.textMuted,
-            modifier = Modifier.width(52.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-
         // Coluna dot + linha
-        Canvas(
+        Column(
             modifier = Modifier
-                .width(dimens.timelineDotSize + 8.dp)
+                .width(24.dp)
                 .fillMaxHeight(),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
         ) {
-            val centerX = size.width / 2
-            val dotY = dotRadius.toPx() + 4.dp.toPx()
+            Canvas(
+                modifier = Modifier
+                    .width(dimens.timelineDotSize)
+                    .height(dimens.timelineDotSize + 8.dp)
+            ) {
+                val centerX = size.width / 2
+                val dotY = dotRadius.toPx() + 4.dp.toPx()
 
-            // Dot
-            drawCircle(
-                color = dotColor,
-                radius = dotRadius.toPx(),
-                center = Offset(centerX, dotY),
-            )
-
-            // Linha tracejada
-            if (mostrarLinha) {
-                drawLine(
-                    color = lineColor,
-                    start = Offset(centerX, dotY + dotRadius.toPx() + 2.dp.toPx()),
-                    end = Offset(centerX, size.height),
-                    strokeWidth = 1.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(
-                        floatArrayOf(4.dp.toPx(), 3.dp.toPx()),
-                    ),
+                // Dot
+                drawCircle(
+                    color = dotColor,
+                    radius = dotRadius.toPx(),
+                    center = Offset(centerX, dotY),
                 )
+            }
+
+            // Linha vertical
+            if (mostrarLinha) {
+                Canvas(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .weight(1f)
+                ) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(size.width / 2, 0f),
+                        end = Offset(size.width / 2, size.height),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(4.dp.toPx(), 3.dp.toPx()),
+                        ),
+                    )
+                }
             }
         }
 
@@ -95,16 +99,27 @@ fun ItemTimeline(
                 .padding(bottom = dimens.cardPaddingV),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
+            // Linha 1: data
+            Text(
+                text = data,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textMuted,
+            )
+            
+            // Linha 2: título
             Text(
                 text = titulo,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 color = colorScheme.onSurface,
             )
+            
+            // Linha 3 (opcional): descrição
             if (!detalhe.isNullOrBlank()) {
                 Text(
                     text = detalhe,
                     style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurfaceVariant,
+                    color = colors.textMuted,
                 )
             }
         }

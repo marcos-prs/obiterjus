@@ -14,8 +14,10 @@ import com.obiterjus.domain.repository.RepositorioSincronizacao
 import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.usecase.ExportarRelatorioUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,20 +34,22 @@ class MonitoramentoViewModel(
     private val repositorioCadastroOab: RepositorioCadastroOab,
     private val syncPreferencesRepository: SyncPreferencesRepository,
     private val exportarRelatorioUC: ExportarRelatorioUC,
+    private val clock: Clock = Clock.systemDefaultZone(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
-    private val today = LocalDate.now()
+
     private val _uiState = MutableStateFlow(
         MonitoramentoUiState(
-            dataInicio = FormatadorData.formatarData(today.minusDays(DEFAULT_LOOKBACK_DAYS)),
-            dataFim = FormatadorData.formatarData(today),
+            dataInicio = FormatadorData.formatarData(today().minusDays(DEFAULT_LOOKBACK_DAYS)),
+            dataFim = FormatadorData.formatarData(today()),
         ),
     )
     val uiState: StateFlow<MonitoramentoUiState> = _uiState.asStateFlow()
-    private var cadastroInicialCarregado = false
 
     private val _exportTextoPendente = MutableStateFlow<String?>(null)
-    /** Texto de relatório pronto para compartilhamento. Consuma com [aoConsumirExporte]. */
     val exportTextoPendente: StateFlow<String?> = _exportTextoPendente.asStateFlow()
+
+    private var cadastroInicialCarregado = false
 
     init {
         viewModelScope.launch {
@@ -55,10 +59,10 @@ class MonitoramentoViewModel(
                         current.copy(
                             numeroOab = cadastro.numero.ifBlank { current.numeroOab },
                             ufOab = cadastro.uf.ifBlank { current.ufOab },
-                            dataInicio = cadastro.dataInicio?.let(FormatadorData::formatarData)
+                            dataInicio = cadastro.dataInicio
+                                ?.let(FormatadorData::formatarData)
                                 ?: current.dataInicio,
-                            dataFim = cadastro.dataFim?.let(FormatadorData::formatarData)
-                                ?: current.dataFim,
+                            dataFim = FormatadorData.formatarData(today()),
                         )
                     }
                     cadastroInicialCarregado = true
@@ -71,13 +75,15 @@ class MonitoramentoViewModel(
                 _uiState.update { it.copy(syncStatus = status) }
             }
         }
-        
+
         viewModelScope.launch {
             syncPreferencesRepository.syncFrequencyHours.collect { freq ->
                 _uiState.update { it.copy(syncFrequencyHours = freq) }
             }
         }
     }
+
+    private fun today(): LocalDate = LocalDate.now(clock)
 
     fun onNumeroOabChange(value: String) {
         _uiState.update { it.copy(numeroOab = value, error = null) }
@@ -99,8 +105,9 @@ class MonitoramentoViewModel(
         persistirCadastroAtual()
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun onDataFimChange(value: String) {
-        _uiState.update { it.copy(dataFim = value, error = null) }
+        _uiState.update { it.copy(dataFim = FormatadorData.formatarData(today()), error = null) }
         persistirCadastroAtual()
     }
 
@@ -113,25 +120,18 @@ class MonitoramentoViewModel(
     fun sincronizar() {
         val state = _uiState.value
         val dataInicio = CnjDateParser.parseLocalDate(state.dataInicio)
-        val dataFim = CnjDateParser.parseLocalDate(state.dataFim)
 
-        if (dataInicio == null || dataFim == null) {
-            _uiState.update {
-                it.copy(error = MonitoramentoUiError.InvalidDate)
-            }
+        if (dataInicio == null) {
+            _uiState.update { it.copy(error = MonitoramentoUiError.InvalidDate) }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    error = null,
-                )
-            }
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
+            val dataFim = today()
             val result = runCatching {
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     monitorarCnjUseCase(
                         MonitorarDjenParams(
                             numeroOab = state.numeroOab,
@@ -144,46 +144,36 @@ class MonitoramentoViewModel(
                 }
             }
 
-            _uiState.update { current ->
-                result.fold(
-                    onSuccess = { resumo ->
-                        viewModelScope.launch {
-                            if (resumo.djen.falhas.isEmpty()) {
-                                repositorioCadastroOab.registrarSucesso(
-                                    executadoEm = Instant.now(),
-                                    novasPublicacoes = resumo.djen.novas,
-                                )
-                            } else {
-                                repositorioCadastroOab.registrarFalha(
-                                    executadoEm = Instant.now(),
-                                    mensagem = resumo.djen.falhas.first(),
-                                )
-                            }
-                        }
-                        current.copy(
-                            isLoading = false,
-                            lastResumo = resumo,
-                            error = null,
-                        )
-                    },
-                    onFailure = {
-                        viewModelScope.launch {
-                            repositorioCadastroOab.registrarFalha(
-                                executadoEm = Instant.now(),
-                                mensagem = it.message ?: it::class.java.simpleName,
-                            )
-                        }
-                        current.copy(
-                            isLoading = false,
-                            error = MonitoramentoUiError.SyncFailed,
-                        )
-                    },
-                )
-            }
+            result.fold(
+                onSuccess = { resumo ->
+                    _uiState.update { it.copy(isLoading = false, lastResumo = resumo, error = null) }
+                    registrarResultado(resumo)
+                    if (resumo.djen.falhas.isEmpty()) {
+                        sincronizarNuvemSePossivel()
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isLoading = false, error = MonitoramentoUiError.SyncFailed) }
+                    repositorioCadastroOab.registrarFalha(
+                        executadoEm = Instant.now(clock),
+                        mensagem = error.message ?: error::class.java.simpleName,
+                    )
+                },
+            )
+        }
+    }
 
-            result.getOrNull()
-                ?.takeIf { it.djen.falhas.isEmpty() }
-                ?.let { sincronizarNuvemSePossivel() }
+    private suspend fun registrarResultado(resumo: MonitorarCnjResumo) {
+        if (resumo.djen.falhas.isEmpty()) {
+            repositorioCadastroOab.registrarSucesso(
+                executadoEm = Instant.now(clock),
+                novasPublicacoes = resumo.djen.novas,
+            )
+        } else {
+            repositorioCadastroOab.registrarFalha(
+                executadoEm = Instant.now(clock),
+                mensagem = resumo.djen.falhas.first(),
+            )
         }
     }
 
@@ -194,7 +184,7 @@ class MonitoramentoViewModel(
                 numero = state.numeroOab,
                 uf = state.ufOab,
                 dataInicio = CnjDateParser.parseLocalDate(state.dataInicio),
-                dataFim = CnjDateParser.parseLocalDate(state.dataFim),
+                dataFim = null,
             )
         }
     }
@@ -204,7 +194,7 @@ class MonitoramentoViewModel(
             ?: authRepository.signInAnonymously().getOrNull()
         usuario?.uid?.let { uid ->
             runCatching {
-                withContext(Dispatchers.IO) {
+                withContext(ioDispatcher) {
                     repositorioSincronizacao.enviarTudo(uid)
                 }
             }
@@ -241,10 +231,10 @@ data class MonitoramentoUiState(
 ) {
     val canSubmit: Boolean
         get() = !isLoading &&
-            numeroOab.isNotBlank() &&
-            ufOab.trim().length == 2 &&
-            dataInicio.isNotBlank() &&
-            dataFim.isNotBlank()
+                numeroOab.isNotBlank() &&
+                ufOab.trim().length == 2 &&
+                dataInicio.isNotBlank() &&
+                dataFim.isNotBlank()
 }
 
 sealed interface MonitoramentoUiError {

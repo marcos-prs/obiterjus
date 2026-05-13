@@ -1,9 +1,12 @@
 package com.obiterjus.data.djen
 
+import android.util.Log
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
+import com.obiterjus.data.djen.remote.DjenPaginationStopReason
 import com.obiterjus.data.djen.remote.DjenRemoteDataSource
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
+import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
@@ -11,6 +14,8 @@ import com.obiterjus.domain.model.ProcessoDataJudSyncRequest
 import com.obiterjus.domain.repository.DjenRepository
 import java.time.Clock
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 class DjenRepositoryImpl(
     private val remoteDataSource: DjenRemoteDataSource,
@@ -19,84 +24,114 @@ class DjenRepositoryImpl(
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
     private val clock: Clock = Clock.systemUTC(),
 ) : DjenRepository {
+
     override suspend fun monitorar(params: MonitorarDjenParams): MonitorarDjenResumo {
-        val remoteResult = try {
-            remoteDataSource.buscarComunicacoes(
-                numeroOab = params.numeroOab,
-                ufOab = params.ufOab,
-                dataInicio = params.dataInicio,
-                dataFim = params.dataFim,
-            )
+        val (remoteResultOab, remoteResultName) = try {
+            coroutineScope {
+                val oabJob = async {
+                    remoteDataSource.buscarComunicacoes(
+                        numeroOab = params.numeroOab,
+                        ufOab = params.ufOab,
+                        nomeAdvogado = null,
+                        dataInicio = params.dataInicio,
+                        dataFim = params.dataFim,
+                    )
+                }
+                val nameJob = async {
+                    if (!params.nomeAdvogado.isNullOrBlank()) {
+                        remoteDataSource.buscarComunicacoes(
+                            numeroOab = null,
+                            ufOab = null,
+                            nomeAdvogado = params.nomeAdvogado,
+                            dataInicio = params.dataInicio,
+                            dataFim = params.dataFim,
+                        )
+                    } else null
+                }
+                Pair(oabJob.await(), nameJob.await())
+            }
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            return MonitorarDjenResumo(
-                totalRemoto = null,
-                totalRecebidas = 0,
-                novas = 0,
-                atualizadas = 0,
-                sigilosas = 0,
-                processosNovos = emptyList(),
-                processosParaSincronizar = emptyList(),
-                paginasConsultadas = 0,
-                motivoParada = MonitorarDjenStopReason.UNKNOWN,
-                falhas = listOf(error.message ?: error::class.java.simpleName),
-            )
+            return errorResumo(error)
         }
+
         val capturedAt = clock.instant()
-        val publicacoes = mutableListOf<com.obiterjus.data.publicacao.local.PublicacaoEntity>()
-        for (dto in remoteResult.items) {
+
+        val allItems = (remoteResultOab.items + (remoteResultName?.items ?: emptyList()))
+            .distinctBy { it.id }
+
+        val publicacoes: List<PublicacaoEntity> = allItems.map { dto ->
             val entity = djenMapper.toPublicacaoEntity(
                 dto = dto,
                 capturedAt = capturedAt,
                 updatedAt = capturedAt,
             )
-            publicacoes.add(publicacaoPrazoMapper.comPrazoCalculado(entity))
+            publicacaoPrazoMapper.comPrazoCalculado(entity)
         }
+
+        Log.d(TAG, "Publicações recebidas da API (${publicacoes.size}):")
+        publicacoes.forEach { pub ->
+            Log.d(TAG, "  id=${pub.id} | dataDisponibilizacao=${pub.dataDisponibilizacao} | tribunal=${pub.tribunal}")
+        }
+
         val upsertResult = localPublicacaoRepository.upsertPublicacoes(publicacoes)
+        Log.d(TAG, "Upsert: novas=${upsertResult.novas} | atualizadas=${upsertResult.atualizadas} | novasIds=${upsertResult.novasIds}")
         val novasIds = upsertResult.novasIds.toSet()
-        val processosNovos = publicacoes
+        val publicacoesNovas = publicacoes.filter { it.id in novasIds }
+
+        val processosParaSincronizar = publicacoesNovas
             .asSequence()
-            .filter { it.id in novasIds }
-            .mapNotNull { it.numeroProcesso }
-            .distinct()
-            .toList()
-        val processosParaSincronizar = publicacoes
-            .asSequence()
-            .filter { it.id in novasIds }
             .mapNotNull { publicacao ->
-                publicacao.numeroProcesso?.let { numeroProcesso ->
+                publicacao.numeroProcesso?.let { numero ->
                     ProcessoDataJudSyncRequest(
-                        numeroProcesso = numeroProcesso,
+                        numeroProcesso = numero,
                         tribunal = publicacao.tribunal,
                     )
                 }
             }
             .distinctBy { it.numeroProcesso to it.tribunal?.uppercase() }
             .toList()
-        val publicacoesNovas = publicacoes.filter { it.id in novasIds }
 
         return MonitorarDjenResumo(
-            totalRemoto = remoteResult.totalRemoto,
+            totalRemoto = remoteResultOab.totalRemoto ?: remoteResultName?.totalRemoto,
             totalRecebidas = upsertResult.totalRecebidas,
             novas = upsertResult.novas,
             atualizadas = upsertResult.atualizadas,
             sigilosas = publicacoes.count { it.isSigiloso },
-            processosNovos = processosNovos,
+            processosNovos = processosParaSincronizar.map { it.numeroProcesso },
             processosParaSincronizar = processosParaSincronizar,
-            paginasConsultadas = remoteResult.paginasConsultadas,
-            motivoParada = remoteResult.motivoParada.paraMotivoParadaDominio(),
+            paginasConsultadas = remoteResultOab.paginasConsultadas + (remoteResultName?.paginasConsultadas ?: 0),
+            motivoParada = remoteResultOab.motivoParada.toDomain(),
             falhas = emptyList(),
             novasComPrazo = publicacoesNovas.count { it.prazoQuantidade != null },
             novasSigilosas = publicacoesNovas.count { it.isSigiloso },
         )
     }
 
-    private fun com.obiterjus.data.djen.remote.DjenPaginationStopReason.paraMotivoParadaDominio(): MonitorarDjenStopReason =
+    private fun errorResumo(error: Exception) = MonitorarDjenResumo(
+        totalRemoto = null,
+        totalRecebidas = 0,
+        novas = 0,
+        atualizadas = 0,
+        sigilosas = 0,
+        processosNovos = emptyList(),
+        processosParaSincronizar = emptyList(),
+        paginasConsultadas = 0,
+        motivoParada = MonitorarDjenStopReason.UNKNOWN,
+        falhas = listOf(error.message ?: error::class.java.simpleName),
+    )
+
+    private fun DjenPaginationStopReason.toDomain(): MonitorarDjenStopReason =
         when (this) {
-            com.obiterjus.data.djen.remote.DjenPaginationStopReason.EMPTY_PAGE -> MonitorarDjenStopReason.EMPTY_PAGE
-            com.obiterjus.data.djen.remote.DjenPaginationStopReason.PARTIAL_PAGE -> MonitorarDjenStopReason.PARTIAL_PAGE
-            com.obiterjus.data.djen.remote.DjenPaginationStopReason.COUNT_CONSUMED -> MonitorarDjenStopReason.COUNT_CONSUMED
-            com.obiterjus.data.djen.remote.DjenPaginationStopReason.REPEATED_PAGE -> MonitorarDjenStopReason.REPEATED_PAGE
-            com.obiterjus.data.djen.remote.DjenPaginationStopReason.PAGE_LIMIT -> MonitorarDjenStopReason.PAGE_LIMIT
+            DjenPaginationStopReason.EMPTY_PAGE -> MonitorarDjenStopReason.EMPTY_PAGE
+            DjenPaginationStopReason.PARTIAL_PAGE -> MonitorarDjenStopReason.PARTIAL_PAGE
+            DjenPaginationStopReason.COUNT_CONSUMED -> MonitorarDjenStopReason.COUNT_CONSUMED
+            DjenPaginationStopReason.REPEATED_PAGE -> MonitorarDjenStopReason.REPEATED_PAGE
+            DjenPaginationStopReason.PAGE_LIMIT -> MonitorarDjenStopReason.PAGE_LIMIT
         }
+
+    companion object {
+        private const val TAG = "DjenRepositoryImpl"
+    }
 }

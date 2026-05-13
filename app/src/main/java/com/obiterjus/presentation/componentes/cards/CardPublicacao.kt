@@ -31,8 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
 import com.obiterjus.ui.theme.ObiterTheme
@@ -45,12 +47,17 @@ fun CardPublicacao(
     tituloAto: String,
     tipoAto: String,
     data: String,
+    tribunal: String? = null,
+    juizo: String? = null,
     numeroProcesso: String,
     prazoDias: String?,
     trechoTexto: String?,
     prioridade: PrioridadeStripe,
     aoClicar: () -> Unit,
     modifier: Modifier = Modifier,
+    badgeOrdem: String? = null,
+    onVerDetalhes: () -> Unit = {},
+    mostrarBotaoDetalhes: Boolean = false,
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
@@ -108,24 +115,38 @@ fun CardPublicacao(
                     ),
                 verticalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
             ) {
-                // Linha 1: badge tipo + data
+                // Linha 1: ordem, tribunal e data
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    BadgeTipoAto(
-                        texto = tipoAto,
-                        variante = prioridadeParaVariante(prioridade),
-                    )
-                    Text(
-                        text = data,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.textMuted,
-                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
+                        verticalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        if (!badgeOrdem.isNullOrBlank()) {
+                            BadgeTipoAto(
+                                texto = badgeOrdem,
+                                variante = VarianteBadge.DESPACHO,
+                            )
+                        }
+                        BadgeTipoAto(
+                            texto = tribunal?.takeIf { it.isNotBlank() } ?: tipoAto,
+                            variante = VarianteBadge.TRIBUNAL,
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = data,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.textMuted,
+                        )
+                    }
                 }
 
-                // Linha 2: título
+                // Linha 2: tipo do ato
                 Text(
                     text = tituloAto,
                     style = MaterialTheme.typography.titleMedium,
@@ -134,7 +155,35 @@ fun CardPublicacao(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                // Linha 3: trecho opcional
+                if (!tribunal.isNullOrBlank()) {
+                    Text(
+                        text = "Tribunal: $tribunal",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (!juizo.isNullOrBlank()) {
+                    Text(
+                        text = "Juízo: $juizo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Text(
+                    text = "Tipo do ato: $tipoAto",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                // Trecho opcional, mantido para telas antigas.
                 if (!trechoTexto.isNullOrBlank()) {
                     Text(
                         text = trechoTexto,
@@ -151,13 +200,32 @@ fun CardPublicacao(
                     verticalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
                 ) {
                     BadgeTipoAto(
-                        texto = numeroProcesso,
+                        texto = numeroProcesso.formatarCnj(),
                         variante = VarianteBadge.DESPACHO,
                     )
                     if (!prazoDias.isNullOrBlank()) {
                         BadgeTipoAto(
                             texto = prazoDias,
                             variante = VarianteBadge.URGENTE,
+                        )
+                    }
+                }
+
+                // Linha 5: Ver Detalhes (Opcional)
+                if (mostrarBotaoDetalhes) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            text = "VER DETALHES",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { onVerDetalhes() }
+                                .padding(4.dp)
                         )
                     }
                 }

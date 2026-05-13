@@ -11,7 +11,15 @@ object FormatadorData {
         .ofPattern("dd/MM/yyyy HH:mm:ss")
         .withZone(ZoneId.systemDefault())
 
+    private val dataPorExtenso = DateTimeFormatter
+        .ofPattern("dd MMM yyyy", java.util.Locale.forLanguageTag("pt-BR"))
+        .withZone(ZoneId.systemDefault())
+
     fun formatarData(data: LocalDate): String = data.format(dataBrasileira)
 
-    fun formatarDataHora(instante: Instant): String = dataHoraBrasileira.format(instante)
+    fun formatarDataHora(instante: Instant?): String = 
+        instante?.let { dataHoraBrasileira.format(it) } ?: "Data não disponível"
+
+    fun formatarDataPorExtenso(instante: Instant?): String = 
+        instante?.let { dataPorExtenso.format(it).lowercase() } ?: "Data não disponível"
 }

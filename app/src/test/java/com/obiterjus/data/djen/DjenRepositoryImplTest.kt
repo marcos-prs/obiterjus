@@ -56,7 +56,7 @@ class DjenRepositoryImplTest {
                                 id = 1L,
                                 siglaTribunal = "TJMG",
                                 numeroProcesso = "5011087-95.2025.8.13.0245",
-                                texto = "Intime-se.",
+                                texto = "Intime-se. OAB/MG 12345.",
                             ),
                         ),
                     ),
@@ -90,8 +90,9 @@ class DjenRepositoryImplTest {
         private val response: DjenResponseDto,
     ) : DjenApi {
         override suspend fun buscarComunicacoes(
-            numeroOab: String,
-            ufOab: String,
+            numeroOab: String?,
+            ufOab: String?,
+            nomeAdvogado: String?,
             dataDisponibilizacaoInicio: String,
             dataDisponibilizacaoFim: String,
             pagina: Int,
@@ -117,8 +118,12 @@ class DjenRepositoryImplTest {
 
         override suspend fun getExistingIds(ids: List<Long>): List<Long> = existingIds
 
+        override suspend fun getByHashes(hashes: List<String>): List<PublicacaoEntity> = emptyList()
+
         override suspend fun getById(id: Long): PublicacaoEntity? =
             saved.firstOrNull { it.id == id }
+
+        override fun observeById(id: Long): Flow<PublicacaoEntity?> = emptyFlow()
 
         override suspend fun getByIds(ids: List<Long>): List<PublicacaoEntity> =
             saved.filter { it.id in ids }

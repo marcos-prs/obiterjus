@@ -24,18 +24,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,14 +55,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
+import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.model.ConfirmacaoPrazoResultado
 import com.obiterjus.domain.model.ProvedorCalendario
+import com.obiterjus.presentation.componentes.filtros.DropdownTribunal
 import com.obiterjus.presentation.componentes.EstadoVazioObiter
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.barras.BarraBusca
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
-import com.obiterjus.presentation.componentes.chips.ChipFiltroRow
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
 import com.obiterjus.ui.theme.ObiterTheme
 import java.util.Locale
@@ -67,6 +71,7 @@ import java.util.Locale
 @Composable
 fun TelaPrazos(
     viewModel: ModeloPrazos,
+    aoAbrirPublicacao: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val estado by viewModel.estado.collectAsStateWithLifecycle()
@@ -141,17 +146,10 @@ fun TelaPrazos(
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
         val dimens = ObiterTheme.dimens
-        val tribunais = listOf(
-            stringResource(R.string.filtro_todos),
-            stringResource(R.string.filtro_tjmg),
-            stringResource(R.string.filtro_trt),
-            stringResource(R.string.filtro_trf),
-        )
         val abas = listOf(
             AbaPrazos.TODOS to stringResource(R.string.prazos_aba_todos),
             AbaPrazos.VENCIDOS to stringResource(R.string.prazos_aba_vencidos),
             AbaPrazos.PROXIMOS to stringResource(R.string.prazos_aba_proximos),
-            AbaPrazos.FUTUROS to stringResource(R.string.prazos_aba_futuros),
             AbaPrazos.SEM_DATA to stringResource(R.string.prazos_aba_sem_data),
         )
         val tituloExpirados = stringResource(R.string.prazos_secao_expirados)
@@ -175,12 +173,13 @@ fun TelaPrazos(
                 )
             }
             item {
-                ChipFiltroRow(
-                    chips = tribunais,
-                    chipAtivo = estado.filtros.tribunal.ifBlank { tribunais.first() },
-                    aoSelecionar = { chip ->
-                        viewModel.aoSelecionarTribunal(chip.takeUnless { it == tribunais.first() })
+                DropdownTribunal(
+                    tribunalSelecionado = estado.filtros.tribunal,
+                    tribunaisPorGenero = estado.tribunaisPorGenero,
+                    aoSelecionarTribunal = { tribunal ->
+                        viewModel.aoSelecionarTribunal(tribunal.takeIf { it.isNotBlank() })
                     },
+                    modifier = Modifier.padding(horizontal = dimens.screenMargin),
                 )
             }
             item {
@@ -201,7 +200,7 @@ fun TelaPrazos(
                 }
             }
             item {
-                TabRow(
+                SecondaryTabRow(
                     selectedTabIndex = estado.abaSelecionada.ordinal,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -213,10 +212,10 @@ fun TelaPrazos(
                             thickness = dimens.borderWidth,
                         )
                     },
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
+                    indicator = {
+                        SecondaryIndicator(
                             modifier = Modifier.tabIndicatorOffset(
-                                tabPositions[estado.abaSelecionada.ordinal],
+                                estado.abaSelecionada.ordinal,
                             ),
                             color = ObiterTheme.colors.accent,
                         )
@@ -303,13 +302,7 @@ fun TelaPrazos(
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
                 }
-                AbaPrazos.FUTUROS -> secaoPrazos(
-                    titulo = tituloProximos,
-                    itens = estado.proximos,
-                    prioridade = VarianteBadge.DESPACHO,
-                    confirmandoPrazoId = estado.confirmandoPrazoId,
-                    onSolicitarConfirmacao = { prazoEmDialogo = it },
-                )
+                // FUTUROS aba removida; PRÓXIMOS já cobrem próximos e futuros
                 AbaPrazos.SEM_DATA -> secaoPrazos(
                     titulo = tituloSemData,
                     itens = estado.semData,
@@ -334,10 +327,14 @@ fun TelaPrazos(
 
     val prazoParaConfirmar = prazoEmDialogo
     if (prazoParaConfirmar != null) {
-        DialogConfirmarPrazo(
-            prazo = prazoParaConfirmar,
-            onDismiss = { prazoEmDialogo = null },
-            onConfirmar = { provedor ->
+            DialogConfirmarPrazo(
+                prazo = prazoParaConfirmar,
+                onDismiss = { prazoEmDialogo = null },
+                onVerAto = {
+                    prazoEmDialogo = null
+                    aoAbrirPublicacao(prazoParaConfirmar.item.publicacao.id)
+                },
+                onConfirmar = { provedor ->
                 viewModel.aoConfirmarPrazo(
                     publicacaoId = prazoParaConfirmar.item.publicacao.id,
                     provedor = provedor,
@@ -398,7 +395,7 @@ private fun CardPrazo(
         label = "prazoPress",
     )
     val item = prazo.item
-    val numeroProcesso = item.publicacao.numeroProcesso
+    val numeroProcesso = item.publicacao.numeroProcesso?.formatarCnj()
         ?: stringResource(R.string.prazos_sem_processo)
     val dataVencimento = item.prazo.dataLimiteEstimada?.let(FormatadorData::formatarData)
         ?: stringResource(R.string.agenda_item_sem_data)
@@ -578,6 +575,7 @@ private fun CardPrazo(
 private fun DialogConfirmarPrazo(
     prazo: PrazoUiItem,
     onDismiss: () -> Unit,
+    onVerAto: () -> Unit,
     onConfirmar: (ProvedorCalendario) -> Unit,
 ) {
     var provedorSelecionado by rememberSaveable(prazo.item.publicacao.id) {
@@ -597,7 +595,7 @@ private fun DialogConfirmarPrazo(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(ObiterTheme.dimens.space2)) {
                 Text(
-                    text = prazo.item.publicacao.numeroProcesso
+                    text = prazo.item.publicacao.numeroProcesso?.formatarCnj()
                         ?: stringResource(R.string.prazos_sem_processo),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -611,6 +609,14 @@ private fun DialogConfirmarPrazo(
                     style = MaterialTheme.typography.bodySmall,
                     color = ObiterTheme.colors.textMuted,
                 )
+                TextButton(onClick = onVerAto) {
+                    Icon(
+                        imageVector = ObiterIcones.Documento,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(ObiterTheme.dimens.space1))
+                    Text(text = stringResource(R.string.prazos_ver_ato))
+                }
                 provedores.forEach { (provedor, rotulo) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

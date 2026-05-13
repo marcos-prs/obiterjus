@@ -18,4 +18,10 @@ data class ParticipanteEntity(
     val nome: String?,
     val tipoPessoa: String?,
     val tipoParticipacao: String?,
+    // Qualificação completa
+    val cpfCnpj: String? = null,
+    val estadoCivil: String? = null,
+    val profissao: String? = null,
+    val endereco: String? = null,
+    val contatos: String? = null,
 )

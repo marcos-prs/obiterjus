@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "7f9b63266beeb1296bce505c844f988d",
+    "identityHash": "b0be6dd923e3988899e03feb3b203a45",
     "entities": [
       {
         "tableName": "publicacoes",
@@ -198,7 +198,7 @@
       },
       {
         "tableName": "processos",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`numeroProcesso` TEXT NOT NULL, `tribunal` TEXT, `grau` TEXT, `classeCodigo` INTEGER, `classeNome` TEXT, `assuntosJson` TEXT, `orgaoJulgadorCodigo` INTEGER, `orgaoJulgadorNome` TEXT, `nivelSigilo` INTEGER, `dataAjuizamento` INTEGER, `syncStatus` TEXT NOT NULL, `capturadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, PRIMARY KEY(`numeroProcesso`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`numeroProcesso` TEXT NOT NULL, `tribunal` TEXT, `grau` TEXT, `classeCodigo` INTEGER, `classeNome` TEXT, `assuntosJson` TEXT, `orgaoJulgadorCodigo` INTEGER, `orgaoJulgadorNome` TEXT, `nivelSigilo` INTEGER, `dataAjuizamento` INTEGER, `syncStatus` TEXT NOT NULL, `capturadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, `dataDistribuicao` INTEGER, `comarcaSecao` TEXT, `juizo` TEXT, `prioridadeTramitacao` TEXT, `gratuidadeJustica` TEXT, `valorCausa` REAL, `faseProcessual` TEXT, `situacaoAtual` TEXT, `tutelaAntecipadaLiminar` TEXT, `advogadosAtivo` TEXT, `advogadosPassivo` TEXT, `defensoriaPublica` TEXT, `ministerioPublico` TEXT, `terceirosAuxiliares` TEXT, PRIMARY KEY(`numeroProcesso`))",
         "fields": [
           {
             "fieldPath": "numeroProcesso",
@@ -268,6 +268,76 @@
             "columnName": "atualizadoEm",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "dataDistribuicao",
+            "columnName": "dataDistribuicao",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "comarcaSecao",
+            "columnName": "comarcaSecao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "juizo",
+            "columnName": "juizo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prioridadeTramitacao",
+            "columnName": "prioridadeTramitacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "gratuidadeJustica",
+            "columnName": "gratuidadeJustica",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "valorCausa",
+            "columnName": "valorCausa",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "faseProcessual",
+            "columnName": "faseProcessual",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "situacaoAtual",
+            "columnName": "situacaoAtual",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tutelaAntecipadaLiminar",
+            "columnName": "tutelaAntecipadaLiminar",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "advogadosAtivo",
+            "columnName": "advogadosAtivo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "advogadosPassivo",
+            "columnName": "advogadosPassivo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "defensoriaPublica",
+            "columnName": "defensoriaPublica",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "ministerioPublico",
+            "columnName": "ministerioPublico",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "terceirosAuxiliares",
+            "columnName": "terceirosAuxiliares",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -395,7 +465,7 @@
       },
       {
         "tableName": "participantes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idLocal` TEXT NOT NULL, `numeroProcesso` TEXT NOT NULL, `polo` TEXT, `nome` TEXT, `tipoPessoa` TEXT, `tipoParticipacao` TEXT, PRIMARY KEY(`idLocal`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idLocal` TEXT NOT NULL, `numeroProcesso` TEXT NOT NULL, `polo` TEXT, `nome` TEXT, `tipoPessoa` TEXT, `tipoParticipacao` TEXT, `cpfCnpj` TEXT, `estadoCivil` TEXT, `profissao` TEXT, `endereco` TEXT, `contatos` TEXT, PRIMARY KEY(`idLocal`))",
         "fields": [
           {
             "fieldPath": "idLocal",
@@ -427,6 +497,31 @@
           {
             "fieldPath": "tipoParticipacao",
             "columnName": "tipoParticipacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cpfCnpj",
+            "columnName": "cpfCnpj",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "estadoCivil",
+            "columnName": "estadoCivil",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "profissao",
+            "columnName": "profissao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "endereco",
+            "columnName": "endereco",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contatos",
+            "columnName": "contatos",
             "affinity": "TEXT"
           }
         ],
@@ -602,7 +697,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7f9b63266beeb1296bce505c844f988d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b0be6dd923e3988899e03feb3b203a45')"
     ]
   }
 }
