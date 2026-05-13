@@ -242,6 +242,7 @@ class TesteModeloAutenticacao {
         override suspend fun saveNotificarPrazosUrgentes(ativo: Boolean) = Unit
         override suspend fun saveNotificarMovimentacoes(ativo: Boolean) = Unit
         override suspend fun saveTema(tema: TipoTema) = Unit
+        override suspend fun saveApenasPorNome(ativo: Boolean) = Unit
     }
 
     private class RepositorioSincronizacaoFake : com.obiterjus.domain.repository.RepositorioSincronizacao {

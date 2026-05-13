@@ -44,6 +44,7 @@ fun DataJudProcessoDto.toProcessoEntity(
         syncStatus = syncStatus,
         capturadoEm = syncedAt,
         atualizadoEm = syncedAt,
+        dataJudTentativasRestantes = 0,
     )
 }
 

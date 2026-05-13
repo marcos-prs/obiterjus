@@ -11,11 +11,13 @@ import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
 import com.obiterjus.domain.repository.DjenRepository
+import com.obiterjus.domain.repository.RepositorioProcessos
 import java.time.Clock
 
 class ConfiguredDjenRepository(
     private val appConfigRepository: AppConfigRepository,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
+    private val localProcessoRepository: RepositorioProcessos,
     private val djenMapper: DjenMapper,
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
     private val clock: Clock = Clock.systemUTC(),
@@ -53,6 +55,7 @@ class ConfiguredDjenRepository(
                 itensPorPagina = config.djenDefaultItemsPerPage,
             ),
             localPublicacaoRepository = localPublicacaoRepository,
+            localProcessoRepository = localProcessoRepository,
             djenMapper = djenMapper,
             publicacaoPrazoMapper = publicacaoPrazoMapper,
             clock = clock,

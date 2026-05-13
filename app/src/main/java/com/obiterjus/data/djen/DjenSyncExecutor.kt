@@ -65,6 +65,7 @@ class DjenSyncExecutorImpl(
             Log.d(TAG, "CONFIGURAÇÃO: intervaloBuscaDias (usuário): ${perfil.intervaloBuscaDias}")
             Log.d(TAG, "CONFIGURAÇÃO: syncLookbackDays (ignorado, era Remote Config): ${config.syncLookbackDays}")
             Log.d(TAG, "CONFIGURAÇÃO: lookbackDias EFETIVO: $lookbackDias")
+            Log.d(TAG, "CONFIGURAÇÃO: apenasPorNome: ${perfil.apenasPorNome}")
             Log.d(TAG, "dataInicio enviada para busca: $dataInicio")
             Log.d(TAG, "dataFim enviada:    $dataFim")
             Log.d(TAG, "modo: $modo")
@@ -77,6 +78,7 @@ class DjenSyncExecutorImpl(
                     dataInicio = dataInicio,
                     dataFim = dataFim,
                     modo = modo,
+                    apenasPorNome = perfil.apenasPorNome,
                 ),
             )
 

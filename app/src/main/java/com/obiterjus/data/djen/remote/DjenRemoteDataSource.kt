@@ -8,6 +8,7 @@ class DjenRemoteDataSource(
     private val api: DjenApi,
     private val itensPorPagina: Int = DEFAULT_ITEMS_PER_PAGE,
     private val maxPaginas: Int = DEFAULT_MAX_PAGES,
+    private val limiteResultadosTotal: Int = DEFAULT_TOTAL_LIMIT,
 ) {
     suspend fun buscarComunicacoes(
         dataInicio: LocalDate,
@@ -41,6 +42,22 @@ class DjenRemoteDataSource(
                 totalRemoto = response.count
             }
             Log.d(TAG, "  → página=$pagina | itens retornados=${items.size} | totalRemoto=$totalRemoto")
+
+            // Cinto de segurança: se o totalRemoto for absurdo, é sinal de que
+            // a busca pegou homônimos do país inteiro. Aborta antes de inundar
+            // o banco (e antes que a API responda 429 por excesso de paginação).
+            val totalConhecido = totalRemoto
+            if (pagina == 1 && totalConhecido != null && totalConhecido > limiteResultadosTotal) {
+                Log.w(
+                    TAG,
+                    "  → STOP: totalRemoto=$totalConhecido excede limite=$limiteResultadosTotal | abortando paginação (provável homônimo).",
+                )
+                return emptyList<DjenComunicacaoDto>().toFetchResult(
+                    totalRemoto = totalRemoto,
+                    paginasConsultadas = pagina,
+                    motivoParada = DjenPaginationStopReason.PARTIAL_PAGE,
+                )
+            }
 
             if (items.isEmpty()) {
                 Log.d(TAG, "  → STOP: EMPTY_PAGE na página=$pagina | total acumulado=${allItems.size}")
@@ -108,6 +125,7 @@ class DjenRemoteDataSource(
     companion object {
         const val DEFAULT_ITEMS_PER_PAGE = 100
         const val DEFAULT_MAX_PAGES = 100
+        const val DEFAULT_TOTAL_LIMIT = 500
         private const val TAG = "DjenRemoteDataSource"
     }
 }

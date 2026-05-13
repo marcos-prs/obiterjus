@@ -110,6 +110,7 @@ data class ProcessoFirestoreDto(
     val syncStatus: String = "",
     val capturadoEm: Timestamp? = null,
     val atualizadoEm: Timestamp? = null,
+    val dataJudTentativasRestantes: Int = 0,
 )
 
 fun ProcessoEntity.toFirestoreDto() = ProcessoFirestoreDto(
@@ -126,6 +127,7 @@ fun ProcessoEntity.toFirestoreDto() = ProcessoFirestoreDto(
     syncStatus = syncStatus.name,
     capturadoEm = capturadoEm.toTimestamp(),
     atualizadoEm = atualizadoEm.toTimestamp(),
+    dataJudTentativasRestantes = dataJudTentativasRestantes,
 )
 
 fun ProcessoFirestoreDto.toEntity(): ProcessoEntity? =
@@ -147,6 +149,7 @@ fun ProcessoFirestoreDto.toEntity(): ProcessoEntity? =
                 .getOrDefault(ProcessoSyncStatus.FAILED),
             capturadoEm = capturadoEm.toJavaInstant(),
             atualizadoEm = atualizadoEm.toJavaInstant(),
+            dataJudTentativasRestantes = dataJudTentativasRestantes,
         )
     }
 
@@ -228,6 +231,7 @@ data class PerfilFirestoreDto(
     val notificarPrazosUrgentes: Boolean = true,
     val notificarMovimentacoes: Boolean = true,
     val tema: String = "",
+    val apenasPorNome: Boolean = false,
     val atualizadoEm: Timestamp? = null,
 )
 

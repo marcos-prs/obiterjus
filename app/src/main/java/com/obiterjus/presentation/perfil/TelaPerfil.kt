@@ -155,6 +155,13 @@ fun TelaPerfil(
                         aoAlternar = viewModel::aoAlternarSincronizacaoAutomatica,
                     )
                     DividerInterno()
+                    LinhaToggleDescritivo(
+                        rotulo = stringResource(R.string.perfil_apenas_por_nome),
+                        descricao = stringResource(R.string.perfil_apenas_por_nome_descricao),
+                        ativo = estado.apenasPorNome,
+                        aoAlternar = viewModel::aoAlternarApenasPorNome,
+                    )
+                    DividerInterno()
                     LinhaValor(
                         rotulo = stringResource(R.string.perfil_frequencia),
                         valor = estado.frequenciaSincronizacao,
@@ -443,6 +450,38 @@ private fun LinhaToggle(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
+        ToggleObiter(ativo = ativo, aoAlternar = aoAlternar)
+    }
+}
+
+@Composable
+private fun LinhaToggleDescritivo(
+    rotulo: String,
+    descricao: String,
+    ativo: Boolean,
+    aoAlternar: (Boolean) -> Unit,
+) {
+    val dimens = ObiterTheme.dimens
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = dimens.cardPaddingH, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = rotulo,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = descricao,
+                style = MaterialTheme.typography.bodySmall,
+                color = ObiterTheme.colors.textMuted,
+            )
+        }
+        Spacer(modifier = Modifier.size(dimens.space1))
         ToggleObiter(ativo = ativo, aoAlternar = aoAlternar)
     }
 }

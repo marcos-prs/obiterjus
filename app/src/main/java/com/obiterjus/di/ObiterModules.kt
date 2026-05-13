@@ -135,6 +135,7 @@ private val dataModule = module {
         ConfiguredDjenRepository(
             appConfigRepository = get(),
             localPublicacaoRepository = get(),
+            localProcessoRepository = get(),
             djenMapper = get(),
             publicacaoPrazoMapper = get(),
         )

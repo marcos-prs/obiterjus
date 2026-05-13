@@ -21,6 +21,7 @@ data class PerfilPreferences(
     val notificarPrazosUrgentes: Boolean = true,
     val notificarMovimentacoes: Boolean = true,
     val tema: TipoTema = TipoTema.SISTEMA,
+    val apenasPorNome: Boolean = false,
 )
 
 interface PerfilPreferencesRepository {
@@ -36,6 +37,7 @@ interface PerfilPreferencesRepository {
 
     suspend fun saveNotificarMovimentacoes(ativo: Boolean)
     suspend fun saveTema(tema: TipoTema)
+    suspend fun saveApenasPorNome(ativo: Boolean)
 }
 
 class DataStorePerfilPreferencesRepository(
@@ -55,6 +57,7 @@ class DataStorePerfilPreferencesRepository(
             } catch (e: Exception) {
                 TipoTema.SISTEMA
             },
+            apenasPorNome = prefs[KEY_APENAS_POR_NOME] ?: false,
         )
     }
 
@@ -94,6 +97,12 @@ class DataStorePerfilPreferencesRepository(
         }
     }
 
+    override suspend fun saveApenasPorNome(ativo: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_APENAS_POR_NOME] = ativo
+        }
+    }
+
     private fun DataStore<Preferences>.safeData(): Flow<Preferences> =
         data.catch { error ->
             if (error is IOException) {
@@ -110,5 +119,6 @@ class DataStorePerfilPreferencesRepository(
         val KEY_NOTIFICAR_PRAZOS_URGENTES = booleanPreferencesKey("notificar_prazos_urgentes")
         val KEY_NOTIFICAR_MOVIMENTACOES = booleanPreferencesKey("notificar_movimentacoes")
         val KEY_TEMA = stringPreferencesKey("tema")
+        val KEY_APENAS_POR_NOME = booleanPreferencesKey("apenas_por_nome")
     }
 }

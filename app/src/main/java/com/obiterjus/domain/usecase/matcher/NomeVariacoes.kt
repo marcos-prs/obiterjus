@@ -3,12 +3,15 @@ package com.obiterjus.domain.usecase.matcher
 import java.text.Normalizer
 
 /**
- * Gera variações ortográficas/estruturais de um nome para ampliar a consulta no
- * DJEN. A ideia é compensar cadastros incompletos no CNJ: às vezes o nome do
- * advogado aparece sem acento, sem nome do meio, ou só com primeiro + último.
+ * Gera variações ortográficas do nome do advogado para ampliar a consulta no
+ * DJEN. Compensa cadastros do CNJ que armazenam o nome sem acentuação.
  *
- * Sempre inclui a forma canônica como primeira variante e deduplica preservando
- * a ordem (canônica primeiro = melhor sinal).
+ * Por que NÃO geramos "primeiro + último": para um sobrenome comum como
+ * "Souza", isso devolve milhares de publicações de homônimos do país inteiro
+ * (3349 num teste real), causando rate-limit na API e enchendo o banco de
+ * lixo. Se a publicação do usuário existir com o nome abreviado, a busca por
+ * OAB já a captura — então a variação curta é redundante para os casos reais
+ * e estritamente prejudicial para nomes comuns.
  */
 object NomeVariacoes {
 
@@ -16,22 +19,9 @@ object NomeVariacoes {
         val canonico = nome.trim()
         if (canonico.isBlank()) return emptyList()
 
-        val stopwords = setOf("de", "da", "do", "das", "dos", "e")
-        val tokens = canonico.split("\\s+".toRegex()).filter { it.isNotBlank() }
-        val tokensSignificativos = tokens.filter { it.lowercase() !in stopwords }
-
-        val variacoes = mutableListOf<String>()
-        variacoes += canonico
-
+        val variacoes = mutableListOf(canonico)
         val semAcento = removerAcentos(canonico)
         if (semAcento != canonico) variacoes += semAcento
-
-        if (tokensSignificativos.size >= 2) {
-            val primeiroUltimo = "${tokensSignificativos.first()} ${tokensSignificativos.last()}"
-            variacoes += primeiroUltimo
-            val semAcentoPU = removerAcentos(primeiroUltimo)
-            if (semAcentoPU != primeiroUltimo) variacoes += semAcentoPU
-        }
 
         return variacoes
             .map { it.trim() }

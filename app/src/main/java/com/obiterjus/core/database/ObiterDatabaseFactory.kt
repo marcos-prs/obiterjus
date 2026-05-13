@@ -14,7 +14,14 @@ object ObiterDatabaseFactory {
             ObiterDatabase::class.java,
             DATABASE_NAME,
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_7_8,
+            )
             .build()
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -93,6 +100,11 @@ object ObiterDatabaseFactory {
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_prazos_sugeridos_publicacaoId ON prazos_sugeridos(publicacaoId)")
         }
     }
-}
 
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE processos ADD COLUMN dataJudTentativasRestantes INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+}
 

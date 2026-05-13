@@ -625,4 +625,6 @@
     <string name="confianca_baixa">Verificar</string>
     <string name="confianca_filtro_titulo">Confiança do match</string>
     <string name="confianca_filtro_todas">Todas</string>
+    <string name="perfil_apenas_por_nome">Buscar apenas pelo nome</string>
+    <string name="perfil_apenas_por_nome_descricao">Útil para quem ainda não tem OAB cadastrada ou atua em UF diferente. Resultados podem incluir homônimos (badge "Verificar").</string>
 </resources>

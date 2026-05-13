@@ -16,6 +16,7 @@ data class ProcessoMonitorado(
     val syncStatus: ProcessoSyncStatus,
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
+    val dataJudTentativasRestantes: Int = 0,
     val participantes: List<ParticipanteProcesso> = emptyList(),
     // Campos expandidos
     val dataDistribuicao: Instant? = null,

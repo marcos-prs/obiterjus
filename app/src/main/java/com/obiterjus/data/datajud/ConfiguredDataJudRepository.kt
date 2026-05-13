@@ -72,6 +72,7 @@ class ConfiguredDataJudRepository(
                     syncStatus = ProcessoSyncStatus.PENDING,
                     capturadoEm = now,
                     atualizadoEm = now,
+                    dataJudTentativasRestantes = 0,
                 ),
             )
             ProcessoDataJudSyncResultado(

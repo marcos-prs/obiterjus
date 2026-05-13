@@ -16,6 +16,11 @@ import com.obiterjus.data.time.FeriadoDto
 import com.obiterjus.data.time.FeriadoRepository
 import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
+import com.obiterjus.domain.model.MovimentoProcesso
+import com.obiterjus.domain.model.ParticipanteProcesso
+import com.obiterjus.domain.model.ProcessoMonitorado
+import com.obiterjus.domain.model.ProcessoSyncStatus
+import com.obiterjus.domain.repository.RepositorioProcessos
 import com.obiterjus.domain.usecase.CalcularPrazoRegraUC
 import java.time.Clock
 import java.time.Instant
@@ -27,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.ResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Response
 
@@ -64,6 +70,7 @@ class DjenRepositoryImplTest {
                 itensPorPagina = 100,
             ),
             localPublicacaoRepository = LocalPublicacaoRepository(FakePublicacaoDao(existingIds = emptyList())),
+            localProcessoRepository = FakeProcessoRepository(),
             djenMapper = djenMapper,
             publicacaoPrazoMapper = publicacaoPrazoMapper,
             clock = Clock.fixed(Instant.parse("2026-04-29T12:00:00Z"), ZoneOffset.UTC),
@@ -77,6 +84,45 @@ class DjenRepositoryImplTest {
         assertEquals("TJMG", resumo.processosParaSincronizar.first().tribunal)
     }
 
+    @Test
+    fun skipsDataJudForAlreadySyncedProcess() = runBlocking {
+        val repository = DjenRepositoryImpl(
+            remoteDataSource = DjenRemoteDataSource(
+                api = FakeDjenApi(
+                    response = DjenResponseDto(
+                        count = 1,
+                        items = listOf(
+                            DjenComunicacaoDto(
+                                id = 1L,
+                                siglaTribunal = "TJMG",
+                                numeroProcesso = "5011087-95.2025.8.13.0245",
+                                texto = "Intime-se. OAB/MG 12345.",
+                            ),
+                        ),
+                    ),
+                ),
+                itensPorPagina = 100,
+            ),
+            localPublicacaoRepository = LocalPublicacaoRepository(FakePublicacaoDao(existingIds = emptyList())),
+            localProcessoRepository = FakeProcessoRepository(
+                processos = mapOf(
+                    "50110879520258130245" to processoLocal(
+                        numeroProcesso = "50110879520258130245",
+                        status = ProcessoSyncStatus.SYNCED,
+                    ),
+                ),
+            ),
+            djenMapper = djenMapper,
+            publicacaoPrazoMapper = publicacaoPrazoMapper,
+            clock = Clock.fixed(Instant.parse("2026-04-29T12:00:00Z"), ZoneOffset.UTC),
+        )
+
+        val resumo = repository.monitorar(params())
+
+        assertTrue(resumo.processosNovos.isEmpty())
+        assertTrue(resumo.processosParaSincronizar.isEmpty())
+    }
+
     private fun params(): MonitorarDjenParams =
         MonitorarDjenParams(
             numeroOab = "12345",
@@ -84,6 +130,26 @@ class DjenRepositoryImplTest {
             dataInicio = LocalDate.of(2026, 4, 1),
             dataFim = LocalDate.of(2026, 4, 29),
             modo = MonitorarDjenModo.MANUAL,
+        )
+
+    private fun processoLocal(
+        numeroProcesso: String,
+        status: ProcessoSyncStatus,
+    ): ProcessoMonitorado =
+        ProcessoMonitorado(
+            numeroProcesso = numeroProcesso,
+            tribunal = "TJMG",
+            grau = null,
+            classeCodigo = null,
+            classeNome = null,
+            assuntos = emptyList(),
+            orgaoJulgadorCodigo = null,
+            orgaoJulgadorNome = null,
+            nivelSigilo = null,
+            dataAjuizamento = null,
+            syncStatus = status,
+            capturadoEm = Instant.EPOCH,
+            atualizadoEm = Instant.EPOCH,
         )
 
     private class FakeDjenApi(
@@ -140,5 +206,22 @@ class DjenRepositoryImplTest {
         override fun observePorProcesso(numeroProcesso: String): Flow<List<PublicacaoEntity>> = emptyFlow()
 
         override suspend fun getNumerosProcessoDistintos(): List<String> = emptyList()
+    }
+
+    private class FakeProcessoRepository(
+        private val processos: Map<String, ProcessoMonitorado> = emptyMap(),
+    ) : RepositorioProcessos {
+        override fun observarProcessos(): Flow<List<ProcessoMonitorado>> = emptyFlow()
+
+        override fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>> = emptyFlow()
+
+        override fun observarParticipantes(numeroProcesso: String): Flow<List<ParticipanteProcesso>> = emptyFlow()
+
+        override suspend fun obterProcesso(numeroProcesso: String): ProcessoMonitorado? =
+            processos[numeroProcesso]
+
+        override suspend fun salvarProcesso(processo: ProcessoMonitorado) = Unit
+
+        override suspend fun excluirProcesso(numeroProcesso: String) = Unit
     }
 }

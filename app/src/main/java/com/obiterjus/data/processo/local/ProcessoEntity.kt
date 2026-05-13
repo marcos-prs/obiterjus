@@ -29,6 +29,7 @@ data class ProcessoEntity(
     val syncStatus: ProcessoSyncStatus,
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
+    val dataJudTentativasRestantes: Int = 0,
     // Campos expandidos
     val dataDistribuicao: Instant? = null,
     val comarcaSecao: String? = null,

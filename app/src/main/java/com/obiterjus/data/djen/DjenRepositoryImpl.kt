@@ -1,6 +1,7 @@
 package com.obiterjus.data.djen
 
 import android.util.Log
+import com.obiterjus.core.parser.NumeroProcessoNormalizer
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
 import com.obiterjus.data.djen.remote.DjenFetchResult
@@ -13,18 +14,21 @@ import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
+import com.obiterjus.domain.model.ProcessoMonitorado
+import com.obiterjus.domain.model.ProcessoSyncStatus
 import com.obiterjus.domain.model.ProcessoDataJudSyncRequest
 import com.obiterjus.domain.repository.DjenRepository
+import com.obiterjus.domain.repository.RepositorioProcessos
 import com.obiterjus.domain.usecase.matcher.NomeVariacoes
 import com.obiterjus.domain.usecase.matcher.PublicationMatcher
 import java.time.Clock
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 
 class DjenRepositoryImpl(
     private val remoteDataSource: DjenRemoteDataSource,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
+    private val localProcessoRepository: RepositorioProcessos,
     private val djenMapper: DjenMapper,
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
     private val clock: Clock = Clock.systemUTC(),
@@ -35,30 +39,36 @@ class DjenRepositoryImpl(
             ?.let { NomeVariacoes.gerar(it) }
             .orEmpty()
 
+        // Queries sequenciais com pequeno intervalo entre elas: a API do CNJ
+        // (comunicaapi.pje.jus.br) responde 429 quando recebe rajada de
+        // requisicoes em paralelo. Latencia maior, porem confiavel.
         val (remoteResultOab, resultadosPorNome) = try {
-            coroutineScope {
-                val oabJob = async {
-                    remoteDataSource.buscarComunicacoes(
-                        numeroOab = params.numeroOab,
-                        ufOab = params.ufOab,
-                        nomeAdvogado = null,
-                        dataInicio = params.dataInicio,
-                        dataFim = params.dataFim,
-                    )
-                }
-                val nameJobs = nomeVariacoes.map { variacao ->
-                    async {
-                        remoteDataSource.buscarComunicacoes(
-                            numeroOab = null,
-                            ufOab = null,
-                            nomeAdvogado = variacao,
-                            dataInicio = params.dataInicio,
-                            dataFim = params.dataFim,
-                        )
-                    }
-                }
-                Pair(oabJob.await(), nameJobs.map { it.await() })
+            val oab = if (params.apenasPorNome) {
+                Log.d(TAG, "Modo apenasPorNome ativo: pulando busca por OAB.")
+                vazioFetchResult()
+            } else {
+                val resultado = remoteDataSource.buscarComunicacoes(
+                    numeroOab = params.numeroOab,
+                    ufOab = params.ufOab,
+                    nomeAdvogado = null,
+                    dataInicio = params.dataInicio,
+                    dataFim = params.dataFim,
+                )
+                if (nomeVariacoes.isNotEmpty()) delay(THROTTLE_ENTRE_QUERIES_MS)
+                resultado
             }
+            val porNome = mutableListOf<DjenFetchResult>()
+            nomeVariacoes.forEachIndexed { index, variacao ->
+                if (index > 0) delay(THROTTLE_ENTRE_QUERIES_MS)
+                porNome += remoteDataSource.buscarComunicacoes(
+                    numeroOab = null,
+                    ufOab = null,
+                    nomeAdvogado = variacao,
+                    dataInicio = params.dataInicio,
+                    dataFim = params.dataFim,
+                )
+            }
+            Pair(oab, porNome.toList())
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -113,15 +123,7 @@ class DjenRepositoryImpl(
         val publicacoesNovas = publicacoes.filter { it.id in novasIds }
 
         val processosParaSincronizar = publicacoesNovas
-            .asSequence()
-            .mapNotNull { publicacao ->
-                publicacao.numeroProcesso?.let { numero ->
-                    ProcessoDataJudSyncRequest(
-                        numeroProcesso = numero,
-                        tribunal = publicacao.tribunal,
-                    )
-                }
-            }
+            .mapNotNull { publicacao -> publicacao.resolverProcessoParaSincronizar() }
             .distinctBy { it.numeroProcesso to it.tribunal?.uppercase() }
             .toList()
 
@@ -183,7 +185,44 @@ class DjenRepositoryImpl(
             DjenPaginationStopReason.PAGE_LIMIT -> MonitorarDjenStopReason.PAGE_LIMIT
         }
 
+    private suspend fun PublicacaoEntity.resolverProcessoParaSincronizar(): ProcessoDataJudSyncRequest? {
+        val numeroProcesso = NumeroProcessoNormalizer.normalize(numeroProcesso) ?: return null
+        if (!deveSincronizarDataJud(numeroProcesso)) return null
+
+        return ProcessoDataJudSyncRequest(
+            numeroProcesso = numeroProcesso,
+            tribunal = tribunal,
+        )
+    }
+
+    private suspend fun deveSincronizarDataJud(numeroProcesso: String): Boolean {
+        val processoLocal = localProcessoRepository.obterProcesso(numeroProcesso)
+        return processoLocal == null || processoLocal.syncStatus.isReenriquecivel(processoLocal.dataJudTentativasRestantes)
+    }
+
+    private fun ProcessoSyncStatus.isReenriquecivel(tentativasRestantes: Int): Boolean =
+        when (this) {
+            ProcessoSyncStatus.PENDING,
+            ProcessoSyncStatus.STALE,
+            -> true
+
+            ProcessoSyncStatus.NOT_FOUND,
+            ProcessoSyncStatus.FAILED,
+            -> tentativasRestantes > 0
+
+            ProcessoSyncStatus.SYNCED -> false
+        }
+
+    private fun vazioFetchResult(): DjenFetchResult =
+        DjenFetchResult(
+            items = emptyList(),
+            totalRemoto = null,
+            paginasConsultadas = 0,
+            motivoParada = DjenPaginationStopReason.EMPTY_PAGE,
+        )
+
     companion object {
         private const val TAG = "DjenRepositoryImpl"
+        private const val THROTTLE_ENTRE_QUERIES_MS = 600L
     }
 }

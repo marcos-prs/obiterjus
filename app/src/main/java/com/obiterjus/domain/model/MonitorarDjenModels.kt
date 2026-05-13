@@ -9,6 +9,7 @@ data class MonitorarDjenParams(
     val dataInicio: LocalDate,
     val dataFim: LocalDate,
     val modo: MonitorarDjenModo,
+    val apenasPorNome: Boolean = false,
 )
 
 enum class MonitorarDjenModo {

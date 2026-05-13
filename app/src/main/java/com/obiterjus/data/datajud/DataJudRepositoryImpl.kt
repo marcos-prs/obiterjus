@@ -156,6 +156,10 @@ class DataJudRepositoryImpl(
             syncStatus = status,
             capturadoEm = syncedAt,
             atualizadoEm = syncedAt,
+            dataJudTentativasRestantes = when (status) {
+                ProcessoSyncStatus.NOT_FOUND, ProcessoSyncStatus.FAILED -> 2
+                else -> 0
+            },
         )
     companion object {
         private const val TAG = "DataJudRepository"

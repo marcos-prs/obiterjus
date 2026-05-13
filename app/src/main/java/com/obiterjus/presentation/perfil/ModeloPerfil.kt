@@ -46,6 +46,7 @@ data class EstadoPerfil(
     val autenticado: Boolean = false,
     val sincronizando: Boolean = false,
     val tema: TipoTema = TipoTema.SISTEMA,
+    val apenasPorNome: Boolean = false,
 )
 
 class ModeloPerfil(
@@ -110,6 +111,7 @@ class ModeloPerfil(
             },
             sincronizando = sincronizando,
             tema = preferencias.tema,
+            apenasPorNome = preferencias.apenasPorNome,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -148,6 +150,13 @@ class ModeloPerfil(
     fun aoAlterarTema(tema: TipoTema) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveTema(tema)
+            syncPerfilToCloud()
+        }
+    }
+
+    fun aoAlternarApenasPorNome(ativo: Boolean) {
+        viewModelScope.launch {
+            perfilPreferencesRepository.saveApenasPorNome(ativo)
             syncPerfilToCloud()
         }
     }

@@ -129,6 +129,7 @@ class FirestoreSincronizacaoRepository(
             notificarPrazosUrgentes = preferencias.notificarPrazosUrgentes,
             notificarMovimentacoes = preferencias.notificarMovimentacoes,
             tema = preferencias.tema.name,
+            apenasPorNome = preferencias.apenasPorNome,
             atualizadoEm = Timestamp.now(),
         )
 
@@ -165,6 +166,7 @@ class FirestoreSincronizacaoRepository(
             runCatching { com.obiterjus.ui.theme.TipoTema.valueOf(dto.tema) }
                 .getOrDefault(com.obiterjus.ui.theme.TipoTema.SISTEMA)
         )
+        perfilPreferencesRepository.saveApenasPorNome(dto.apenasPorNome)
         syncPreferencesRepository.saveSyncFrequencyHours(dto.frequenciaSyncHoras)
     }
 

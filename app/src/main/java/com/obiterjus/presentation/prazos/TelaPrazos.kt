@@ -440,6 +440,9 @@ private fun CardPrazo(
                             VarianteBadge.DESPACHO -> colors.divider
                             VarianteBadge.FAVORAVEL -> colors.success
                             VarianteBadge.TRIBUNAL -> colorScheme.primary
+                            VarianteBadge.CONFIANCA_ALTA,
+                            VarianteBadge.CONFIANCA_MEDIA,
+                            VarianteBadge.CONFIANCA_BAIXA -> colors.divider
                         },
                     ),
             )
@@ -515,6 +518,9 @@ private fun CardPrazo(
                             VarianteBadge.DESPACHO -> VarianteBadge.DESPACHO
                             VarianteBadge.FAVORAVEL -> VarianteBadge.FAVORAVEL
                             VarianteBadge.TRIBUNAL -> VarianteBadge.TRIBUNAL
+                            VarianteBadge.CONFIANCA_ALTA,
+                            VarianteBadge.CONFIANCA_MEDIA,
+                            VarianteBadge.CONFIANCA_BAIXA -> VarianteBadge.DESPACHO
                         },
                     )
                     BadgeTipoAto(
