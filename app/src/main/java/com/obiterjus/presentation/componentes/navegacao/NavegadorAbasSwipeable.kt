@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Componente de navegação por abas com suporte a swipe.
- * Sincroniza bidirecionalmente o [PrimaryTabRow] com o [HorizontalPager].
+ * Sincroniza bidirecionalmente o [PrimaryScrollableTabRow] com o [HorizontalPager].
  */
 @Composable
 fun NavegadorAbasSwipeable(
@@ -48,14 +48,15 @@ fun NavegadorAbasSwipeable(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        PrimaryTabRow(
+        PrimaryScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             modifier = Modifier.fillMaxWidth(),
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary,
+            edgePadding = 0.dp,
             indicator = {
                 TabRowDefaults.PrimaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(pagerState.currentPage),
+                    modifier = Modifier.tabIndicatorOffset(pagerState.currentPage, matchContentSize = true),
                     color = MaterialTheme.colorScheme.primary
                 )
             },
@@ -75,6 +76,8 @@ fun NavegadorAbasSwipeable(
                             text = title,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            softWrap = false,
                             color = if (selected) MaterialTheme.colorScheme.primary else colors.textMuted
                         )
                     }
