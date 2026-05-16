@@ -1,5 +1,6 @@
 package com.obiterjus.presentation.prazos
 
+import android.app.Activity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -44,17 +45,24 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import com.obiterjus.R
+import com.obiterjus.data.agenda.remote.GoogleCalendarAuthorizationRepository
+import com.obiterjus.data.agenda.remote.GoogleCalendarAuthorizationResult
 import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.model.ConfirmacaoPrazoResultado
@@ -67,6 +75,8 @@ import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
 import com.obiterjus.ui.theme.ObiterTheme
 import java.util.Locale
+import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 
 @Composable
 fun TelaPrazos(
@@ -76,7 +86,13 @@ fun TelaPrazos(
 ) {
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val googleCalendarAuthorizationRepository = remember {
+        GlobalContext.get().get<GoogleCalendarAuthorizationRepository>()
+    }
     var prazoEmDialogo by remember { mutableStateOf<PrazoUiItem?>(null) }
+    var prazoGooglePendente by remember { mutableStateOf<PrazoUiItem?>(null) }
     val feedbackLocal = stringResource(R.string.prazos_feedback_local)
     val rotuloGoogle = stringResource(R.string.prazos_provedor_google)
     val rotuloOutlook = stringResource(R.string.prazos_provedor_outlook)
@@ -90,6 +106,35 @@ fun TelaPrazos(
             ProvedorCalendario.GOOGLE -> rotuloGoogle
             ProvedorCalendario.OUTLOOK -> rotuloOutlook
             ProvedorCalendario.LOCAL -> rotuloLocal
+        }
+    }
+
+    val autorizacaoGoogleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        val prazoPendente = prazoGooglePendente ?: return@rememberLauncherForActivityResult
+        if (result.resultCode != Activity.RESULT_OK) {
+            prazoGooglePendente = null
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(feedbackErro)
+            }
+            return@rememberLauncherForActivityResult
+        }
+
+        coroutineScope.launch {
+            val tokenResult = googleCalendarAuthorizationRepository.completeAuthorization(result.data)
+            tokenResult.fold(
+                onSuccess = {
+                    viewModel.aoConfirmarPrazo(
+                        publicacaoId = prazoPendente.item.publicacao.id,
+                        provedor = ProvedorCalendario.GOOGLE,
+                    )
+                },
+                onFailure = {
+                    snackbarHostState.showSnackbar(feedbackErro)
+                },
+            )
+            prazoGooglePendente = null
         }
     }
 
@@ -335,11 +380,50 @@ fun TelaPrazos(
                     aoAbrirPublicacao(prazoParaConfirmar.item.publicacao.id)
                 },
                 onConfirmar = { provedor ->
-                viewModel.aoConfirmarPrazo(
-                    publicacaoId = prazoParaConfirmar.item.publicacao.id,
-                    provedor = provedor,
-                )
-                prazoEmDialogo = null
+                    if (provedor == ProvedorCalendario.GOOGLE) {
+                        val activity = context as? Activity
+                        if (activity == null) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(feedbackErro)
+                            }
+                        } else {
+                            coroutineScope.launch {
+                                val authorizationResult = googleCalendarAuthorizationRepository.authorize(activity)
+                                authorizationResult.fold(
+                                    onSuccess = { outcome ->
+                                        when (outcome) {
+                                            is GoogleCalendarAuthorizationResult.Authorized -> {
+                                                prazoGooglePendente = null
+                                                viewModel.aoConfirmarPrazo(
+                                                    publicacaoId = prazoParaConfirmar.item.publicacao.id,
+                                                    provedor = provedor,
+                                                )
+                                            }
+                                            is GoogleCalendarAuthorizationResult.NeedsResolution -> {
+                                                prazoGooglePendente = prazoParaConfirmar
+                                                autorizacaoGoogleLauncher.launch(
+                                                    IntentSenderRequest.Builder(
+                                                        outcome.pendingIntent.intentSender,
+                                                    ).build(),
+                                                )
+                                            }
+                                        }
+                                        prazoEmDialogo = null
+                                    },
+                                    onFailure = {
+                                        prazoGooglePendente = null
+                                        snackbarHostState.showSnackbar(feedbackErro)
+                                    },
+                                )
+                            }
+                        }
+                    } else {
+                        viewModel.aoConfirmarPrazo(
+                            publicacaoId = prazoParaConfirmar.item.publicacao.id,
+                            provedor = provedor,
+                        )
+                        prazoEmDialogo = null
+                    }
             },
         )
     }

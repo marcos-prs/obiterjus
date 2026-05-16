@@ -83,6 +83,11 @@ class LocalPublicacaoRepository(
         val existingIds = publicacaoDao.getExistingIds(ids).toSet()
         publicacaoDao.upsertAll(publicacoesParaSalvar)
 
+        val datasAfetadas = publicacoesParaSalvar
+            .mapNotNull { it.dataDisponibilizacao }
+            .toSet()
+        reconciliarDuplicatas(datasAfetadas)
+
         val newIds = ids.filterNot(existingIds::contains)
         return UpsertPublicacoesResult(
             totalRecebidas = publicacoes.size,
@@ -90,6 +95,55 @@ class LocalPublicacaoRepository(
             atualizadas = publicacoesParaSalvar.size - newIds.size,
             novasIds = newIds,
         )
+    }
+
+    /**
+     * Para cada data afetada, agrupa publicações por chave semântica (mesmo
+     * conteúdo no mesmo dia) e marca todas, exceto a primeira a chegar, como
+     * duplicatas. Não dedup entre dias diferentes — texto idêntico em datas
+     * distintas pode ser retificação/republicação com sentido jurídico próprio.
+     */
+    private suspend fun reconciliarDuplicatas(datas: Set<LocalDate>) {
+        if (datas.isEmpty()) return
+        for (data in datas) {
+            val entidadesDoDia = publicacaoDao.getByDataDisponibilizacao(data)
+            if (entidadesDoDia.size <= 1) {
+                // Mesmo com 0/1 entrada, garante que o estado fique limpo.
+                entidadesDoDia.forEach { entidade ->
+                    if (entidade.duplicataDe != null || entidade.totalDuplicatas != 0) {
+                        publicacaoDao.atualizarStatusDuplicata(entidade.id, null, 0)
+                    }
+                }
+                continue
+            }
+
+            val grupos = entidadesDoDia.groupBy { it.chaveDeduplicacao() }
+            for (grupo in grupos.values) {
+                val ordenadas = grupo.sortedWith(
+                    compareBy<PublicacaoEntity> { it.capturadoEm }.thenBy { it.id },
+                )
+                val canonica = ordenadas.first()
+                val duplicatas = ordenadas.drop(1)
+                val totalDuplicatas = duplicatas.size
+
+                if (canonica.duplicataDe != null || canonica.totalDuplicatas != totalDuplicatas) {
+                    publicacaoDao.atualizarStatusDuplicata(
+                        id = canonica.id,
+                        duplicataDe = null,
+                        totalDuplicatas = totalDuplicatas,
+                    )
+                }
+                for (duplicata in duplicatas) {
+                    if (duplicata.duplicataDe != canonica.id || duplicata.totalDuplicatas != 0) {
+                        publicacaoDao.atualizarStatusDuplicata(
+                            id = duplicata.id,
+                            duplicataDe = canonica.id,
+                            totalDuplicatas = 0,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     suspend fun getNumerosProcessoDistintos(): List<String> =
@@ -135,7 +189,25 @@ private fun PublicacaoEntity.paraDominio(): Publicacao =
         capturadoEm = capturadoEm,
         atualizadoEm = atualizadoEm,
         confiancaMatch = confiancaMatch,
+        duplicataDe = duplicataDe,
+        totalDuplicatas = totalDuplicatas,
     )
+
+internal fun PublicacaoEntity.chaveDeduplicacao(): String {
+    val texto = textoLimpo?.normalizarParaDedup().orEmpty()
+    return listOf(
+        numeroProcesso.orEmpty(),
+        tribunal.orEmpty().uppercase(),
+        idOrgao?.toString().orEmpty(),
+        tipoComunicacao.orEmpty().lowercase(),
+        texto,
+    ).joinToString("||")
+}
+
+private fun String.normalizarParaDedup(): String =
+    trim().lowercase().replace(WHITESPACE_REGEX, " ")
+
+private val WHITESPACE_REGEX = Regex("\\s+")
 
 private fun PublicacaoEntity.prazo(): PublicacaoPrazo? {
     val quantidade = prazoQuantidade ?: return null

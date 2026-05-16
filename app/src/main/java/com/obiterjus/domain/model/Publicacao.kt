@@ -20,7 +20,12 @@ data class Publicacao(
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
     val confiancaMatch: ConfiancaMatch = ConfiancaMatch.ALTA,
-)
+    val duplicataDe: Long? = null,
+    val totalDuplicatas: Int = 0,
+) {
+    val isDuplicata: Boolean get() = duplicataDe != null
+    val possuiDuplicatas: Boolean get() = totalDuplicatas > 0
+}
 
 @Serializable
 data class PublicacaoParticipante(

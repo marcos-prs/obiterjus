@@ -6,24 +6,16 @@ import androidx.work.WorkerParameters
 import com.obiterjus.core.notification.PublicacaoNotificationHelper
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.domain.model.MonitorarDjenModo
-import com.obiterjus.domain.repository.RepositorioCadastroOab
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 
 class DjenSyncWorker(
     appContext: Context,
     workerParams: WorkerParameters,
     private val djenSyncExecutor: DjenSyncExecutor,
-    private val repositorioCadastroOab: RepositorioCadastroOab,
     private val notificationHelper: PublicacaoNotificationHelper,
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         return try {
-            val cadastro = repositorioCadastroOab.cadastro.first()
-            if (!cadastro.isValid) {
-                return Result.success()
-            }
-
             val resumo = djenSyncExecutor.executar(MonitorarDjenModo.BACKGROUND)
 
             notificationHelper.notificarNovasPublicacoes(resumo.djen.novas)

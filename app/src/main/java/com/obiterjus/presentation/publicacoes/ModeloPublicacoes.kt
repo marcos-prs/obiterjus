@@ -30,6 +30,7 @@ class PublicacoesViewModel(
     private val filtros = MutableStateFlow(FiltrosPublicacoes())
     private val publicacaoSelecionadaId = MutableStateFlow<Long?>(null)
     private val certidaoState = MutableStateFlow(CertidaoUiState())
+    private val duplicatasCanonicaId = MutableStateFlow<Long?>(null)
 
     val estado: StateFlow<EstadoPublicacoes> =
         combine(
@@ -37,13 +38,23 @@ class PublicacoesViewModel(
             filtros,
             publicacaoSelecionadaId,
             certidaoState,
-        ) { publicacoes, filtrosAtuais, selecionadaId, certidao ->
+            duplicatasCanonicaId,
+        ) { publicacoes, filtrosAtuais, selecionadaId, certidao, canonicaId ->
             val tribunaisPorGenero = publicacoes.tribunaisPorGenero()
             val filtradas = publicacoes
                 .filter { publicacao -> publicacao.atende(filtrosAtuais) }
             val deduplicadas = NormalizadorPublicacoes.deduplicar(filtradas)
             val agrupadas = NormalizadorPublicacoes.agruparPorData(deduplicadas)
             val metadados = NormalizadorPublicacoes.calcularMetadadosOrdem(deduplicadas)
+
+            val canonicaDuplicatas = canonicaId
+                ?.let { id -> publicacoes.firstOrNull { it.id == id } }
+            val duplicatasSelecionadas = canonicaId
+                ?.let { id ->
+                    publicacoes.filter { it.duplicataDe == id }
+                        .sortedWith(compareBy({ it.capturadoEm }, { it.id }))
+                }
+                .orEmpty()
 
             EstadoPublicacoes(
                 publicacoes = deduplicadas,
@@ -54,6 +65,8 @@ class PublicacoesViewModel(
                 filtros = filtrosAtuais,
                 publicacaoSelecionada = publicacoes.firstOrNull { it.id == selecionadaId },
                 certidao = certidao,
+                canonicaDuplicatas = canonicaDuplicatas,
+                duplicatasSelecionadas = duplicatasSelecionadas,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -90,11 +103,32 @@ class PublicacoesViewModel(
     }
 
     fun aoAlterarFiltroConfianca(valor: ConfiancaMatch?) {
-        filtros.update { it.copy(confiancaSelecionada = valor) }
+        filtros.update {
+            // Confiança e Duplicatas são mutuamente exclusivas no mesmo chip row.
+            it.copy(confiancaSelecionada = valor, mostrarApenasDuplicatas = false)
+        }
+    }
+
+    fun aoAlternarFiltroDuplicatas() {
+        filtros.update {
+            val novoEstado = !it.mostrarApenasDuplicatas
+            it.copy(
+                mostrarApenasDuplicatas = novoEstado,
+                confiancaSelecionada = if (novoEstado) null else it.confiancaSelecionada,
+            )
+        }
     }
 
     fun aoLimparFiltros() {
         filtros.value = FiltrosPublicacoes()
+    }
+
+    fun aoAbrirDuplicatas(canonicaId: Long) {
+        duplicatasCanonicaId.value = canonicaId
+    }
+
+    fun aoFecharDuplicatas() {
+        duplicatasCanonicaId.value = null
     }
 
     fun aoSelecionarPublicacao(id: Long) {
@@ -154,8 +188,13 @@ class PublicacoesViewModel(
         val atendePeriodo = atendePeriodo(filtros)
         val atendeConfianca = filtros.confiancaSelecionada == null ||
             confiancaMatch == filtros.confiancaSelecionada
+        val atendeDuplicatas = if (filtros.mostrarApenasDuplicatas) {
+            isDuplicata
+        } else {
+            !isDuplicata
+        }
         return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo && atendeTipoAto &&
-            atendePeriodo && atendeConfianca
+            atendePeriodo && atendeConfianca && atendeDuplicatas
     }
 
     private fun Publicacao.atendeTribunal(filtro: String): Boolean {
@@ -190,6 +229,8 @@ data class EstadoPublicacoes(
     val filtros: FiltrosPublicacoes = FiltrosPublicacoes(),
     val publicacaoSelecionada: Publicacao? = null,
     val certidao: CertidaoUiState = CertidaoUiState(),
+    val canonicaDuplicatas: Publicacao? = null,
+    val duplicatasSelecionadas: List<Publicacao> = emptyList(),
 )
 
 data class CertidaoUiState(
@@ -207,6 +248,7 @@ data class FiltrosPublicacoes(
     val dataFim: String = "",
     val somenteSigilosas: Boolean = false,
     val confiancaSelecionada: ConfiancaMatch? = null,
+    val mostrarApenasDuplicatas: Boolean = false,
 ) {
     val possuiFiltrosAtivos: Boolean
         get() = texto.isNotBlank() ||
@@ -216,7 +258,8 @@ data class FiltrosPublicacoes(
             dataInicio.isNotBlank() ||
             dataFim.isNotBlank() ||
             somenteSigilosas ||
-            confiancaSelecionada != null
+            confiancaSelecionada != null ||
+            mostrarApenasDuplicatas
 }
 
 private fun List<Publicacao>.tribunaisPorGenero(): Map<GeneroTribunal, List<String>> =

@@ -11,7 +11,6 @@ import com.obiterjus.domain.model.SincronizacaoStatus
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.RepositorioCadastroOab
 import com.obiterjus.domain.repository.RepositorioSincronizacao
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.usecase.ExportarRelatorioUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import java.time.Clock
@@ -32,7 +31,6 @@ class MonitoramentoViewModel(
     private val authRepository: AuthRepository,
     private val repositorioSincronizacao: RepositorioSincronizacao,
     private val repositorioCadastroOab: RepositorioCadastroOab,
-    private val syncPreferencesRepository: SyncPreferencesRepository,
     private val exportarRelatorioUC: ExportarRelatorioUC,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -75,12 +73,6 @@ class MonitoramentoViewModel(
                 _uiState.update { it.copy(syncStatus = status) }
             }
         }
-
-        viewModelScope.launch {
-            syncPreferencesRepository.syncFrequencyHours.collect { freq ->
-                _uiState.update { it.copy(syncFrequencyHours = freq) }
-            }
-        }
     }
 
     private fun today(): LocalDate = LocalDate.now(clock)
@@ -109,12 +101,6 @@ class MonitoramentoViewModel(
     fun onDataFimChange(value: String) {
         _uiState.update { it.copy(dataFim = FormatadorData.formatarData(today()), error = null) }
         persistirCadastroAtual()
-    }
-
-    fun onSyncFrequencyChange(hours: Int) {
-        viewModelScope.launch {
-            syncPreferencesRepository.saveSyncFrequencyHours(hours)
-        }
     }
 
     fun sincronizar() {
@@ -225,7 +211,6 @@ data class MonitoramentoUiState(
     val isLoading: Boolean = false,
     val lastResumo: MonitorarCnjResumo? = null,
     val syncStatus: SincronizacaoStatus = SincronizacaoStatus(),
-    val syncFrequencyHours: Int = 24,
     val error: MonitoramentoUiError? = null,
     val semPublicacoesParaExportar: Boolean = false,
 ) {

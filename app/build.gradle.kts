@@ -11,12 +11,24 @@ val dataJudApiKey = providers.gradleProperty("DATAJUD_API_KEY")
     .get()
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
+val releaseStorePassword = providers.gradleProperty("RELEASE_STORE_PASSWORD").orElse("").get()
+val releaseKeyAlias = providers.gradleProperty("RELEASE_KEY_ALIAS").orElse("").get()
+val releaseKeyPassword = providers.gradleProperty("RELEASE_KEY_PASSWORD").orElse("").get()
 
 android {
     namespace = "com.obiterjus"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("C:/Users/marcos/OneDrive/APP/ANDROID/ObiterJus/Chave/Build aab")
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
         }
     }
 
@@ -34,6 +46,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -91,6 +104,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.config)
     implementation(libs.firebase.firestore)
+    implementation(libs.play.services.auth)
     implementation(libs.googleid)
     ksp(libs.androidx.room.compiler)
 

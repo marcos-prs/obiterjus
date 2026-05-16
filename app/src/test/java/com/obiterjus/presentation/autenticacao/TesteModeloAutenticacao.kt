@@ -3,9 +3,11 @@ package com.obiterjus.presentation.autenticacao
 import com.obiterjus.R
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
+import com.obiterjus.domain.model.MovimentoProcesso
+import com.obiterjus.domain.model.ParticipanteProcesso
+import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.SincronizacaoStatus
 import com.obiterjus.domain.model.SincronizarProcessosDataJudParams
 import com.obiterjus.domain.model.SincronizarProcessosDataJudResumo
@@ -13,6 +15,7 @@ import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
 import com.obiterjus.domain.repository.RepositorioCadastroOab
+import com.obiterjus.domain.repository.RepositorioProcessos
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
@@ -116,7 +119,6 @@ class TesteModeloAutenticacao {
             repositorioCadastroOab = RepositorioCadastroOabFake(),
             repositorioSincronizacao = RepositorioSincronizacaoFake(),
             monitorarCnjUseCase = monitorarCnjUseCase(),
-            syncPreferencesRepository = SyncPreferencesRepositoryFake(),
             perfilPreferencesRepository = PerfilPreferencesRepositoryFake(),
             textos = TextosFake,
         )
@@ -147,6 +149,15 @@ class TesteModeloAutenticacao {
                         )
                 },
             ),
+            repositorioProcessos = object : RepositorioProcessos {
+                override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
+                    kotlinx.coroutines.flow.flowOf(emptyList())
+                override fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>> = kotlinx.coroutines.flow.emptyFlow()
+                override fun observarParticipantes(numeroProcesso: String): Flow<List<ParticipanteProcesso>> = kotlinx.coroutines.flow.emptyFlow()
+                override suspend fun obterProcesso(numeroProcesso: String): ProcessoMonitorado? = null
+                override suspend fun salvarProcesso(processo: ProcessoMonitorado) = Unit
+                override suspend fun excluirProcesso(numeroProcesso: String) = Unit
+            },
         )
 
     private object TextosFake : TextosAutenticacao {
@@ -227,12 +238,6 @@ class TesteModeloAutenticacao {
         override suspend fun registrarFalha(executadoEm: Instant, mensagem: String) = Unit
     }
 
-    private class SyncPreferencesRepositoryFake : SyncPreferencesRepository {
-        override val syncFrequencyHours = MutableStateFlow(6)
-        override suspend fun saveSyncFrequencyHours(hours: Int) {
-            syncFrequencyHours.value = hours
-        }
-    }
 
     private class PerfilPreferencesRepositoryFake : PerfilPreferencesRepository {
         override val preferencias = MutableStateFlow(PerfilPreferences())

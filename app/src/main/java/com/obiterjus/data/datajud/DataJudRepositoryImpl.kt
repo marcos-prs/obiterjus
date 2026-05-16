@@ -48,12 +48,14 @@ class DataJudRepositoryImpl(
                 Log.d(TAG, "  → indexName=${remoteResult.indexName} | processo=${if (remoteResult.processo != null) "FOUND" else "NOT_FOUND"}")
                 val processoDto = remoteResult.processo
                 if (processoDto == null) {
+                    val tentativasRestantes = proximaTentativaRestante(request.numeroProcesso)
                     localProcessoRepository.upsertProcesso(
                         processoStatusEntity(
                             numeroProcesso = request.numeroProcesso,
                             tribunal = remoteResult.tribunal,
                             status = ProcessoSyncStatus.NOT_FOUND,
                             syncedAt = syncedAt,
+                            tentativasRestantes = tentativasRestantes,
                         ),
                     )
                     resultados += ProcessoDataJudSyncResultado(
@@ -89,12 +91,14 @@ class DataJudRepositoryImpl(
                 }
             } catch (error: UnknownDataJudTribunalException) {
                 Log.e(TAG, "  → FAILED (tribunal desconhecido): ${error.message}")
+                val tentativasRestantes = proximaTentativaRestante(request.numeroProcesso)
                 localProcessoRepository.upsertProcesso(
                     processoStatusEntity(
                         numeroProcesso = request.numeroProcesso,
                         tribunal = request.tribunal,
                         status = ProcessoSyncStatus.FAILED,
                         syncedAt = syncedAt,
+                        tentativasRestantes = tentativasRestantes,
                     ),
                 )
                 resultados += ProcessoDataJudSyncResultado(
@@ -107,12 +111,14 @@ class DataJudRepositoryImpl(
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 Log.e(TAG, "  → FAILED (excecao): ${error::class.java.simpleName}: ${error.message}")
+                val tentativasRestantes = proximaTentativaRestante(request.numeroProcesso)
                 localProcessoRepository.upsertProcesso(
                     processoStatusEntity(
                         numeroProcesso = request.numeroProcesso,
                         tribunal = request.tribunal,
                         status = ProcessoSyncStatus.FAILED,
                         syncedAt = syncedAt,
+                        tentativasRestantes = tentativasRestantes,
                     ),
                 )
                 resultados += ProcessoDataJudSyncResultado(
@@ -141,6 +147,7 @@ class DataJudRepositoryImpl(
         tribunal: String?,
         status: ProcessoSyncStatus,
         syncedAt: java.time.Instant,
+        tentativasRestantes: Int = 0,
     ): ProcessoEntity =
         ProcessoEntity(
             numeroProcesso = numeroProcesso,
@@ -156,11 +163,18 @@ class DataJudRepositoryImpl(
             syncStatus = status,
             capturadoEm = syncedAt,
             atualizadoEm = syncedAt,
-            dataJudTentativasRestantes = when (status) {
-                ProcessoSyncStatus.NOT_FOUND, ProcessoSyncStatus.FAILED -> 2
-                else -> 0
-            },
+            dataJudTentativasRestantes = tentativasRestantes,
         )
+
+    private suspend fun proximaTentativaRestante(numeroProcesso: String): Int {
+        val processoLocal = localProcessoRepository.getProcesso(numeroProcesso)
+            ?: return 2
+        val tentativasAtuais = processoLocal.dataJudTentativasRestantes
+        return when {
+            tentativasAtuais > 0 -> tentativasAtuais - 1
+            else -> 0
+        }
+    }
     companion object {
         private const val TAG = "DataJudRepository"
     }

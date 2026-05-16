@@ -12,7 +12,6 @@
     <string name="monitoramento_label_frequencia">Frequência de Sincronização</string>
     <string name="monitoramento_freq_4h">4 horas</string>
     <string name="monitoramento_freq_12h">12 horas</string>
-    <string name="monitoramento_freq_24h">Diário</string>
     <string name="monitoramento_action_buscar">Buscar publicações</string>
     <string name="monitoramento_action_buscar_loading">Buscando...</string>
     <string name="monitoramento_error_title">Não foi possível sincronizar</string>
@@ -203,7 +202,6 @@
     <string name="autenticacao_preferencias_sub">Estas escolhas controlam a carga inicial, a frequência das consultas e os alertas.</string>
     <string name="autenticacao_label_janela_busca">Janela de busca</string>
     <string name="autenticacao_dias">dias</string>
-    <string name="autenticacao_label_frequencia_sync">Frequência de sincronização</string>
     <string name="autenticacao_notificar_publicacoes">Publicações novas</string>
     <string name="autenticacao_notificar_prazos">Prazos urgentes</string>
     <string name="autenticacao_notificar_movimentacoes">Movimentações do DataJud</string>
@@ -215,8 +213,6 @@
     <string name="autenticacao_resumo_areas">Áreas</string>
     <string name="autenticacao_resumo_busca">Busca inicial</string>
     <string name="autenticacao_resumo_dias">Últimos %1$d dias</string>
-    <string name="autenticacao_resumo_sync">Sincronização</string>
-    <string name="autenticacao_resumo_horas">A cada %1$d h</string>
     <string name="autenticacao_resumo_aviso">Tudo pode ser ajustado depois em Perfil.</string>
     <string name="autenticacao_action_home">Ir para a Home</string>
     <string name="autenticacao_verificacao_djen_ok">DJEN acessível.</string>
@@ -421,7 +417,6 @@
     <string name="perfil_estado_uf">Estado (UF)</string>
     <string name="perfil_intervalo_dias">%1$d dias</string>
     <string name="perfil_sincronizacao_automatica">Sincronização automática</string>
-    <string name="perfil_frequencia">Frequência</string>
     <string name="perfil_notificar_publicacoes">Publicações novas</string>
     <string name="perfil_notificar_prazos">Prazos urgentes</string>
     <string name="perfil_notificar_movimentacoes">Movimentações</string>
@@ -435,6 +430,7 @@
     <string name="perfil_enriquecimento_datajud">DataJud</string>
     <string name="perfil_forcar_sincronizacao">Sincronizar publicações</string>
     <string name="perfil_forcar_sincronizacao_loading">Sincronizando publicações...</string>
+    <string name="perfil_sincronizacao_descricao">Sincronização automática diária às 7h. Toque para sincronizar agora.</string>
     <string name="perfil_sync_sucesso">Publicações sincronizadas: %1$d processo(s) e %2$d publicação(ões).</string>
     <string name="perfil_sync_falha">Não foi possível sincronizar publicações agora.</string>
     <string name="perfil_logout_sucesso">Sessão encerrada.</string>
@@ -444,9 +440,6 @@
     <string name="perfil_criar_conta">Criar conta</string>
     <string name="perfil_versao">Versão %1$s</string>
     <string name="perfil_auditoria">Auditoria de sincronização</string>
-    <string name="perfil_frequencia_horas">%1$d horas</string>
-    <string name="perfil_frequencia_a_cada_horas">A cada %1$dh</string>
-    <string name="perfil_frequencia_diaria">Diária</string>
     <string name="perfil_grupo_personalizacao">PERSONALIZAÇÃO</string>
     <string name="perfil_tema">Tema do aplicativo</string>
     <string name="perfil_tema_sistema">Sistema</string>
@@ -625,6 +618,15 @@
     <string name="confianca_baixa">Verificar</string>
     <string name="confianca_filtro_titulo">Confiança do match</string>
     <string name="confianca_filtro_todas">Todas</string>
+    <string name="publicacoes_filtro_duplicatas">Duplicatas</string>
+    <string name="publicacoes_badge_duplicatas">+%1$d duplicatas</string>
+    <string name="publicacoes_duplicatas_titulo">%1$d cópias idênticas neste dia</string>
+    <string name="publicacoes_duplicatas_subtitulo">O tribunal enviou a mesma publicação mais de uma vez na mesma data. Apenas a primeira aparece na lista; as demais ficam aqui para auditoria.</string>
+    <string name="publicacoes_duplicatas_canonica">Mantida na lista</string>
+    <string name="publicacoes_duplicatas_copias">Cópias ignoradas</string>
+    <string name="publicacoes_duplicatas_linha_id">ID #%1$d</string>
+    <string name="publicacoes_duplicatas_linha_recebida">Recebida em %1$s</string>
+    <string name="publicacoes_duplicatas_linha_hash">Hash: %1$s</string>
     <string name="perfil_apenas_por_nome">Buscar apenas pelo nome</string>
     <string name="perfil_apenas_por_nome_descricao">Útil para quem ainda não tem OAB cadastrada ou atua em UF diferente. Resultados podem incluir homônimos (badge "Verificar").</string>
 </resources>

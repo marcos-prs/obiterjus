@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
 import com.obiterjus.data.settings.PerfilPreferencesRepository
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.repository.AuthRepository
@@ -77,7 +76,6 @@ data class EstadoAutenticacao(
     val nomeEscritorio: String = "",
     val areasAtuacao: Set<String> = emptySet(),
     val janelaBuscaDias: Int = 30,
-    val frequenciaSincronizacaoHoras: Int = 6,
     val sincronizacaoAutomatica: Boolean = true,
     val notificarPublicacoes: Boolean = true,
     val notificarPrazosUrgentes: Boolean = true,
@@ -137,7 +135,6 @@ class ModeloAutenticacao internal constructor(
     private val repositorioCadastroOab: RepositorioCadastroOab,
     private val repositorioSincronizacao: RepositorioSincronizacao,
     private val monitorarCnjUseCase: MonitorarCnjUseCase,
-    private val syncPreferencesRepository: SyncPreferencesRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
     private val textos: TextosAutenticacao,
 ) : ViewModel() {
@@ -147,14 +144,12 @@ class ModeloAutenticacao internal constructor(
         repositorioCadastroOab: RepositorioCadastroOab,
         repositorioSincronizacao: RepositorioSincronizacao,
         monitorarCnjUseCase: MonitorarCnjUseCase,
-        syncPreferencesRepository: SyncPreferencesRepository,
         perfilPreferencesRepository: PerfilPreferencesRepository,
     ) : this(
         authRepository = authRepository,
         repositorioCadastroOab = repositorioCadastroOab,
         repositorioSincronizacao = repositorioSincronizacao,
         monitorarCnjUseCase = monitorarCnjUseCase,
-        syncPreferencesRepository = syncPreferencesRepository,
         perfilPreferencesRepository = perfilPreferencesRepository,
         textos = ContextTextosAutenticacao(context),
     )
@@ -211,9 +206,6 @@ class ModeloAutenticacao internal constructor(
     }
     fun aoAlterarJanelaBusca(dias: Int) = atualizar {
         it.copy(janelaBuscaDias = dias)
-    }
-    fun aoAlterarFrequenciaSincronizacao(horas: Int) = atualizar {
-        it.copy(frequenciaSincronizacaoHoras = horas)
     }
     fun aoAlternarSincronizacaoAutomatica(ativo: Boolean) = atualizar { it.copy(sincronizacaoAutomatica = ativo) }
     fun aoAlternarNotificarPublicacoes(ativo: Boolean) = atualizar { it.copy(notificarPublicacoes = ativo) }
@@ -304,7 +296,6 @@ class ModeloAutenticacao internal constructor(
 
             EtapaCadastro.PREFERENCIAS -> {
                 viewModelScope.launch {
-                    syncPreferencesRepository.saveSyncFrequencyHours(estadoAtual.frequenciaSincronizacaoHoras)
                     perfilPreferencesRepository.saveIntervaloBuscaDias(estadoAtual.janelaBuscaDias)
                     perfilPreferencesRepository.saveSincronizacaoAutomatica(estadoAtual.sincronizacaoAutomatica)
                     perfilPreferencesRepository.saveNotificarPublicacoes(estadoAtual.notificarPublicacoes)

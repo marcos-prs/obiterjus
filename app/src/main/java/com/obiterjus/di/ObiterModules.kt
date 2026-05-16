@@ -22,9 +22,12 @@ import com.obiterjus.domain.usecase.CalcularPrazoRegraUC
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.agenda.remote.CalendarRetrofitFactory
+import com.obiterjus.data.agenda.remote.DataStoreGoogleCalendarTokenRepository
+import com.obiterjus.data.agenda.remote.GoogleCalendarAuthorizationRepository
 import com.obiterjus.data.agenda.remote.GoogleCalendarDataSource
 import com.obiterjus.data.agenda.remote.OutlookCalendarDataSource
 import com.obiterjus.data.agenda.remote.CalendarSyncRepositoryImpl
+import com.obiterjus.data.agenda.remote.GoogleCalendarTokenRepository
 import com.obiterjus.domain.repository.CalendarSyncRepository
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
 import com.obiterjus.data.agenda.worker.CalendarSyncWorker
@@ -38,8 +41,6 @@ import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.settings.PreferencesCadastroOabRepository
 import com.obiterjus.data.settings.DataStorePerfilPreferencesRepository
 import com.obiterjus.data.settings.PerfilPreferencesRepository
-import com.obiterjus.data.settings.SyncPreferencesRepository
-import com.obiterjus.data.settings.DataStoreSyncPreferencesRepository
 import com.obiterjus.data.sincronizacao.FirestoreSincronizacaoRepository
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.CertidaoDjenRepository
@@ -111,13 +112,18 @@ private val dataModule = module {
     single<AuthRepository> { FirebaseAuthRepository() }
     single<RepositorioCadastroOab> { PreferencesCadastroOabRepository(androidContext()) }
     single<PerfilPreferencesRepository> { DataStorePerfilPreferencesRepository(androidContext()) }
-    single<SyncPreferencesRepository> { DataStoreSyncPreferencesRepository(androidContext()) }
     single { LocalPublicacaoRepository(get()) } bind RepositorioPublicacoes::class
-    single<GoogleCalendarDataSource> { CalendarRetrofitFactory.createGoogleApi() }
+    single<GoogleCalendarTokenRepository> { DataStoreGoogleCalendarTokenRepository(androidContext()) }
+    single { GoogleCalendarAuthorizationRepository(androidContext(), get()) }
+    single<GoogleCalendarDataSource> {
+        CalendarRetrofitFactory.createGoogleApi(
+            tokenProvider = { get<GoogleCalendarTokenRepository>().accessToken.value },
+        )
+    }
 
     single<OutlookCalendarDataSource> { CalendarRetrofitFactory.createOutlookApi() }
 
-    single<CalendarSyncRepository> { CalendarSyncRepositoryImpl(get(), get()) }
+    single<CalendarSyncRepository> { CalendarSyncRepositoryImpl(get(), get(), get()) }
 
     single {
         LocalProcessoRepository(
@@ -158,7 +164,6 @@ private val dataModule = module {
             localPublicacaoRepository = get(),
             repositorioCadastroOab = get(),
             perfilPreferencesRepository = get(),
-            syncPreferencesRepository = get(),
         )
     }
     single<DjenSyncExecutor> {
@@ -180,6 +185,7 @@ private val domainModule = module {
         MonitorarCnjUseCase(
             monitorarDjenUseCase = get(),
             sincronizarProcessosDataJudUseCase = get(),
+            repositorioProcessos = get(),
         )
     }
     factory { ClassificarPublicacaoUC(get()) }
@@ -209,7 +215,6 @@ private val presentationModule = module {
             authRepository = get(),
             repositorioSincronizacao = get(),
             repositorioCadastroOab = get(),
-            syncPreferencesRepository = get(),
             exportarRelatorioUC = get(),
         )
     }
@@ -218,9 +223,9 @@ private val presentationModule = module {
     viewModel { ModeloProcessos(get(), get()) }
     viewModel { AuditoriaViewModel(get()) }
     viewModel { ModeloInicio(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloPerfil(androidContext(), get(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloAutenticacao(androidContext(), get(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloEditarPerfil(get(), get(), get(), get(), get(), androidContext()) }
+    viewModel { ModeloPerfil(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloAutenticacao(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { ModeloEditarPerfil(get(), get(), get(), get(), androidContext()) }
     viewModel { ModeloDetalheProcesso(get(), get(), get(), get()) }
     viewModel { ModeloDetalhePublicacao(get(), get()) }
     viewModel { ModeloAdicionarProcesso(get()) }
@@ -233,7 +238,6 @@ private val workerModule = module {
             appContext = params.get<Context>(),
             workerParams = params.get<WorkerParameters>(),
             djenSyncExecutor = get(),
-            repositorioCadastroOab = get(),
             notificationHelper = get(),
         )
     }

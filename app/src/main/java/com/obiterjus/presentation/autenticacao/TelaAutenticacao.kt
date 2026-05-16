@@ -196,7 +196,6 @@ fun TelaAutenticacao(
                         EtapaCadastro.PREFERENCIAS -> EtapaPreferencias(
                             estado = estado,
                             aoAlterarJanelaBusca = viewModel::aoAlterarJanelaBusca,
-                            aoAlterarFrequencia = viewModel::aoAlterarFrequenciaSincronizacao,
                             aoAlternarNotificarPublicacoes = viewModel::aoAlternarNotificarPublicacoes,
                             aoAlternarNotificarPrazos = viewModel::aoAlternarNotificarPrazos,
                             aoAlternarNotificarMovimentacoes = viewModel::aoAlternarNotificarMovimentacoes,
@@ -603,7 +602,6 @@ private fun EtapaVerificacao(
 private fun EtapaPreferencias(
     estado: EstadoAutenticacao,
     aoAlterarJanelaBusca: (Int) -> Unit,
-    aoAlterarFrequencia: (Int) -> Unit,
     aoAlternarNotificarPublicacoes: (Boolean) -> Unit,
     aoAlternarNotificarPrazos: (Boolean) -> Unit,
     aoAlternarNotificarMovimentacoes: (Boolean) -> Unit,
@@ -622,13 +620,6 @@ private fun EtapaPreferencias(
             opcoes = listOf(7, 30, 60, 90),
             rotulo = { "$it $rotuloDias" },
             onSelect = aoAlterarJanelaBusca,
-        )
-        ChipsNumericos(
-            titulo = stringResource(R.string.autenticacao_label_frequencia_sync),
-            selecionado = estado.frequenciaSincronizacaoHoras,
-            opcoes = listOf(2, 6, 12, 24),
-            rotulo = { "${it}h" },
-            onSelect = aoAlterarFrequencia,
         )
         ToggleLinha(
             titulo = stringResource(R.string.autenticacao_notificar_publicacoes),
@@ -681,7 +672,6 @@ private fun EtapaResumo(
                 LinhaResumo(stringResource(R.string.autenticacao_resumo_oab), "OAB/${estado.uf} ${estado.numeroOab} · ${tipoLabel(estado.tipoInscricao)}")
                 LinhaResumo(stringResource(R.string.autenticacao_resumo_areas), estado.areasAtuacao.joinToString(" · ").ifBlank { "—" })
                 LinhaResumo(stringResource(R.string.autenticacao_resumo_busca), stringResource(R.string.autenticacao_resumo_dias, estado.janelaBuscaDias))
-                LinhaResumo(stringResource(R.string.autenticacao_resumo_sync), stringResource(R.string.autenticacao_resumo_horas, estado.frequenciaSincronizacaoHoras))
             }
         }
         Text(

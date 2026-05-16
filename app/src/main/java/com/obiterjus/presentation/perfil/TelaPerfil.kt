@@ -161,11 +161,6 @@ fun TelaPerfil(
                         ativo = estado.apenasPorNome,
                         aoAlternar = viewModel::aoAlternarApenasPorNome,
                     )
-                    DividerInterno()
-                    LinhaValor(
-                        rotulo = stringResource(R.string.perfil_frequencia),
-                        valor = estado.frequenciaSincronizacao,
-                    )
                 }
                 
                 Spacer(modifier = Modifier.height(dimens.cardGap))
@@ -176,6 +171,7 @@ fun TelaPerfil(
                 ) {
                     LinhaSincronizacao(
                         rotulo = stringResource(R.string.perfil_forcar_sincronizacao),
+                        descricao = stringResource(R.string.perfil_sincronizacao_descricao),
                         sincronizando = estado.sincronizando,
                         aoForcar = aoForcarSincronizacao,
                     )
@@ -489,6 +485,7 @@ private fun LinhaToggleDescritivo(
 @Composable
 private fun LinhaSincronizacao(
     rotulo: String,
+    descricao: String,
     sincronizando: Boolean,
     aoForcar: () -> Unit,
 ) {
@@ -499,12 +496,20 @@ private fun LinhaSincronizacao(
             .padding(horizontal = dimens.cardPaddingH, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = rotulo,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = rotulo,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = descricao,
+                style = MaterialTheme.typography.bodySmall,
+                color = ObiterTheme.colors.textMuted,
+            )
+        }
+        Spacer(modifier = Modifier.size(dimens.space1))
         Button(
             onClick = aoForcar,
             enabled = !sincronizando,

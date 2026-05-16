@@ -226,7 +226,6 @@ data class PerfilFirestoreDto(
     val areasAtuacao: List<String> = emptyList(),
     val intervaloBuscaDias: Int = 7,
     val sincronizacaoAutomatica: Boolean = true,
-    val frequenciaSyncHoras: Int = 24,
     val notificarPublicacoes: Boolean = true,
     val notificarPrazosUrgentes: Boolean = true,
     val notificarMovimentacoes: Boolean = true,

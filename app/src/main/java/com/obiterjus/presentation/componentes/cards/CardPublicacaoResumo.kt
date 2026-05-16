@@ -18,6 +18,8 @@ fun CardPublicacaoResumo(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     badgeOrdem: String? = null,
+    badgeDuplicatas: String? = null,
+    onBadgeDuplicatasClick: (() -> Unit)? = null,
     onVerDetalhes: (() -> Unit)? = null,
 ){
     val tituloAto = publicacao.tipoComunicacao ?: stringResource(R.string.publicacoes_sem_tipo)
@@ -50,6 +52,8 @@ fun CardPublicacaoResumo(
         mostrarBotaoDetalhes = true,
         modifier = modifier,
         badgeOrdem = badgeOrdem,
+        badgeDuplicatas = badgeDuplicatas,
+        onBadgeDuplicatasClick = onBadgeDuplicatasClick,
         confianca = publicacao.confiancaMatch,
     )
 }

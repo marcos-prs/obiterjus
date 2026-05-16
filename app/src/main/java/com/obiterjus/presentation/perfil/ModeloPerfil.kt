@@ -7,7 +7,6 @@ import com.obiterjus.R
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.model.MonitorarDjenModo
@@ -36,7 +35,6 @@ data class EstadoPerfil(
     val tipoInscricao: String = "",
     val intervaloBuscaDias: Int = 0,
     val sincronizacaoAutomatica: Boolean = true,
-    val frequenciaSincronizacao: String = "",
     val notificarPublicacoes: Boolean = true,
     val notificarPrazosUrgentes: Boolean = true,
     val notificarMovimentacoes: Boolean = true,
@@ -54,7 +52,6 @@ class ModeloPerfil(
     private val authRepository: AuthRepository,
     repositorioCadastroOab: RepositorioCadastroOab,
     private val djenSyncExecutor: DjenSyncExecutor,
-    syncPreferencesRepository: SyncPreferencesRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
     private val repositorioSincronizacao: RepositorioSincronizacao,
 ) : ViewModel() {
@@ -73,7 +70,6 @@ class ModeloPerfil(
         authRepository.currentUser,
         repositorioCadastroOab.cadastro,
         repositorioCadastroOab.status,
-        syncPreferencesRepository.syncFrequencyHours,
         perfilPreferencesRepository.preferencias,
         _sincronizando,
         _statusNuvemOverride,
@@ -81,10 +77,9 @@ class ModeloPerfil(
         val usuario = values[0] as AuthUser?
         val cadastro = values[1] as OabCadastro
         val status = values[2] as SincronizacaoStatus
-        val frequencia = values[3] as Int
-        val preferencias = values[4] as PerfilPreferences
-        val sincronizando = values[5] as Boolean
-        val statusOverride = values[6] as String?
+        val preferencias = values[3] as PerfilPreferences
+        val sincronizando = values[4] as Boolean
+        val statusOverride = values[5] as String?
         val autenticado = usuario != null && !usuario.isAnonymous
         EstadoPerfil(
             nomeUsuario = cadastro.nomeAdvogado.ifBlank {
@@ -97,7 +92,6 @@ class ModeloPerfil(
             tipoInscricao = cadastro.tipoInscricao,
             intervaloBuscaDias = preferencias.intervaloBuscaDias,
             sincronizacaoAutomatica = preferencias.sincronizacaoAutomatica,
-            frequenciaSincronizacao = rotuloFrequencia(frequencia),
             notificarPublicacoes = preferencias.notificarPublicacoes,
             notificarPrazosUrgentes = preferencias.notificarPrazosUrgentes,
             notificarMovimentacoes = preferencias.notificarMovimentacoes,
@@ -228,9 +222,4 @@ class ModeloPerfil(
         repositorioSincronizacao.enviarPerfil(user.uid)
     }
 
-    private fun rotuloFrequencia(horas: Int): String =
-        when (horas) {
-            24 -> context.getString(R.string.perfil_frequencia_diaria)
-            else -> context.getString(R.string.perfil_frequencia_a_cada_horas, horas)
-        }
 }

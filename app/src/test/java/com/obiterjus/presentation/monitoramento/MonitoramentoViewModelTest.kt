@@ -5,7 +5,10 @@ import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
 import com.obiterjus.domain.model.OabCadastro
+import com.obiterjus.domain.model.MovimentoProcesso
 import com.obiterjus.domain.model.Publicacao
+import com.obiterjus.domain.model.ParticipanteProcesso
+import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.SincronizacaoNuvemResumo
 import com.obiterjus.domain.model.SincronizacaoStatus
 import com.obiterjus.domain.model.SincronizarProcessosDataJudParams
@@ -14,8 +17,8 @@ import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
 import com.obiterjus.domain.repository.RepositorioCadastroOab
+import com.obiterjus.domain.repository.RepositorioProcessos
 import com.obiterjus.domain.repository.RepositorioPublicacoes
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.repository.RepositorioSincronizacao
 import com.obiterjus.domain.usecase.ExportarRelatorioUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
@@ -62,7 +65,6 @@ class MonitoramentoViewModelTest {
             authRepository = FakeAuthRepository(),
             repositorioSincronizacao = FakeRepositorioSincronizacao(),
             repositorioCadastroOab = FakeRepositorioCadastroOab(),
-            syncPreferencesRepository = FakeSyncPreferencesRepository(),
             exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
         )
 
@@ -84,7 +86,6 @@ class MonitoramentoViewModelTest {
             authRepository = FakeAuthRepository(),
             repositorioSincronizacao = FakeRepositorioSincronizacao(),
             repositorioCadastroOab = FakeRepositorioCadastroOab(),
-            syncPreferencesRepository = FakeSyncPreferencesRepository(),
             exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
         )
 
@@ -108,7 +109,6 @@ class MonitoramentoViewModelTest {
                     dataFim = LocalDate.of(2026, 4, 30),
                 ),
             ),
-            syncPreferencesRepository = FakeSyncPreferencesRepository(),
             exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
             clock = Clock.fixed(
                 Instant.parse("2026-05-07T12:00:00Z"),
@@ -132,7 +132,6 @@ class MonitoramentoViewModelTest {
             authRepository = FakeAuthRepository(),
             repositorioSincronizacao = FakeRepositorioSincronizacao(),
             repositorioCadastroOab = cadastroRepository,
-            syncPreferencesRepository = FakeSyncPreferencesRepository(),
             exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
             clock = Clock.fixed(
                 Instant.parse("2026-05-07T12:00:00Z"),
@@ -176,6 +175,15 @@ class MonitoramentoViewModelTest {
                         )
                 },
             ),
+            repositorioProcessos = object : RepositorioProcessos {
+                override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
+                    kotlinx.coroutines.flow.flowOf(emptyList())
+                override fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>> = kotlinx.coroutines.flow.emptyFlow()
+                override fun observarParticipantes(numeroProcesso: String): Flow<List<ParticipanteProcesso>> = kotlinx.coroutines.flow.emptyFlow()
+                override suspend fun obterProcesso(numeroProcesso: String): ProcessoMonitorado? = null
+                override suspend fun salvarProcesso(processo: ProcessoMonitorado) = Unit
+                override suspend fun excluirProcesso(numeroProcesso: String) = Unit
+            },
         )
 
     private class FakeDjenRepository : DjenRepository {
@@ -289,14 +297,6 @@ class MonitoramentoViewModelTest {
         }
     }
 
-    private class FakeSyncPreferencesRepository : SyncPreferencesRepository {
-        private val _syncFrequencyHours = MutableStateFlow(24)
-        override val syncFrequencyHours: Flow<Int> = _syncFrequencyHours
-
-        override suspend fun saveSyncFrequencyHours(hours: Int) {
-            _syncFrequencyHours.value = hours
-        }
-    }
 
     private class FakeRepositorioPublicacoes : RepositorioPublicacoes {
         private val publicacoes = MutableStateFlow(emptyList<Publicacao>())

@@ -80,6 +80,23 @@ class LocalPublicacaoRepositoryTest {
         override fun observePorProcesso(numeroProcesso: String): Flow<List<PublicacaoEntity>> = emptyFlow()
 
         override suspend fun getNumerosProcessoDistintos(): List<String> = emptyList()
+
+        override suspend fun getByDataDisponibilizacao(data: LocalDate): List<PublicacaoEntity> =
+            upserted.filter { it.dataDisponibilizacao == data }
+
+        override suspend fun atualizarStatusDuplicata(
+            id: Long,
+            duplicataDe: Long?,
+            totalDuplicatas: Int,
+        ) {
+            upserted = upserted.map { entidade ->
+                if (entidade.id == id) {
+                    entidade.copy(duplicataDe = duplicataDe, totalDuplicatas = totalDuplicatas)
+                } else {
+                    entidade
+                }
+            }
+        }
     }
 
     private fun publicacao(

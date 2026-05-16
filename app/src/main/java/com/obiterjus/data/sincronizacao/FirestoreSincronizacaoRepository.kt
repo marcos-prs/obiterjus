@@ -11,7 +11,6 @@ import com.obiterjus.data.processo.local.ProcessoEntity
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.data.settings.PerfilPreferencesRepository
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.model.SincronizacaoNuvemResumo
 import com.obiterjus.domain.repository.RepositorioCadastroOab
 import com.obiterjus.domain.repository.RepositorioSincronizacao
@@ -26,7 +25,6 @@ class FirestoreSincronizacaoRepository(
     private val localPublicacaoRepository: LocalPublicacaoRepository,
     private val repositorioCadastroOab: RepositorioCadastroOab,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
-    private val syncPreferencesRepository: SyncPreferencesRepository,
 ) : RepositorioSincronizacao {
 
     override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo {
@@ -113,7 +111,6 @@ class FirestoreSincronizacaoRepository(
     override suspend fun enviarPerfil(userId: String): Result<Unit> = runCatching {
         val cadastro = repositorioCadastroOab.cadastro.first()
         val preferencias = perfilPreferencesRepository.preferencias.first()
-        val frequenciaHoras = syncPreferencesRepository.syncFrequencyHours.first()
 
         val dto = PerfilFirestoreDto(
             nomeAdvogado = cadastro.nomeAdvogado,
@@ -124,7 +121,6 @@ class FirestoreSincronizacaoRepository(
             areasAtuacao = cadastro.areasAtuacao,
             intervaloBuscaDias = preferencias.intervaloBuscaDias,
             sincronizacaoAutomatica = preferencias.sincronizacaoAutomatica,
-            frequenciaSyncHoras = frequenciaHoras,
             notificarPublicacoes = preferencias.notificarPublicacoes,
             notificarPrazosUrgentes = preferencias.notificarPrazosUrgentes,
             notificarMovimentacoes = preferencias.notificarMovimentacoes,
@@ -167,7 +163,6 @@ class FirestoreSincronizacaoRepository(
                 .getOrDefault(com.obiterjus.ui.theme.TipoTema.SISTEMA)
         )
         perfilPreferencesRepository.saveApenasPorNome(dto.apenasPorNome)
-        syncPreferencesRepository.saveSyncFrequencyHours(dto.frequenciaSyncHoras)
     }
 
     private suspend fun mergeProcessos(processosNuvem: List<ProcessoEntity>): Int {

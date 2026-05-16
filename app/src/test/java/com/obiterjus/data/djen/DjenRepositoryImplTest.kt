@@ -206,12 +206,30 @@ class DjenRepositoryImplTest {
         override fun observePorProcesso(numeroProcesso: String): Flow<List<PublicacaoEntity>> = emptyFlow()
 
         override suspend fun getNumerosProcessoDistintos(): List<String> = emptyList()
+
+        override suspend fun getByDataDisponibilizacao(data: LocalDate): List<PublicacaoEntity> =
+            saved.filter { it.dataDisponibilizacao == data }
+
+        override suspend fun atualizarStatusDuplicata(
+            id: Long,
+            duplicataDe: Long?,
+            totalDuplicatas: Int,
+        ) {
+            val idx = saved.indexOfFirst { it.id == id }
+            if (idx >= 0) {
+                saved[idx] = saved[idx].copy(
+                    duplicataDe = duplicataDe,
+                    totalDuplicatas = totalDuplicatas,
+                )
+            }
+        }
     }
 
     private class FakeProcessoRepository(
         private val processos: Map<String, ProcessoMonitorado> = emptyMap(),
     ) : RepositorioProcessos {
-        override fun observarProcessos(): Flow<List<ProcessoMonitorado>> = emptyFlow()
+        override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
+            kotlinx.coroutines.flow.flowOf(emptyList())
 
         override fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>> = emptyFlow()
 

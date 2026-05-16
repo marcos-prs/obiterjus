@@ -7,7 +7,8 @@ import java.time.format.DateTimeFormatter
 
 class CalendarSyncRepositoryImpl(
     private val googleDataSource: GoogleCalendarDataSource,
-    private val outlookDataSource: OutlookCalendarDataSource
+    private val outlookDataSource: OutlookCalendarDataSource,
+    private val googleCalendarTokenRepository: GoogleCalendarTokenRepository,
 ) : CalendarSyncRepository {
 
     override suspend fun syncPrazo(
@@ -30,6 +31,9 @@ class CalendarSyncRepositoryImpl(
                 val response = googleDataSource.createEvent(event)
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!.id)
+                } else if (response.code() == 401 || response.code() == 403) {
+                    googleCalendarTokenRepository.clearAccessToken()
+                    Result.failure(Exception("Erro Google: ${response.code()}"))
                 } else {
                     Result.failure(Exception("Erro Google: ${response.code()}"))
                 }
@@ -59,6 +63,10 @@ class CalendarSyncRepositoryImpl(
             ProvedorCalendario.GOOGLE -> {
                 val response = googleDataSource.deleteEvent(idExterno)
                 if (response.isSuccessful) Result.success(Unit)
+                else if (response.code() == 401 || response.code() == 403) {
+                    googleCalendarTokenRepository.clearAccessToken()
+                    Result.failure(Exception("Erro Google: ${response.code()}"))
+                }
                 else Result.failure(Exception("Erro Google: ${response.code()}"))
             }
             ProvedorCalendario.OUTLOOK -> {

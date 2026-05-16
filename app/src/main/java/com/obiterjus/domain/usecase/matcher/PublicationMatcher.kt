@@ -46,14 +46,6 @@ object PublicationMatcher {
         return ConfiancaMatch.BAIXA
     }
 
-    /** Mantido para compatibilidade com testes legados. */
-    fun matches(
-        textoPublicacao: String?,
-        numeroOab: String,
-        ufOab: String,
-        nomeAdvogado: String,
-    ): Boolean = classificar(textoPublicacao, numeroOab, ufOab, nomeAdvogado) != ConfiancaMatch.BAIXA
-
     private fun casaOab(textoLimpo: String, numeroOab: String, ufOab: String): Boolean {
         val digitsRegex = numeroOab.toList().joinToString("[.\\\\-]?")
         val regexOab = Regex(

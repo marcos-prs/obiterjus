@@ -258,7 +258,6 @@ private fun AbaOab(estado: EstadoEditarPerfil, viewModel: ModeloEditarPerfil) {
 @Composable
 private fun AbaPreferencias(estado: EstadoEditarPerfil, viewModel: ModeloEditarPerfil) {
     val rotuloDias = stringResource(R.string.autenticacao_dias)
-    val rotuloHoras = stringResource(R.string.perfil_frequencia_horas)
 
     Text(stringResource(R.string.autenticacao_step_preferencias), style = MaterialTheme.typography.titleLarge)
 
@@ -268,15 +267,6 @@ private fun AbaPreferencias(estado: EstadoEditarPerfil, viewModel: ModeloEditarP
         opcoes = listOf(7, 30, 60, 90),
         rotulo = { "$it $rotuloDias" },
         onSelect = viewModel::aoAlterarJanelaBusca
-    )
-
-    val rotuloFreq24h = stringResource(R.string.monitoramento_freq_24h)
-    ChipsNumericos(
-        titulo = stringResource(R.string.autenticacao_label_frequencia_sync),
-        selecionado = estado.frequenciaSincronizacaoHoras,
-        opcoes = listOf(4, 6, 12, 24),
-        rotulo = { if (it == 24) rotuloFreq24h else "$it $rotuloHoras" },
-        onSelect = viewModel::aoAlterarFrequenciaSync
     )
 
     Spacer(Modifier.height(8.dp))
@@ -390,10 +380,6 @@ private fun AbaResumo(
                 ResumoLinha(
                     stringResource(R.string.autenticacao_label_janela_busca),
                     "${estado.janelaBuscaDias} dias"
-                )
-                ResumoLinha(
-                    stringResource(R.string.autenticacao_label_frequencia_sync),
-                    "${estado.frequenciaSincronizacaoHoras}h"
                 )
                 ResumoLinha(
                     stringResource(R.string.autenticacao_notificar_publicacoes),

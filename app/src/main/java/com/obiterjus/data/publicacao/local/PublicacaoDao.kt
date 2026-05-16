@@ -67,4 +67,21 @@ interface PublicacaoDao {
         """,
     )
     suspend fun getNumerosProcessoDistintos(): List<String>
+
+    @Query(
+        """
+        SELECT * FROM publicacoes
+        WHERE dataDisponibilizacao = :data
+        """,
+    )
+    suspend fun getByDataDisponibilizacao(data: LocalDate): List<PublicacaoEntity>
+
+    @Query(
+        """
+        UPDATE publicacoes
+        SET duplicataDe = :duplicataDe, totalDuplicatas = :totalDuplicatas
+        WHERE id = :id
+        """,
+    )
+    suspend fun atualizarStatusDuplicata(id: Long, duplicataDe: Long?, totalDuplicatas: Int)
 }

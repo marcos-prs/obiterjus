@@ -1,65 +1,106 @@
 package com.obiterjus.domain.usecase.matcher
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import com.obiterjus.domain.model.ConfiancaMatch
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PublicationMatcherTest {
 
     @Test
-    fun `matches exato de OAB`() {
+    fun `OAB exata no corpo classifica como ALTA`() {
         val texto = "Ato publicado pelo advogado OAB MG 123456 referente ao processo"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Qualquer Nome"))
+        assertEquals(
+            ConfiancaMatch.ALTA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Qualquer Nome"),
+        )
     }
 
     @Test
-    fun `matches OAB suja pontuacao`() {
+    fun `OAB com pontuacao classifica como ALTA`() {
         val texto = "Advogado OAB/MG 123.456, requereu"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Qualquer Nome"))
+        assertEquals(
+            ConfiancaMatch.ALTA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Qualquer Nome"),
+        )
     }
 
     @Test
-    fun `matches OAB suja invertida e com traco`() {
+    fun `OAB invertida e com traco classifica como ALTA`() {
         val texto = "Advogado 123-456 / MG, requereu"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Qualquer Nome"))
+        assertEquals(
+            ConfiancaMatch.ALTA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Qualquer Nome"),
+        )
     }
 
     @Test
-    fun `nao matches OAB errada mas nome diferente`() {
+    fun `OAB errada e nome ausente classifica como BAIXA`() {
         val texto = "OAB MG 999999 referente ao advogado Ze Ninguem"
-        assertFalse(PublicationMatcher.matches(texto, "123456", "MG", "Marcos Silva"))
+        assertEquals(
+            ConfiancaMatch.BAIXA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Marcos Silva"),
+        )
     }
 
     @Test
-    fun `matches Nome completo sem OAB`() {
+    fun `nome completo sem OAB classifica como MEDIA`() {
         val texto = "Intime-se o advogado Marcos Silva Carvalho para manifestar"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Marcos Silva Carvalho"))
+        assertEquals(
+            ConfiancaMatch.MEDIA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Marcos Silva Carvalho"),
+        )
     }
 
     @Test
-    fun `matches Nome com abreviacao do meio`() {
+    fun `nome com abreviacao do meio classifica como MEDIA`() {
         val texto = "Intime-se o advogado Marcos S. Carvalho para manifestar"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Marcos Silva Carvalho"))
+        assertEquals(
+            ConfiancaMatch.MEDIA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Marcos Silva Carvalho"),
+        )
     }
 
     @Test
-    fun `matches Nome com abreviacao sem ponto do meio`() {
+    fun `nome com abreviacao sem ponto do meio classifica como MEDIA`() {
         val texto = "Intime-se o advogado Marcos S Carvalho para manifestar"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Marcos Silva Carvalho"))
+        assertEquals(
+            ConfiancaMatch.MEDIA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Marcos Silva Carvalho"),
+        )
     }
 
     @Test
-    fun `matches Nome com stopwords cadastradas`() {
+    fun `cadastro tem stopwords mas publicacao usa primeiro mais ultimo classifica como MEDIA`() {
         val texto = "Intime-se o advogado Marcos Carvalho para manifestar"
-        // Cadastro tem "da Silva", a publicação sonegou o "Silva" -> a tokenização exige First e Last.
-        // Se a publicação for "Marcos Carvalho", FIRST é Marcos, LAST é Carvalho.
-        // middleRegex accepts middle parts optionally!
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Marcos da Silva Carvalho"))
+        // Tokenização remove stopwords "da", então tokens = [marcos, silva, carvalho].
+        // Como middleRegex aceita o nome do meio opcionalmente, "Marcos Carvalho" casa.
+        assertEquals(
+            ConfiancaMatch.MEDIA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Marcos da Silva Carvalho"),
+        )
     }
 
     @Test
-    fun `matches Fuzzy digitacao errada (Souza vs Sousa)`() {
+    fun `fuzzy de typo (Sousa vs Souza) classifica como BAIXA para forcar verificacao`() {
+        // Match por Levenshtein não tem como distinguir typo do usuário de homônimo
+        // real com sobrenome parecido. Por isso a regra é não auto-confirmar: vai
+        // entrar no banco com badge "Verificar".
         val texto = "Intime-se o advogado Marcos Silva Sousa para"
-        assertTrue(PublicationMatcher.matches(texto, "123456", "MG", "Marcos Silva Souza"))
+        assertEquals(
+            ConfiancaMatch.BAIXA,
+            PublicationMatcher.classificar(texto, "123456", "MG", "Marcos Silva Souza"),
+        )
+    }
+
+    @Test
+    fun `texto vazio classifica como BAIXA`() {
+        assertEquals(
+            ConfiancaMatch.BAIXA,
+            PublicationMatcher.classificar(null, "123456", "MG", "Marcos Silva"),
+        )
+        assertEquals(
+            ConfiancaMatch.BAIXA,
+            PublicationMatcher.classificar("", "123456", "MG", "Marcos Silva"),
+        )
     }
 }

@@ -57,6 +57,8 @@ fun CardPublicacao(
     aoClicar: () -> Unit,
     modifier: Modifier = Modifier,
     badgeOrdem: String? = null,
+    badgeDuplicatas: String? = null,
+    onBadgeDuplicatasClick: (() -> Unit)? = null,
     onVerDetalhes: () -> Unit = {},
     mostrarBotaoDetalhes: Boolean = false,
     confianca: ConfiancaMatch? = null,
@@ -142,6 +144,21 @@ fun CardPublicacao(
                             BadgeTipoAto(
                                 texto = confianca.rotuloCurto(),
                                 variante = confianca.varianteBadge(),
+                            )
+                        }
+                        if (!badgeDuplicatas.isNullOrBlank()) {
+                            BadgeTipoAto(
+                                texto = badgeDuplicatas,
+                                variante = VarianteBadge.URGENTE,
+                                modifier = if (onBadgeDuplicatasClick != null) {
+                                    Modifier.clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = onBadgeDuplicatasClick,
+                                    )
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }

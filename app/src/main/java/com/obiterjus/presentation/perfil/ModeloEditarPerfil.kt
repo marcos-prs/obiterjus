@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
 import com.obiterjus.data.settings.PerfilPreferencesRepository
-import com.obiterjus.data.settings.SyncPreferencesRepository
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.RepositorioCadastroOab
 import com.obiterjus.domain.repository.RepositorioSincronizacao
@@ -36,7 +35,6 @@ data class EstadoEditarPerfil(
     val nomeEscritorio: String = "",
     val areasAtuacao: Set<String> = emptySet(),
     val janelaBuscaDias: Int = 30,
-    val frequenciaSincronizacaoHoras: Int = 6,
     val sincronizacaoAutomatica: Boolean = true,
     val notificarPublicacoes: Boolean = true,
     val notificarPrazosUrgentes: Boolean = true,
@@ -66,7 +64,6 @@ class ModeloEditarPerfil(
     private val repositorioCadastroOab: RepositorioCadastroOab,
     private val repositorioSincronizacao: RepositorioSincronizacao,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
-    private val syncPreferencesRepository: SyncPreferencesRepository,
     context: Context,
 ) : ViewModel() {
 
@@ -91,7 +88,6 @@ class ModeloEditarPerfil(
             // Agora lê dos repositórios locais (que foram atualizados pelo restaurarPerfil ou já tinham dados)
             val cadastro = repositorioCadastroOab.cadastro.first()
             val perfilPrefs = perfilPreferencesRepository.preferencias.first()
-            val syncPrefs = syncPreferencesRepository.syncFrequencyHours.first()
             val user = authRepository.currentUser.first()
 
             _estado.update {
@@ -108,7 +104,6 @@ class ModeloEditarPerfil(
                     nomeEscritorio = cadastro.nomeEscritorio,
                     areasAtuacao = cadastro.areasAtuacao.toSet(),
                     janelaBuscaDias = perfilPrefs.intervaloBuscaDias,
-                    frequenciaSincronizacaoHoras = syncPrefs,
                     sincronizacaoAutomatica = perfilPrefs.sincronizacaoAutomatica,
                     notificarPublicacoes = perfilPrefs.notificarPublicacoes,
                     notificarPrazosUrgentes = perfilPrefs.notificarPrazosUrgentes,
@@ -206,13 +201,6 @@ class ModeloEditarPerfil(
         }
     }
 
-    fun aoAlterarFrequenciaSync(horas: Int) {
-        _estado.update { it.copy(frequenciaSincronizacaoHoras = horas) }
-        viewModelScope.launch {
-            syncPreferencesRepository.saveSyncFrequencyHours(horas)
-            sincronizarComNuvem()
-        }
-    }
 
     fun aoAlternarNotificarPublicacoes(ativo: Boolean) {
         _estado.update { it.copy(notificarPublicacoes = ativo) }

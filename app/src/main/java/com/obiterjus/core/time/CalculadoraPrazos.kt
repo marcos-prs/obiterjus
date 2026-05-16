@@ -48,9 +48,17 @@ class CalculadoraPrazos(
         val dow = data.dayOfWeek
         if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) return false
         if (MonthDay.from(data) in feriadosFixos) return false
-        
+        if (emSuspensaoForense(data)) return false
+
         val feriadosDinamicos = feriadoRepository.getFeriados(data.year)
         return data !in feriadosDinamicos
+    }
+
+    // CPC art. 220: prazos processuais suspensos de 20/12 a 20/01, inclusive.
+    private fun emSuspensaoForense(data: LocalDate): Boolean {
+        val md = MonthDay.from(data)
+        return (md.monthValue == 12 && md.dayOfMonth >= 20) ||
+            (md.monthValue == 1 && md.dayOfMonth <= 20)
     }
 
     suspend fun calcularDataLimite(

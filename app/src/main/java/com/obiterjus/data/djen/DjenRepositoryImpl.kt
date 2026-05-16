@@ -99,7 +99,7 @@ class DjenRepositoryImpl(
             )
             val comPrazo = publicacaoPrazoMapper.comPrazoCalculado(entity)
             val confianca = classificarConfianca(
-                texto = tagged.dto.texto,
+                texto = comPrazo.textoLimpo,
                 veioDaBuscaOab = tagged.veioDaBuscaOab,
                 params = params,
             )

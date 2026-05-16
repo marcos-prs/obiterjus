@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,11 +13,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +66,9 @@ fun TelaPublicacoes(
     aoAlterarFiltroDataFim: (String) -> Unit,
     aoAlternarSomenteSigilosas: () -> Unit,
     aoAlterarFiltroConfianca: (ConfiancaMatch?) -> Unit,
+    aoAlternarFiltroDuplicatas: () -> Unit,
+    aoAbrirDuplicatas: (Long) -> Unit,
+    aoFecharDuplicatas: () -> Unit,
     aoLimparFiltros: () -> Unit,
     aoSelecionarPublicacao: (Long) -> Unit,
     aoAbrirPublicacao: (Long) -> Unit,
@@ -186,20 +193,32 @@ fun TelaPublicacoes(
         }
         item {
             val rotuloTodas = stringResource(R.string.confianca_filtro_todas)
+            val rotuloDuplicatas = stringResource(R.string.publicacoes_filtro_duplicatas)
             val rotulosConfianca = listOf(
                 ConfiancaMatch.ALTA to stringResource(R.string.confianca_alta),
                 ConfiancaMatch.MEDIA to stringResource(R.string.confianca_media),
                 ConfiancaMatch.BAIXA to stringResource(R.string.confianca_baixa),
             )
+            val chipAtivo = when {
+                estado.filtros.mostrarApenasDuplicatas -> rotuloDuplicatas
+                estado.filtros.confiancaSelecionada != null ->
+                    rotulosConfianca.first { (nivel, _) -> nivel == estado.filtros.confiancaSelecionada }.second
+                else -> rotuloTodas
+            }
             ChipFiltroRow(
-                chips = listOf(rotuloTodas) + rotulosConfianca.map { (_, rotulo) -> rotulo },
-                chipAtivo = rotulosConfianca
-                    .firstOrNull { (nivel, _) -> nivel == estado.filtros.confiancaSelecionada }
-                    ?.second
-                    ?: rotuloTodas,
+                chips = listOf(rotuloTodas) +
+                    rotulosConfianca.map { (_, rotulo) -> rotulo } +
+                    listOf(rotuloDuplicatas),
+                chipAtivo = chipAtivo,
                 aoSelecionar = { chip ->
-                    val nivel = rotulosConfianca.firstOrNull { (_, rotulo) -> rotulo == chip }?.first
-                    aoAlterarFiltroConfianca(nivel)
+                    when (chip) {
+                        rotuloDuplicatas -> aoAlternarFiltroDuplicatas()
+                        else -> {
+                            val nivel = rotulosConfianca
+                                .firstOrNull { (_, rotulo) -> rotulo == chip }?.first
+                            aoAlterarFiltroConfianca(nivel)
+                        }
+                    }
                 },
             )
         }
@@ -239,6 +258,11 @@ fun TelaPublicacoes(
                     val badgeOrdem = metadados?.first?.let { ordem ->
                         stringResource(R.string.publicacoes_badge_ordem, ordem)
                     }
+                    val badgeDuplicatas = if (pubItem.possuiDuplicatas) {
+                        stringResource(R.string.publicacoes_badge_duplicatas, pubItem.totalDuplicatas)
+                    } else {
+                        null
+                    }
                     CardPublicacaoResumo(
                         publicacao = pubItem,
                         onClick = {
@@ -247,6 +271,12 @@ fun TelaPublicacoes(
                         },
                         modifier = Modifier.padding(horizontal = dimens.screenMargin),
                         badgeOrdem = badgeOrdem,
+                        badgeDuplicatas = badgeDuplicatas,
+                        onBadgeDuplicatasClick = if (pubItem.possuiDuplicatas) {
+                            { aoAbrirDuplicatas(pubId) }
+                        } else {
+                            null
+                        },
                         onVerDetalhes = {
                             aoSelecionarPublicacao(pubId)
                             aoAbrirPublicacao(pubId)
@@ -265,6 +295,117 @@ fun TelaPublicacoes(
                     modifier = Modifier.padding(horizontal = dimens.screenMargin),
                 )
             }
+        }
+    }
+
+    val canonica = estado.canonicaDuplicatas
+    if (canonica != null) {
+        DuplicatasBottomSheet(
+            canonica = canonica,
+            duplicatas = estado.duplicatasSelecionadas,
+            aoFechar = aoFecharDuplicatas,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DuplicatasBottomSheet(
+    canonica: Publicacao,
+    duplicatas: List<Publicacao>,
+    aoFechar: () -> Unit,
+) {
+    val dimens = ObiterTheme.dimens
+    val colors = ObiterTheme.colors
+    ModalBottomSheet(
+        onDismissRequest = aoFechar,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = dimens.screenMargin),
+            contentPadding = PaddingValues(bottom = dimens.screenMargin),
+            verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
+        ) {
+            item {
+                Text(
+                    text = stringResource(
+                        R.string.publicacoes_duplicatas_titulo,
+                        duplicatas.size,
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.publicacoes_duplicatas_subtitulo),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textMuted,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.publicacoes_duplicatas_canonica),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            item {
+                DuplicataLinha(publicacao = canonica)
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.publicacoes_duplicatas_copias),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textMuted,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+            items(items = duplicatas, key = { it.id }) { copia ->
+                DuplicataLinha(publicacao = copia)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DuplicataLinha(publicacao: Publicacao) {
+    val colors = ObiterTheme.colors
+    val capturadoEm = remember(publicacao.capturadoEm) {
+        runCatching {
+            java.time.format.DateTimeFormatter
+                .ofPattern("dd/MM/yyyy HH:mm")
+                .withZone(java.time.ZoneId.systemDefault())
+                .format(publicacao.capturadoEm)
+        }.getOrDefault("")
+    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.publicacoes_duplicatas_linha_id, publicacao.id),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(
+                R.string.publicacoes_duplicatas_linha_recebida,
+                capturadoEm,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.textMuted,
+        )
+        publicacao.hash?.takeIf { it.isNotBlank() }?.let { hash ->
+            Text(
+                text = stringResource(R.string.publicacoes_duplicatas_linha_hash, hash),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textMuted,
+            )
         }
     }
 }
@@ -304,6 +445,9 @@ fun ConteudoPublicacoes(
         aoAlterarFiltroDataFim = viewModel::aoAlterarFiltroDataFim,
         aoAlternarSomenteSigilosas = viewModel::aoAlternarSomenteSigilosas,
         aoAlterarFiltroConfianca = viewModel::aoAlterarFiltroConfianca,
+        aoAlternarFiltroDuplicatas = viewModel::aoAlternarFiltroDuplicatas,
+        aoAbrirDuplicatas = viewModel::aoAbrirDuplicatas,
+        aoFecharDuplicatas = viewModel::aoFecharDuplicatas,
         aoLimparFiltros = viewModel::aoLimparFiltros,
         aoSelecionarPublicacao = viewModel::aoSelecionarPublicacao,
         aoAbrirPublicacao = aoAbrirPublicacao,

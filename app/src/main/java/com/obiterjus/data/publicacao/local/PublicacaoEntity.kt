@@ -17,6 +17,7 @@ import java.time.LocalDate
         Index("tipoComunicacao"),
         Index("isSigiloso"),
         Index("confiancaMatch"),
+        Index("duplicataDe"),
     ],
 )
 data class PublicacaoEntity(
@@ -45,4 +46,6 @@ data class PublicacaoEntity(
     val capturadoEm: Instant,
     val atualizadoEm: Instant,
     val confiancaMatch: ConfiancaMatch = ConfiancaMatch.ALTA,
+    val duplicataDe: Long? = null,
+    val totalDuplicatas: Int = 0,
 )
