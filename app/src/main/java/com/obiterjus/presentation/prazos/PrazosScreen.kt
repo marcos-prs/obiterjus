@@ -32,7 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -193,10 +194,11 @@ fun PrazosScreen(
         val dimens = ObiterTheme.dimens
         val abas = listOf(
             AbaPrazos.TODOS to stringResource(R.string.prazos_aba_todos),
-            AbaPrazos.VENCIDOS to stringResource(R.string.prazos_aba_vencidos),
             AbaPrazos.PROXIMOS to stringResource(R.string.prazos_aba_proximos),
             AbaPrazos.SEM_DATA to stringResource(R.string.prazos_aba_sem_data),
+            AbaPrazos.VENCIDOS to stringResource(R.string.prazos_aba_vencidos),
         )
+        val abaIndex = abas.indexOfFirst { it.first == estado.abaSelecionada }.coerceAtLeast(0)
         val tituloExpirados = stringResource(R.string.prazos_secao_expirados)
         val tituloUrgente = stringResource(R.string.prazos_secao_urgente)
         val tituloSemana = stringResource(R.string.prazos_secao_semana)
@@ -245,12 +247,13 @@ fun PrazosScreen(
                 }
             }
             item {
-                SecondaryTabRow(
-                    selectedTabIndex = estado.abaSelecionada.ordinal,
+                SecondaryScrollableTabRow(
+                    selectedTabIndex = abaIndex,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = dimens.screenMargin),
                     containerColor = MaterialTheme.colorScheme.surface,
+                    edgePadding = 0.dp,
                     divider = {
                         HorizontalDivider(
                             color = ObiterTheme.colors.divider,
@@ -259,9 +262,7 @@ fun PrazosScreen(
                     },
                     indicator = {
                         SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(
-                                estado.abaSelecionada.ordinal,
-                            ),
+                            modifier = Modifier.tabIndicatorOffset(abaIndex),
                             color = ObiterTheme.colors.accent,
                         )
                     },
@@ -274,6 +275,8 @@ fun PrazosScreen(
                                 Text(
                                     text = rotulo,
                                     style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    softWrap = false,
                                     color = if (estado.abaSelecionada == aba) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
@@ -288,13 +291,6 @@ fun PrazosScreen(
 
             when (estado.abaSelecionada) {
                 AbaPrazos.TODOS -> {
-                    secaoPrazos(
-                        titulo = tituloExpirados,
-                        itens = estado.expirados,
-                        prioridade = VarianteBadge.URGENTE,
-                        confirmandoPrazoId = estado.confirmandoPrazoId,
-                        onSolicitarConfirmacao = { prazoEmDialogo = it },
-                    )
                     secaoPrazos(
                         titulo = tituloUrgente,
                         itens = estado.urgente,
@@ -313,6 +309,13 @@ fun PrazosScreen(
                         titulo = tituloProximos,
                         itens = estado.proximos,
                         prioridade = VarianteBadge.DESPACHO,
+                        confirmandoPrazoId = estado.confirmandoPrazoId,
+                        onSolicitarConfirmacao = { prazoEmDialogo = it },
+                    )
+                    secaoPrazos(
+                        titulo = tituloExpirados,
+                        itens = estado.expirados,
+                        prioridade = VarianteBadge.URGENTE,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
@@ -343,6 +346,13 @@ fun PrazosScreen(
                         titulo = tituloSemana,
                         itens = estado.estaSemana,
                         prioridade = VarianteBadge.SENTENCA,
+                        confirmandoPrazoId = estado.confirmandoPrazoId,
+                        onSolicitarConfirmacao = { prazoEmDialogo = it },
+                    )
+                    secaoPrazos(
+                        titulo = tituloProximos,
+                        itens = estado.proximos,
+                        prioridade = VarianteBadge.DESPACHO,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
