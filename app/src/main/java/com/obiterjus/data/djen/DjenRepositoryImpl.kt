@@ -18,7 +18,7 @@ import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.ProcessoSyncStatus
 import com.obiterjus.domain.model.ProcessoDataJudSyncRequest
 import com.obiterjus.domain.repository.DjenRepository
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 import com.obiterjus.domain.usecase.matcher.NomeVariacoes
 import com.obiterjus.domain.usecase.matcher.PublicationMatcher
 import java.time.Clock
@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 class DjenRepositoryImpl(
     private val remoteDataSource: DjenRemoteDataSource,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
-    private val localProcessoRepository: RepositorioProcessos,
+    private val localProcessoRepository: ProcessosRepository,
     private val djenMapper: DjenMapper,
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
     private val clock: Clock = Clock.systemUTC(),

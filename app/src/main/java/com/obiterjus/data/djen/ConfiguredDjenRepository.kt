@@ -11,13 +11,13 @@ import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
 import com.obiterjus.domain.repository.DjenRepository
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 import java.time.Clock
 
 class ConfiguredDjenRepository(
     private val appConfigRepository: AppConfigRepository,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
-    private val localProcessoRepository: RepositorioProcessos,
+    private val localProcessoRepository: ProcessosRepository,
     private val djenMapper: DjenMapper,
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
     private val clock: Clock = Clock.systemUTC(),

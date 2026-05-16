@@ -2,7 +2,7 @@ package com.obiterjus.data.publicacao.local
 
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
-import com.obiterjus.domain.repository.RepositorioPublicacoes
+import com.obiterjus.domain.repository.PublicacoesRepository
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,7 +18,7 @@ data class PublicacaoFilter(
 
 class LocalPublicacaoRepository(
     private val publicacaoDao: PublicacaoDao,
-) : RepositorioPublicacoes {
+) : PublicacoesRepository {
     override fun observarPublicacoes(): Flow<List<Publicacao>> =
         observePublicacoes().map { entities ->
             entities.map(PublicacaoEntity::paraDominio)

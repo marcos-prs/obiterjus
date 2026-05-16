@@ -18,8 +18,8 @@ import com.obiterjus.domain.model.SincronizarProcessosDataJudResumo
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
-import com.obiterjus.domain.repository.RepositorioCadastroOab
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.CadastroOabRepository
+import com.obiterjus.domain.repository.ProcessosRepository
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
@@ -56,7 +56,7 @@ class DjenSyncExecutorTest {
                 falhas = emptyList(),
             ),
         )
-        val cadastroRepository = FakeRepositorioCadastroOab()
+        val cadastroRepository = FakeCadastroOabRepository()
         val logDao = FakeSyncLogDao()
         val executor = DjenSyncExecutorImpl(
             appConfigRepository = FakeAppConfigRepository(),
@@ -95,7 +95,7 @@ class DjenSyncExecutorTest {
                 falhas = listOf("DJEN indisponivel"),
             ),
         )
-        val cadastroRepository = FakeRepositorioCadastroOab()
+        val cadastroRepository = FakeCadastroOabRepository()
         val logDao = FakeSyncLogDao()
         val executor = DjenSyncExecutorImpl(
             appConfigRepository = FakeAppConfigRepository(),
@@ -142,7 +142,7 @@ class DjenSyncExecutorTest {
         )
         val executor = DjenSyncExecutorImpl(
             appConfigRepository = FakeAppConfigRepository(),
-            repositorioCadastroOab = FakeRepositorioCadastroOab(),
+            repositorioCadastroOab = FakeCadastroOabRepository(),
             monitorarCnjUseCase = monitorarCnjUseCase(djenRepository),
             syncLogDao = FakeSyncLogDao(),
             clock = relogioBrasil,
@@ -173,7 +173,7 @@ class DjenSyncExecutorTest {
         )
         val executor = DjenSyncExecutorImpl(
             appConfigRepository = FakeAppConfigRepository(),
-            repositorioCadastroOab = FakeRepositorioCadastroOab(
+            repositorioCadastroOab = FakeCadastroOabRepository(
                 initialCadastro = OabCadastro(
                     numero = "12345",
                     uf = "MG",
@@ -213,7 +213,7 @@ class DjenSyncExecutorTest {
                         )
                 },
             ),
-            repositorioProcessos = object : RepositorioProcessos {
+            repositorioProcessos = object : ProcessosRepository {
                 override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
                     kotlinx.coroutines.flow.flowOf(emptyList())
                 override fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>> = emptyFlow()
@@ -240,7 +240,7 @@ class DjenSyncExecutorTest {
         override suspend fun refresh(): AppConfig = configState.value
     }
 
-    private class FakeRepositorioCadastroOab(
+    private class FakeCadastroOabRepository(
         initialCadastro: OabCadastro =
             OabCadastro(
                 numero = "12345",
@@ -248,7 +248,7 @@ class DjenSyncExecutorTest {
                 nomeAdvogado = "Advogada Teste",
                 dataInicio = null,
             ),
-    ) : RepositorioCadastroOab {
+    ) : CadastroOabRepository {
         override val cadastro = MutableStateFlow(initialCadastro)
         override val status = MutableStateFlow(SincronizacaoStatus())
 

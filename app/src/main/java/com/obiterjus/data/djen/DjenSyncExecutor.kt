@@ -6,7 +6,7 @@ import com.obiterjus.data.auditoria.local.SyncLogEntity
 import com.obiterjus.domain.model.MonitorarCnjResumo
 import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
-import com.obiterjus.domain.repository.RepositorioCadastroOab
+import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import android.util.Log
 import com.obiterjus.data.settings.PerfilPreferencesRepository
@@ -23,7 +23,7 @@ interface DjenSyncExecutor {
 class DjenSyncExecutorImpl(
     private val appConfigRepository: AppConfigRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
-    private val repositorioCadastroOab: RepositorioCadastroOab,
+    private val repositorioCadastroOab: CadastroOabRepository,
     private val monitorarCnjUseCase: MonitorarCnjUseCase,
     private val syncLogDao: SyncLogDao,
     private val clock: Clock = Clock.systemDefaultZone(),

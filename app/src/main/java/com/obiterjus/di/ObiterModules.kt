@@ -46,10 +46,10 @@ import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.CertidaoDjenRepository
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
-import com.obiterjus.domain.repository.RepositorioCadastroOab
-import com.obiterjus.domain.repository.RepositorioProcessos
-import com.obiterjus.domain.repository.RepositorioPublicacoes
-import com.obiterjus.domain.repository.RepositorioSincronizacao
+import com.obiterjus.domain.repository.CadastroOabRepository
+import com.obiterjus.domain.repository.ProcessosRepository
+import com.obiterjus.domain.repository.PublicacoesRepository
+import com.obiterjus.domain.repository.SincronizacaoRepository
 import com.obiterjus.domain.usecase.AdicionarProcessoUseCase
 import com.obiterjus.domain.usecase.ClassificarPublicacaoUC
 import com.obiterjus.domain.usecase.ExcluirProcessoUseCase
@@ -65,17 +65,17 @@ import com.obiterjus.domain.usecase.ObterPublicacaoPorId
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
 import com.obiterjus.domain.usecase.RessincronizarProcessoUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
-import com.obiterjus.presentation.adicionarprocesso.ModeloAdicionarProcesso
-import com.obiterjus.presentation.detalheprocesso.ModeloDetalheProcesso
-import com.obiterjus.presentation.detalhepublicacao.ModeloDetalhePublicacao
-import com.obiterjus.presentation.autenticacao.ModeloAutenticacao
-import com.obiterjus.presentation.editarprocesso.ModeloEditarProcesso
-import com.obiterjus.presentation.inicio.ModeloInicio
+import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoViewModel
+import com.obiterjus.presentation.detalheprocesso.DetalheProcessoViewModel
+import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoViewModel
+import com.obiterjus.presentation.autenticacao.AutenticacaoViewModel
+import com.obiterjus.presentation.editarprocesso.EditarProcessoViewModel
+import com.obiterjus.presentation.inicio.InicioViewModel
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
-import com.obiterjus.presentation.perfil.ModeloPerfil
-import com.obiterjus.presentation.perfil.ModeloEditarPerfil
-import com.obiterjus.presentation.processos.ModeloProcessos
-import com.obiterjus.presentation.prazos.ModeloPrazos
+import com.obiterjus.presentation.perfil.PerfilViewModel
+import com.obiterjus.presentation.perfil.EditarPerfilViewModel
+import com.obiterjus.presentation.processos.ProcessosViewModel
+import com.obiterjus.presentation.prazos.PrazosViewModel
 import com.obiterjus.presentation.publicacoes.PublicacoesViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.worker
@@ -110,9 +110,9 @@ private val dataModule = module {
         )
     }
     single<AuthRepository> { FirebaseAuthRepository() }
-    single<RepositorioCadastroOab> { PreferencesCadastroOabRepository(androidContext()) }
+    single<CadastroOabRepository> { PreferencesCadastroOabRepository(androidContext()) }
     single<PerfilPreferencesRepository> { DataStorePerfilPreferencesRepository(androidContext()) }
-    single { LocalPublicacaoRepository(get()) } bind RepositorioPublicacoes::class
+    single { LocalPublicacaoRepository(get()) } bind PublicacoesRepository::class
     single<GoogleCalendarTokenRepository> { DataStoreGoogleCalendarTokenRepository(androidContext()) }
     single { GoogleCalendarAuthorizationRepository(androidContext(), get()) }
     single<GoogleCalendarDataSource> {
@@ -131,7 +131,7 @@ private val dataModule = module {
             movimentoDao = get(),
             participanteDao = get(),
         )
-    } bind RepositorioProcessos::class
+    } bind ProcessosRepository::class
     
     single { CalcularPrazoRegraUC(get(), get()) }
     single { PublicacaoPrazoMapper(get()) }
@@ -158,7 +158,7 @@ private val dataModule = module {
             localProcessoRepository = get(),
         )
     }
-    single<RepositorioSincronizacao> {
+    single<SincronizacaoRepository> {
         FirestoreSincronizacaoRepository(
             localProcessoRepository = get(),
             localPublicacaoRepository = get(),
@@ -192,7 +192,7 @@ private val domainModule = module {
     factory { ExportarRelatorioUC(get()) }
     factory { ObservarPublicacoes(get()) }
     factory { ObterPublicacaoPorId(get()) }
-    factory { ObservarAgendaPrazos(get(), get()) }
+    factory { ObservarAgendaPrazos(get(), get(), get()) }
     factory { ObterCertidaoDjen(get()) }
     factory { ObservarProcessos(get()) }
     factory { ObservarMovimentosProcesso(get()) }
@@ -219,17 +219,17 @@ private val presentationModule = module {
         )
     }
     viewModel { PublicacoesViewModel(get(), get()) }
-    viewModel { ModeloPrazos(androidContext(), get(), get(), get()) }
-    viewModel { ModeloProcessos(get(), get()) }
+    viewModel { PrazosViewModel(androidContext(), get(), get(), get()) }
+    viewModel { ProcessosViewModel(get(), get()) }
     viewModel { AuditoriaViewModel(get()) }
-    viewModel { ModeloInicio(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloPerfil(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloAutenticacao(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { ModeloEditarPerfil(get(), get(), get(), get(), androidContext()) }
-    viewModel { ModeloDetalheProcesso(get(), get(), get(), get()) }
-    viewModel { ModeloDetalhePublicacao(get(), get()) }
-    viewModel { ModeloAdicionarProcesso(get()) }
-    viewModel { ModeloEditarProcesso(get(), get(), get()) }
+    viewModel { InicioViewModel(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { PerfilViewModel(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { AutenticacaoViewModel(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { EditarPerfilViewModel(get(), get(), get(), get(), androidContext()) }
+    viewModel { DetalheProcessoViewModel(get(), get(), get(), get()) }
+    viewModel { DetalhePublicacaoViewModel(get(), get()) }
+    viewModel { AdicionarProcessoViewModel(get()) }
+    viewModel { EditarProcessoViewModel(get(), get(), get()) }
 }
 
 private val workerModule = module {

@@ -6,7 +6,7 @@ import com.obiterjus.data.publicacao.local.toAssuntos
 import com.obiterjus.domain.model.MovimentoProcesso
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.domain.model.ProcessoMonitorado
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -19,7 +19,7 @@ class LocalProcessoRepository(
     private val processoDao: ProcessoDao,
     private val movimentoDao: MovimentoDao,
     private val participanteDao: ParticipanteDao,
-) : RepositorioProcessos {
+) : ProcessosRepository {
     override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
         combine(observeProcessos(), participanteDao.observeAll()) { processos, participantes ->
             val participantesPorProcesso = participantes

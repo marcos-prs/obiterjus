@@ -16,10 +16,10 @@ import com.obiterjus.domain.model.SincronizarProcessosDataJudResumo
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
-import com.obiterjus.domain.repository.RepositorioCadastroOab
-import com.obiterjus.domain.repository.RepositorioProcessos
-import com.obiterjus.domain.repository.RepositorioPublicacoes
-import com.obiterjus.domain.repository.RepositorioSincronizacao
+import com.obiterjus.domain.repository.CadastroOabRepository
+import com.obiterjus.domain.repository.ProcessosRepository
+import com.obiterjus.domain.repository.PublicacoesRepository
+import com.obiterjus.domain.repository.SincronizacaoRepository
 import com.obiterjus.domain.usecase.ExportarRelatorioUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
@@ -63,9 +63,9 @@ class MonitoramentoViewModelTest {
         val viewModel = MonitoramentoViewModel(
             monitorarCnjUseCase = monitorarCnjUseCase(djenRepository),
             authRepository = FakeAuthRepository(),
-            repositorioSincronizacao = FakeRepositorioSincronizacao(),
-            repositorioCadastroOab = FakeRepositorioCadastroOab(),
-            exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
+            repositorioSincronizacao = FakeSincronizacaoRepository(),
+            repositorioCadastroOab = FakeCadastroOabRepository(),
+            exportarRelatorioUC = ExportarRelatorioUC(FakePublicacoesRepository()),
         )
 
         viewModel.onNumeroOabChange("12345")
@@ -84,9 +84,9 @@ class MonitoramentoViewModelTest {
         val viewModel = MonitoramentoViewModel(
             monitorarCnjUseCase = monitorarCnjUseCase(FakeDjenRepository()),
             authRepository = FakeAuthRepository(),
-            repositorioSincronizacao = FakeRepositorioSincronizacao(),
-            repositorioCadastroOab = FakeRepositorioCadastroOab(),
-            exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
+            repositorioSincronizacao = FakeSincronizacaoRepository(),
+            repositorioCadastroOab = FakeCadastroOabRepository(),
+            exportarRelatorioUC = ExportarRelatorioUC(FakePublicacoesRepository()),
         )
 
         viewModel.onUfOabChange(" m-g ")
@@ -99,8 +99,8 @@ class MonitoramentoViewModelTest {
         val viewModel = MonitoramentoViewModel(
             monitorarCnjUseCase = monitorarCnjUseCase(FakeDjenRepository()),
             authRepository = FakeAuthRepository(),
-            repositorioSincronizacao = FakeRepositorioSincronizacao(),
-            repositorioCadastroOab = FakeRepositorioCadastroOab(
+            repositorioSincronizacao = FakeSincronizacaoRepository(),
+            repositorioCadastroOab = FakeCadastroOabRepository(
                 initialCadastro = OabCadastro(
                     numero = "12345",
                     uf = "MG",
@@ -109,7 +109,7 @@ class MonitoramentoViewModelTest {
                     dataFim = LocalDate.of(2026, 4, 30),
                 ),
             ),
-            exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
+            exportarRelatorioUC = ExportarRelatorioUC(FakePublicacoesRepository()),
             clock = Clock.fixed(
                 Instant.parse("2026-05-07T12:00:00Z"),
                 ZoneId.of("America/Sao_Paulo"),
@@ -126,13 +126,13 @@ class MonitoramentoViewModelTest {
     @Test
     fun syncUsesTodayAsEndDateEvenIfUiStateHasStaleEndDate() = runTest {
         val djenRepository = FakeDjenRepository()
-        val cadastroRepository = FakeRepositorioCadastroOab()
+        val cadastroRepository = FakeCadastroOabRepository()
         val viewModel = MonitoramentoViewModel(
             monitorarCnjUseCase = monitorarCnjUseCase(djenRepository),
             authRepository = FakeAuthRepository(),
-            repositorioSincronizacao = FakeRepositorioSincronizacao(),
+            repositorioSincronizacao = FakeSincronizacaoRepository(),
             repositorioCadastroOab = cadastroRepository,
-            exportarRelatorioUC = ExportarRelatorioUC(FakeRepositorioPublicacoes()),
+            exportarRelatorioUC = ExportarRelatorioUC(FakePublicacoesRepository()),
             clock = Clock.fixed(
                 Instant.parse("2026-05-07T12:00:00Z"),
                 ZoneId.of("America/Sao_Paulo"),
@@ -175,7 +175,7 @@ class MonitoramentoViewModelTest {
                         )
                 },
             ),
-            repositorioProcessos = object : RepositorioProcessos {
+            repositorioProcessos = object : ProcessosRepository {
                 override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
                     kotlinx.coroutines.flow.flowOf(emptyList())
                 override fun observarMovimentos(numeroProcesso: String): Flow<List<MovimentoProcesso>> = kotlinx.coroutines.flow.emptyFlow()
@@ -235,7 +235,7 @@ class MonitoramentoViewModelTest {
         override suspend fun signOut() = Unit
     }
 
-    private class FakeRepositorioSincronizacao : RepositorioSincronizacao {
+    private class FakeSincronizacaoRepository : SincronizacaoRepository {
         override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo =
             SincronizacaoNuvemResumo()
 
@@ -247,9 +247,9 @@ class MonitoramentoViewModelTest {
         override suspend fun restaurarPerfil(userId: String): Result<Unit> = Result.success(Unit)
     }
 
-    private class FakeRepositorioCadastroOab(
+    private class FakeCadastroOabRepository(
         initialCadastro: OabCadastro = OabCadastro(),
-    ) : RepositorioCadastroOab {
+    ) : CadastroOabRepository {
         override val cadastro = MutableStateFlow(initialCadastro)
         override val status = MutableStateFlow(SincronizacaoStatus())
 
@@ -298,7 +298,7 @@ class MonitoramentoViewModelTest {
     }
 
 
-    private class FakeRepositorioPublicacoes : RepositorioPublicacoes {
+    private class FakePublicacoesRepository : PublicacoesRepository {
         private val publicacoes = MutableStateFlow(emptyList<Publicacao>())
 
         override fun observarPublicacoes(): Flow<List<Publicacao>> = publicacoes

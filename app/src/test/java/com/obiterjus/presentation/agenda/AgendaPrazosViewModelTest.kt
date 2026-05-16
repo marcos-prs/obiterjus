@@ -6,7 +6,7 @@ import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CalendarSyncRepository
-import com.obiterjus.domain.repository.RepositorioPublicacoes
+import com.obiterjus.domain.repository.PublicacoesRepository
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
 import java.time.Clock
@@ -45,7 +45,7 @@ class AgendaPrazosViewModelTest {
     @Test
     fun classifiesDeadlineAgendaItems() = runTest {
         val prazoSugeridoDao = FakePrazoSugeridoDao()
-        val repositorio = FakeRepositorioPublicacoes(
+        val repositorio = FakePublicacoesRepository(
             publicacoes = listOf(
                 publicacao(id = 1L, dataLimite = LocalDate.of(2026, 4, 29)),
                 publicacao(id = 2L, dataLimite = LocalDate.of(2026, 5, 2)),
@@ -53,7 +53,7 @@ class AgendaPrazosViewModelTest {
                 publicacao(id = 4L, prazo = null),
             ),
         )
-        val viewModel = ModeloPrazos(
+        val viewModel = PrazosViewModel(
             observarAgendaPrazos = ObservarAgendaPrazos(repositorio, prazoSugeridoDao),
             confirmarPrazoUC = ConfirmarPrazoUC(
                 prazoSugeridoDao = prazoSugeridoDao,
@@ -106,9 +106,9 @@ class AgendaPrazosViewModelTest {
             atualizadoEm = Instant.parse("2026-04-29T12:00:00Z"),
         )
 
-    private class FakeRepositorioPublicacoes(
+    private class FakePublicacoesRepository(
         publicacoes: List<Publicacao>,
-    ) : RepositorioPublicacoes {
+    ) : PublicacoesRepository {
         private val fluxo = MutableStateFlow(publicacoes)
 
         override fun observarPublicacoes(): Flow<List<Publicacao>> = fluxo

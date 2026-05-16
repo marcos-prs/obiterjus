@@ -11,17 +11,17 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.obiterjus.presentation.autenticacao.TelaAutenticacao
+import com.obiterjus.presentation.autenticacao.AutenticacaoScreen
 import com.obiterjus.presentation.autenticacao.ModoAutenticacao
-import com.obiterjus.presentation.adicionarprocesso.TelaAdicionarProcesso
-import com.obiterjus.presentation.auditoria.TelaAuditoria
-import com.obiterjus.presentation.detalheprocesso.TelaDetalheProcesso
-import com.obiterjus.presentation.detalhepublicacao.TelaDetalhePublicacao
-import com.obiterjus.presentation.editarprocesso.TelaEditarProcesso
-import com.obiterjus.presentation.inicio.TelaInicio
-import com.obiterjus.presentation.perfil.TelaPerfil
-import com.obiterjus.presentation.perfil.TelaEditarPerfil
-import com.obiterjus.presentation.prazos.TelaPrazos
+import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoScreen
+import com.obiterjus.presentation.auditoria.AuditoriaScreen
+import com.obiterjus.presentation.detalheprocesso.DetalheProcessoScreen
+import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoScreen
+import com.obiterjus.presentation.editarprocesso.EditarProcessoScreen
+import com.obiterjus.presentation.inicio.InicioScreen
+import com.obiterjus.presentation.perfil.PerfilScreen
+import com.obiterjus.presentation.perfil.EditarPerfilScreen
+import com.obiterjus.presentation.prazos.PrazosScreen
 import com.obiterjus.presentation.principal.ObiterViewModels
 import com.obiterjus.presentation.processos.ConteudoProcessos
 import com.obiterjus.presentation.publicacoes.ConteudoPublicacoes
@@ -66,7 +66,7 @@ fun ObiterNavGraph(
         },
     ) {
         composable<ObiterRota.Inicio> {
-            TelaInicio(
+            InicioScreen(
                 viewModel = viewModels.inicio,
                 aoNavegarParaPrazos = {
                     navegarParaAbaPrincipal(navController, ObiterRota.Prazos)
@@ -97,7 +97,7 @@ fun ObiterNavGraph(
         }
 
         composable<ObiterRota.Prazos> {
-            TelaPrazos(
+            PrazosScreen(
                 viewModel = viewModels.prazos,
                 aoAbrirPublicacao = { publicacaoId ->
                     navController.navigate(ObiterRota.DetalhePublicacao(publicacaoId)) {
@@ -119,7 +119,7 @@ fun ObiterNavGraph(
         }
 
         composable<ObiterRota.Perfil> {
-            TelaPerfil(
+            PerfilScreen(
                 viewModel = viewModels.perfil,
                 aoAbrirAuditoria = { navController.navigate(ObiterRota.Auditoria) },
                 aoForcarSincronizacao = viewModels.perfil::aoForcarSincronizacao,
@@ -145,7 +145,7 @@ fun ObiterNavGraph(
         }
 
         composable<ObiterRota.Autenticacao> {
-            TelaAutenticacao(
+            AutenticacaoScreen(
                 viewModel = viewModels.autenticacao,
                 aoVoltar = { navController.popBackStack() },
                 aoAutenticado = {
@@ -161,19 +161,19 @@ fun ObiterNavGraph(
         }
 
         composable<ObiterRota.EditarPerfil> {
-            TelaEditarPerfil(
+            EditarPerfilScreen(
                 viewModel = org.koin.androidx.compose.koinViewModel(),
                 aoVoltar = { navController.popBackStack() }
             )
         }
 
         composable<ObiterRota.Auditoria> {
-            TelaAuditoria(viewModel = viewModels.auditoria)
+            AuditoriaScreen(viewModel = viewModels.auditoria)
         }
 
         composable<ObiterRota.DetalheProcesso> { backStackEntry ->
             val rota = backStackEntry.toRoute<ObiterRota.DetalheProcesso>()
-            TelaDetalheProcesso(
+            DetalheProcessoScreen(
                 viewModel = viewModels.detalheProcesso,
                 numeroProcesso = rota.numeroProcesso,
                 onVoltar = { navController.popBackStack() },
@@ -187,7 +187,7 @@ fun ObiterNavGraph(
 
         composable<ObiterRota.DetalhePublicacao> { backStackEntry ->
             val rota = backStackEntry.toRoute<ObiterRota.DetalhePublicacao>()
-            TelaDetalhePublicacao(
+            DetalhePublicacaoScreen(
                 viewModel = viewModels.detalhePublicacao,
                 publicacaoId = rota.publicacaoId,
                 onVoltar = { navController.popBackStack() }
@@ -195,7 +195,7 @@ fun ObiterNavGraph(
         }
 
         composable<ObiterRota.AdicionarProcesso> {
-            TelaAdicionarProcesso(
+            AdicionarProcessoScreen(
                 viewModel = viewModels.adicionarProcesso,
                 onVoltar = { navController.popBackStack() },
                 onProcessoAdicionado = { numero ->
@@ -209,7 +209,7 @@ fun ObiterNavGraph(
 
         composable<ObiterRota.EditarProcesso> { backStackEntry ->
             val rota = backStackEntry.toRoute<ObiterRota.EditarProcesso>()
-            TelaEditarProcesso(
+            EditarProcessoScreen(
                 viewModel = viewModels.editarProcesso,
                 numeroProcesso = rota.numeroProcesso,
                 onVoltar = { navController.popBackStack() },

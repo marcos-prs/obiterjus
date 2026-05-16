@@ -1,29 +1,29 @@
 package com.obiterjus.presentation.principal
 
-import com.obiterjus.presentation.adicionarprocesso.ModeloAdicionarProcesso
+import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoViewModel
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
-import com.obiterjus.presentation.autenticacao.ModeloAutenticacao
-import com.obiterjus.presentation.detalheprocesso.ModeloDetalheProcesso
-import com.obiterjus.presentation.detalhepublicacao.ModeloDetalhePublicacao
-import com.obiterjus.presentation.editarprocesso.ModeloEditarProcesso
-import com.obiterjus.presentation.inicio.ModeloInicio
+import com.obiterjus.presentation.autenticacao.AutenticacaoViewModel
+import com.obiterjus.presentation.detalheprocesso.DetalheProcessoViewModel
+import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoViewModel
+import com.obiterjus.presentation.editarprocesso.EditarProcessoViewModel
+import com.obiterjus.presentation.inicio.InicioViewModel
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
-import com.obiterjus.presentation.perfil.ModeloPerfil
-import com.obiterjus.presentation.processos.ModeloProcessos
-import com.obiterjus.presentation.prazos.ModeloPrazos
+import com.obiterjus.presentation.perfil.PerfilViewModel
+import com.obiterjus.presentation.processos.ProcessosViewModel
+import com.obiterjus.presentation.prazos.PrazosViewModel
 import com.obiterjus.presentation.publicacoes.PublicacoesViewModel
 
 data class ObiterViewModels(
-    val inicio: ModeloInicio,
+    val inicio: InicioViewModel,
     val publicacoes: PublicacoesViewModel,
-    val prazos: ModeloPrazos,
-    val processos: ModeloProcessos,
-    val perfil: ModeloPerfil,
-    val autenticacao: ModeloAutenticacao,
+    val prazos: PrazosViewModel,
+    val processos: ProcessosViewModel,
+    val perfil: PerfilViewModel,
+    val autenticacao: AutenticacaoViewModel,
     val monitoramento: MonitoramentoViewModel,
-    val detalheProcesso: ModeloDetalheProcesso,
-    val detalhePublicacao: ModeloDetalhePublicacao,
+    val detalheProcesso: DetalheProcessoViewModel,
+    val detalhePublicacao: DetalhePublicacaoViewModel,
     val auditoria: AuditoriaViewModel,
-    val adicionarProcesso: ModeloAdicionarProcesso,
-    val editarProcesso: ModeloEditarProcesso,
+    val adicionarProcesso: AdicionarProcessoViewModel,
+    val editarProcesso: EditarProcessoViewModel,
 )

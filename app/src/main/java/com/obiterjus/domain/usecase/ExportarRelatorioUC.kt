@@ -3,7 +3,7 @@ package com.obiterjus.domain.usecase
 import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
-import com.obiterjus.domain.repository.RepositorioPublicacoes
+import com.obiterjus.domain.repository.PublicacoesRepository
 import kotlinx.coroutines.flow.first
 
 /**
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.first
  * implementações diferentes via interface.
  */
 class ExportarRelatorioUC(
-    private val repositorioPublicacoes: RepositorioPublicacoes,
+    private val repositorioPublicacoes: PublicacoesRepository,
 ) {
     /**
      * Retorna o texto do relatório pronto para compartilhamento, ou null se não

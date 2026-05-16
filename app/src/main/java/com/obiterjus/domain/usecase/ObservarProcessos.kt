@@ -1,9 +1,9 @@
 package com.obiterjus.domain.usecase
 
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 
 class ObservarProcessos(
-    val repositorio: RepositorioProcessos,
+    val repositorio: ProcessosRepository,
 ) {
     operator fun invoke() = repositorio.observarProcessos()
 }

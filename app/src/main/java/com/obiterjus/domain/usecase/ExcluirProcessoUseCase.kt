@@ -1,9 +1,9 @@
 package com.obiterjus.domain.usecase
 
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 
 class ExcluirProcessoUseCase(
-    private val repositorio: RepositorioProcessos,
+    private val repositorio: ProcessosRepository,
 ) {
     suspend operator fun invoke(numeroProcesso: String) {
         repositorio.excluirProcesso(numeroProcesso)

@@ -5,13 +5,14 @@ import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
 import com.obiterjus.domain.model.PrazoAgendaItem
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.model.ProvedorCalendario
-import com.obiterjus.domain.repository.RepositorioPublicacoes
+import com.obiterjus.domain.repository.PublicacoesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class ObservarAgendaPrazos(
-    private val repository: RepositorioPublicacoes,
+    private val repository: PublicacoesRepository,
     private val prazoSugeridoDao: PrazoSugeridoDao,
+    private val classificarPublicacaoUC: ClassificarPublicacaoUC,
 ) {
     operator fun invoke(): Flow<List<PrazoAgendaItem>> =
         combine(
@@ -20,6 +21,13 @@ class ObservarAgendaPrazos(
         ) { publicacoes, prazosSugeridos ->
             val prazosPorPublicacao = prazosSugeridos.associateBy { it.publicacaoId }
             publicacoes
+                .map { publicacao ->
+                    if (publicacao.prazo?.dataLimiteEstimada == null) {
+                        classificarPublicacaoUC(publicacao)
+                    } else {
+                        publicacao
+                    }
+                }
                 .mapNotNull { publicacao ->
                     publicacao.prazo?.let { prazo ->
                         PrazoAgendaItem(

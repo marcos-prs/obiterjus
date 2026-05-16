@@ -12,7 +12,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.obiterjus.core.parser.CnjDateParser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.model.SincronizacaoStatus
-import com.obiterjus.domain.repository.RepositorioCadastroOab
+import com.obiterjus.domain.repository.CadastroOabRepository
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.map
 
 class PreferencesCadastroOabRepository(
     context: Context,
-) : RepositorioCadastroOab {
+) : CadastroOabRepository {
     private val dataStore = context.applicationContext.obiterSettingsDataStore
 
     override val cadastro: Flow<OabCadastro> =

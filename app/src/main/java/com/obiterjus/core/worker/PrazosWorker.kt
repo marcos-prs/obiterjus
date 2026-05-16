@@ -6,7 +6,7 @@ import androidx.work.WorkerParameters
 import com.obiterjus.core.notification.PublicacaoNotificationHelper
 import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.data.auditoria.local.SyncLogEntity
-import com.obiterjus.domain.repository.RepositorioPublicacoes
+import com.obiterjus.domain.repository.PublicacoesRepository
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.first
 class PrazosWorker(
     appContext: Context,
     workerParams: WorkerParameters,
-    private val repositorioPublicacoes: RepositorioPublicacoes,
+    private val repositorioPublicacoes: PublicacoesRepository,
     private val notificationHelper: PublicacaoNotificationHelper,
     private val syncLogDao: SyncLogDao,
 ) : CoroutineWorker(appContext, workerParams) {

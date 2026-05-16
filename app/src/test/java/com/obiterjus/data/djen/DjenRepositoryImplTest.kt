@@ -20,7 +20,7 @@ import com.obiterjus.domain.model.MovimentoProcesso
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.ProcessoSyncStatus
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 import com.obiterjus.domain.usecase.CalcularPrazoRegraUC
 import java.time.Clock
 import java.time.Instant
@@ -227,7 +227,7 @@ class DjenRepositoryImplTest {
 
     private class FakeProcessoRepository(
         private val processos: Map<String, ProcessoMonitorado> = emptyMap(),
-    ) : RepositorioProcessos {
+    ) : ProcessosRepository {
         override fun observarProcessos(): Flow<List<ProcessoMonitorado>> =
             kotlinx.coroutines.flow.flowOf(emptyList())
 

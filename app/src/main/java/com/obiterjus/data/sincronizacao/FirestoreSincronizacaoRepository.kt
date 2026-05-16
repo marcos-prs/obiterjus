@@ -12,8 +12,8 @@ import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.SincronizacaoNuvemResumo
-import com.obiterjus.domain.repository.RepositorioCadastroOab
-import com.obiterjus.domain.repository.RepositorioSincronizacao
+import com.obiterjus.domain.repository.CadastroOabRepository
+import com.obiterjus.domain.repository.SincronizacaoRepository
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -23,9 +23,9 @@ class FirestoreSincronizacaoRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val localProcessoRepository: LocalProcessoRepository,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
-    private val repositorioCadastroOab: RepositorioCadastroOab,
+    private val repositorioCadastroOab: CadastroOabRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
-) : RepositorioSincronizacao {
+) : SincronizacaoRepository {
 
     override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo {
         val userRef = firestore.usuarioRef(userId)

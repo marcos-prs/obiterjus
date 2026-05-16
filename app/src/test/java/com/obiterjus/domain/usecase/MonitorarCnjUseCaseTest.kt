@@ -13,7 +13,7 @@ import com.obiterjus.domain.model.SincronizarProcessosDataJudParams
 import com.obiterjus.domain.model.SincronizarProcessosDataJudResumo
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -156,7 +156,7 @@ class MonitorarCnjUseCaseTest {
 
     private class FakeProcessosRepository(
         processos: List<ProcessoMonitorado> = emptyList(),
-    ) : RepositorioProcessos {
+    ) : ProcessosRepository {
         private val estado = MutableStateFlow(processos)
         var ultimoSalvo: ProcessoMonitorado? = null
 

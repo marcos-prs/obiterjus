@@ -5,13 +5,13 @@ import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.ProcessoDataJudSyncRequest
 import com.obiterjus.domain.model.SincronizarProcessosDataJudParams
 import com.obiterjus.domain.model.ProcessoSyncStatus
-import com.obiterjus.domain.repository.RepositorioProcessos
+import com.obiterjus.domain.repository.ProcessosRepository
 import kotlinx.coroutines.flow.first
 
 class MonitorarCnjUseCase(
     private val monitorarDjenUseCase: MonitorarDjenUseCase,
     private val sincronizarProcessosDataJudUseCase: SincronizarProcessosDataJudUseCase,
-    private val repositorioProcessos: RepositorioProcessos,
+    private val repositorioProcessos: ProcessosRepository,
 ) {
     suspend operator fun invoke(params: MonitorarDjenParams): MonitorarCnjResumo {
         val djenResumo = monitorarDjenUseCase(params)

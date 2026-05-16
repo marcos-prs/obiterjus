@@ -5,7 +5,7 @@ import com.obiterjus.domain.model.PublicacaoParticipante
 import java.util.Locale
 
 /**
- * Modelos para representação estruturada de partes.
+ * Models for structured party representation.
  */
 data class ParteAgrupada(
     val nomes: List<String>,
@@ -61,7 +61,7 @@ fun List<PublicacaoParticipante>.resolverPartesPublicacao(): PartesResolvidas {
     )
 }
 
-// --- Lógica Interna (Migrada de ModeloDetalhePublicacao.kt) ---
+// --- Lógica Interna (Migrada de DetalhePublicacaoViewModel.kt) ---
 
 const val VALOR_POLO_ATIVO = "ATIVO"
 const val VALOR_POLO_PASSIVO = "PASSIVO"

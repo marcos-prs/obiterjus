@@ -15,19 +15,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.obiterjus.presentation.adicionarprocesso.ModeloAdicionarProcesso
+import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoViewModel
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
-import com.obiterjus.presentation.autenticacao.ModeloAutenticacao
-import com.obiterjus.presentation.detalheprocesso.ModeloDetalheProcesso
-import com.obiterjus.presentation.detalhepublicacao.ModeloDetalhePublicacao
-import com.obiterjus.presentation.editarprocesso.ModeloEditarProcesso
-import com.obiterjus.presentation.inicio.ModeloInicio
+import com.obiterjus.presentation.autenticacao.AutenticacaoViewModel
+import com.obiterjus.presentation.detalheprocesso.DetalheProcessoViewModel
+import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoViewModel
+import com.obiterjus.presentation.editarprocesso.EditarProcessoViewModel
+import com.obiterjus.presentation.inicio.InicioViewModel
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
-import com.obiterjus.presentation.perfil.ModeloPerfil
+import com.obiterjus.presentation.perfil.PerfilViewModel
 import com.obiterjus.presentation.principal.ObiterViewModels
-import com.obiterjus.presentation.principal.TelaPrincipal
-import com.obiterjus.presentation.processos.ModeloProcessos
-import com.obiterjus.presentation.prazos.ModeloPrazos
+import com.obiterjus.presentation.principal.PrincipalScreen
+import com.obiterjus.presentation.processos.ProcessosViewModel
+import com.obiterjus.presentation.prazos.PrazosViewModel
 import com.obiterjus.presentation.publicacoes.PublicacoesViewModel
 import com.obiterjus.ui.theme.ObiterJusTheme
 import com.obiterjus.ui.theme.TipoTema
@@ -40,21 +40,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-                val modeloPerfil: ModeloPerfil = koinViewModel()
+                val modeloPerfil: PerfilViewModel = koinViewModel()
                 val estadoPerfil by modeloPerfil.estado.collectAsStateWithLifecycle()
 
                 ObiterJusTheme(tema = estadoPerfil.tema) {
-                    val modeloInicio: ModeloInicio = koinViewModel()
+                    val modeloInicio: InicioViewModel = koinViewModel()
                     val publicacoesViewModel: PublicacoesViewModel = koinViewModel()
-                    val modeloPrazos: ModeloPrazos = koinViewModel()
-                    val modeloProcessos: ModeloProcessos = koinViewModel()
-                    val modeloAutenticacao: ModeloAutenticacao = koinViewModel()
+                    val modeloPrazos: PrazosViewModel = koinViewModel()
+                    val modeloProcessos: ProcessosViewModel = koinViewModel()
+                    val modeloAutenticacao: AutenticacaoViewModel = koinViewModel()
                     val monitoramentoViewModel: MonitoramentoViewModel = koinViewModel()
-                    val detalheProcessoViewModel: ModeloDetalheProcesso = koinViewModel()
-                    val detalhePublicacaoViewModel: ModeloDetalhePublicacao = koinViewModel()
+                    val detalheProcessoViewModel: DetalheProcessoViewModel = koinViewModel()
+                    val detalhePublicacaoViewModel: DetalhePublicacaoViewModel = koinViewModel()
                     val auditoriaViewModel: AuditoriaViewModel = koinViewModel()
-                    val adicionarProcessoViewModel: ModeloAdicionarProcesso = koinViewModel()
-                    val editarProcessoViewModel: ModeloEditarProcesso = koinViewModel()
+                    val adicionarProcessoViewModel: AdicionarProcessoViewModel = koinViewModel()
+                    val editarProcessoViewModel: EditarProcessoViewModel = koinViewModel()
 
                     val estadoPublicacoes by publicacoesViewModel.estado.collectAsStateWithLifecycle()
                     val exportTextoPendente by monitoramentoViewModel.exportTextoPendente.collectAsStateWithLifecycle()
@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
                         monitoramentoViewModel.aoConsumirExporte()
                     }
 
-                    TelaPrincipal(viewModels = viewModels)
+                    PrincipalScreen(viewModels = viewModels)
                 }
         }
     }
