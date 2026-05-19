@@ -1,12 +1,16 @@
 package com.obiterjus.core.time
 
+import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.FeriadoRepository
+import com.obiterjus.data.time.PedidoCalculoPrazo
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.MonthDay
+import java.time.format.DateTimeFormatter
 
 class CalculadoraPrazos(
-    private val feriadoRepository: FeriadoRepository
+    private val feriadoRepository: FeriadoRepository,
+    private val calendarioForense: CalendarioForenseDataSource,
 ) {
 
     private val feriadosFixos: Set<MonthDay> = setOf(
@@ -66,20 +70,62 @@ class CalculadoraPrazos(
         quantidade: Int,
         unidade: String,
         diasUteis: Boolean,
-    ): LocalDate? = try {
-        when (unidade.lowercase().trim()) {
-            "dia", "dias" -> {
-                if (diasUteis) adicionarDiasUteis(dataBase, quantidade)
-                else adicionarDiasCorridos(dataBase, quantidade)
-            }
-            "hora", "horas" -> {
-                val diasEquivalentes = (quantidade + 7) / 8
-                adicionarDiasUteis(dataBase, diasEquivalentes)
-            }
-            "mês", "mes", "meses" -> adicionarDiasCorridos(dataBase, quantidade * 30)
-            else -> null
+        tribunal: String? = null,
+    ): ResultadoCalculoPrazo? = try {
+        val unidadeNorm = unidade.lowercase().trim()
+
+        // Meses: cálculo local direto, sem consultar a API
+        if (unidadeNorm == "mês" || unidadeNorm == "mes" || unidadeNorm == "meses") {
+            return ResultadoCalculoPrazo.Estimado(adicionarDiasCorridos(dataBase, quantidade * 30))
+        }
+
+        // API proprietária como fonte primária quando o tribunal é conhecido
+        if (tribunal != null) {
+            val apiResult = calcularViaApi(dataBase, quantidade, unidadeNorm, diasUteis, tribunal)
+            if (apiResult != null) return apiResult
+            // null da API = indisponível/tribunal não coberto → cai no fallback local silencioso
+        }
+
+        // Fallback local → Estimado
+        val dataLocal = when (unidadeNorm) {
+            "dia", "dias" -> if (diasUteis) adicionarDiasUteis(dataBase, quantidade) else adicionarDiasCorridos(dataBase, quantidade)
+            "hora", "horas" -> adicionarDiasUteis(dataBase, (quantidade + 7) / 8)
+            else -> return null
+        }
+        ResultadoCalculoPrazo.Estimado(dataLocal)
+    } catch (e: Exception) {
+        null
+    }
+
+    private suspend fun calcularViaApi(
+        dataBase: LocalDate,
+        quantidade: Int,
+        unidadeNorm: String,
+        diasUteis: Boolean,
+        tribunal: String,
+    ): ResultadoCalculoPrazo? = try {
+        val apiUnidade = when {
+            unidadeNorm == "hora" || unidadeNorm == "horas" -> "horas"
+            diasUteis -> "dias_uteis"
+            else -> "dias_corridos"
+        }
+        val pedido = PedidoCalculoPrazo(
+            tribunal = tribunal,
+            dataDisponibilizacao = dataBase.format(DateTimeFormatter.ISO_LOCAL_DATE),
+            prazo = quantidade,
+            unidade = apiUnidade,
+        )
+        val resposta = calendarioForense.calcularPrazo(pedido)
+        when {
+            resposta.estado == "CONFIAVEL" && resposta.dataVencimento != null ->
+                ResultadoCalculoPrazo.Confiavel(LocalDate.parse(resposta.dataVencimento))
+            resposta.estado.startsWith("BLOQUEADO_") ->
+                // API conhece o tribunal mas há ambiguidade; sinaliza incerteza (não cai no fallback)
+                ResultadoCalculoPrazo.Incerto(resposta.dataVencimento?.let { LocalDate.parse(it) })
+            else -> null  // estado inesperado → fallback local
         }
     } catch (e: Exception) {
+        // timeout, HTTP 4xx/5xx, rede → fallback local silencioso
         null
     }
 }

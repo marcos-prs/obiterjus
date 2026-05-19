@@ -1,5 +1,6 @@
 package com.obiterjus.data.publicacao.local
 
+import com.obiterjus.domain.model.ConfiancaCalculo
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.PublicacoesRepository
@@ -213,11 +214,14 @@ private fun PublicacaoEntity.prazo(): PublicacaoPrazo? {
     val quantidade = prazoQuantidade ?: return null
     val unidade = prazoUnidade?.takeIf { it.isNotBlank() } ?: return null
     val texto = prazoTexto?.takeIf { it.isNotBlank() } ?: return null
+    val confianca = prazoConfianca?.let { runCatching { ConfiancaCalculo.valueOf(it) }.getOrNull() }
+        ?: ConfiancaCalculo.ESTIMADO
     return PublicacaoPrazo(
         quantidade = quantidade,
         unidade = unidade,
         diasUteis = prazoDiasUteis,
         textoOriginal = texto,
         dataLimiteEstimada = prazoDataLimite,
+        confiancaCalculo = confianca,
     )
 }

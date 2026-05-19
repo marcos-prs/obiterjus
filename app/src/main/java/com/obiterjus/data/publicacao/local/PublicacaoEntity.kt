@@ -31,6 +31,7 @@ data class PublicacaoEntity(
     val prazoDiasUteis: Boolean,
     val prazoTexto: String?,
     val prazoDataLimite: LocalDate?,
+    val prazoConfianca: String? = null,
     val dataDisponibilizacao: LocalDate?,
     val tribunal: String?,
     val tipoComunicacao: String?,

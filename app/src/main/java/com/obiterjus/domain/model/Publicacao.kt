@@ -1,8 +1,17 @@
 package com.obiterjus.domain.model
 
+import com.obiterjus.core.time.ResultadoCalculoPrazo
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
+
+enum class ConfiancaCalculo { CONFIAVEL, INCERTO, ESTIMADO }
+
+fun ResultadoCalculoPrazo.toConfianca(): ConfiancaCalculo = when (this) {
+    is ResultadoCalculoPrazo.Confiavel -> ConfiancaCalculo.CONFIAVEL
+    is ResultadoCalculoPrazo.Incerto -> ConfiancaCalculo.INCERTO
+    is ResultadoCalculoPrazo.Estimado -> ConfiancaCalculo.ESTIMADO
+}
 
 data class Publicacao(
     val id: Long,
@@ -42,5 +51,6 @@ data class PublicacaoPrazo(
     val dataLimiteEstimada: LocalDate? = null,
     val isConfirmado: Boolean = false,
     val idExternoCalendario: String? = null,
-    val provedorCalendario: String? = null
+    val provedorCalendario: String? = null,
+    val confiancaCalculo: ConfiancaCalculo = ConfiancaCalculo.ESTIMADO,
 )

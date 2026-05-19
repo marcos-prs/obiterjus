@@ -23,6 +23,8 @@ object ObiterDatabaseFactory {
                 MIGRATION_6_7,
                 MIGRATION_7_8,
                 MIGRATION_8_9,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
             )
             .build()
 
@@ -120,6 +122,22 @@ object ObiterDatabaseFactory {
             db.execSQL("ALTER TABLE publicacoes ADD COLUMN duplicataDe INTEGER")
             db.execSQL("ALTER TABLE publicacoes ADD COLUMN totalDuplicatas INTEGER NOT NULL DEFAULT 0")
             db.execSQL("CREATE INDEX IF NOT EXISTS index_publicacoes_duplicataDe ON publicacoes(duplicataDe)")
+        }
+    }
+
+    private val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE participantes ADD COLUMN cep TEXT")
+            db.execSQL("ALTER TABLE participantes ADD COLUMN logradouro TEXT")
+            db.execSQL("ALTER TABLE participantes ADD COLUMN numeroEndereco TEXT")
+            db.execSQL("ALTER TABLE participantes ADD COLUMN telefone TEXT")
+            db.execSQL("ALTER TABLE participantes ADD COLUMN email TEXT")
+        }
+    }
+
+    private val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE publicacoes ADD COLUMN prazoConfianca TEXT")
         }
     }
 }

@@ -14,7 +14,8 @@ class PublicacaoPrazoMapper(
         val prazo = calcularPrazoRegraUC.invoke(
             texto = texto,
             tipoComunicacao = entity.tipoComunicacao,
-            dataDisponibilizacao = entity.dataDisponibilizacao
+            dataDisponibilizacao = entity.dataDisponibilizacao,
+            tribunal = entity.tribunal,
         ) ?: return entity
 
         return entity.copy(
@@ -23,6 +24,7 @@ class PublicacaoPrazoMapper(
             prazoDiasUteis = entity.prazoQuantidade?.let { entity.prazoDiasUteis } ?: prazo.diasUteis,
             prazoTexto = entity.prazoTexto ?: prazo.textoOriginal,
             prazoDataLimite = entity.prazoDataLimite ?: prazo.dataLimiteEstimada,
+            prazoConfianca = prazo.confiancaCalculo.name,
         )
     }
 }

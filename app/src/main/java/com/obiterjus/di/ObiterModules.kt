@@ -15,6 +15,10 @@ import com.obiterjus.data.auth.FirebaseAuthRepository
 import com.obiterjus.data.config.FirebaseRemoteAppConfigRepository
 import com.obiterjus.data.time.BrasilApiDataSource
 import com.obiterjus.data.time.BrasilApiRetrofitFactory
+import com.obiterjus.data.time.CalendarioForenseDataSource
+import com.obiterjus.data.time.CalendarioForenseRetrofitFactory
+import com.obiterjus.data.viacep.ViaCepApi
+import com.obiterjus.data.viacep.ViaCepRetrofitFactory
 import com.obiterjus.data.time.FeriadoRepository
 import com.obiterjus.core.time.CalculadoraPrazos
 import com.obiterjus.core.parser.DjenPrazoExtractor
@@ -34,6 +38,7 @@ import com.obiterjus.data.agenda.worker.CalendarSyncWorker
 import com.obiterjus.data.djen.CertidaoDjenRepositoryImpl
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.djen.DjenSyncExecutorImpl
+import com.obiterjus.data.djen.DjenPartesResolver
 import com.obiterjus.data.datajud.ConfiguredDataJudRepository
 import com.obiterjus.data.djen.ConfiguredDjenRepository
 import com.obiterjus.data.processo.local.LocalProcessoRepository
@@ -98,8 +103,10 @@ private val coreModule = module {
 
     // Feriados e Prazos
     single<BrasilApiDataSource> { BrasilApiRetrofitFactory.createApi() }
+    single<CalendarioForenseDataSource> { CalendarioForenseRetrofitFactory.createApi() }
+    single<ViaCepApi> { ViaCepRetrofitFactory.createApi() }
     single { FeriadoRepository(get()) }
-    single { CalculadoraPrazos(get()) }
+    single { CalculadoraPrazos(get(), get()) }
     single { DjenPrazoExtractor(get()) }
 }
 
@@ -136,6 +143,7 @@ private val dataModule = module {
     single { CalcularPrazoRegraUC(get(), get()) }
     single { PublicacaoPrazoMapper(get()) }
     single { DjenMapper(get()) }
+    single { DjenPartesResolver(get(), get()) }
 
     single<DjenRepository> {
         ConfiguredDjenRepository(
@@ -144,6 +152,7 @@ private val dataModule = module {
             localProcessoRepository = get(),
             djenMapper = get(),
             publicacaoPrazoMapper = get(),
+            partesResolver = get(),
         )
     }
     single<CertidaoDjenRepository> {
@@ -164,6 +173,7 @@ private val dataModule = module {
             localPublicacaoRepository = get(),
             repositorioCadastroOab = get(),
             perfilPreferencesRepository = get(),
+            partesResolver = get(),
         )
     }
     single<DjenSyncExecutor> {
@@ -229,7 +239,7 @@ private val presentationModule = module {
     viewModel { DetalheProcessoViewModel(get(), get(), get(), get()) }
     viewModel { DetalhePublicacaoViewModel(get(), get()) }
     viewModel { AdicionarProcessoViewModel(get()) }
-    viewModel { EditarProcessoViewModel(get(), get(), get()) }
+    viewModel { EditarProcessoViewModel(get(), get(), get(), get()) }
 }
 
 private val workerModule = module {

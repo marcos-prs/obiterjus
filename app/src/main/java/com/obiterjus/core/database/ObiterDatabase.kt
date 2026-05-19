@@ -26,7 +26,7 @@ import com.obiterjus.data.agenda.local.PrazoSugeridoDao
         SyncLogEntity::class,
         PrazoSugeridoEntity::class,
     ],
-    version = 9,
+    version = 11,
     exportSchema = true,
 )
 @TypeConverters(CnjTypeConverters::class)

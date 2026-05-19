@@ -1,8 +1,10 @@
 package com.obiterjus.domain.usecase
 
 import com.obiterjus.core.time.CalculadoraPrazos
+import com.obiterjus.domain.model.ConfiancaCalculo
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
+import com.obiterjus.domain.model.toConfianca
 import java.time.LocalDate
 
 /**
@@ -34,17 +36,21 @@ class ClassificarPublicacaoUC(
         val prazo = extrairPrazo(texto) ?: return publicacao
 
         val dataBase = publicacao.dataDisponibilizacao
-        val dataLimite = dataBase?.let {
+        val resultado = dataBase?.let {
             calculadoraPrazos.calcularDataLimite(
                 dataBase = it,
                 quantidade = prazo.quantidade,
                 unidade = prazo.unidade,
                 diasUteis = prazo.diasUteis,
+                tribunal = publicacao.tribunal,
             )
         }
 
         return publicacao.copy(
-            prazo = prazo.copy(dataLimiteEstimada = dataLimite),
+            prazo = prazo.copy(
+                dataLimiteEstimada = resultado?.data,
+                confiancaCalculo = resultado?.toConfianca() ?: ConfiancaCalculo.ESTIMADO,
+            ),
         )
     }
 

@@ -1,7 +1,10 @@
 package com.obiterjus.core.parser
 
-import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.core.time.CalculadoraPrazos
+import com.obiterjus.core.time.ResultadoCalculoPrazo
+import com.obiterjus.domain.model.ConfiancaCalculo
+import com.obiterjus.domain.model.PublicacaoPrazo
+import com.obiterjus.domain.model.toConfianca
 import java.time.LocalDate
 
 class DjenPrazoExtractor(
@@ -14,6 +17,7 @@ class DjenPrazoExtractor(
     suspend fun extract(
         texto: String?,
         dataDisponibilizacao: LocalDate?,
+        tribunal: String? = null,
     ): PublicacaoPrazo? {
         if (texto.isNullOrBlank()) return null
         val match = prazoRegex.find(texto) ?: return null
@@ -24,19 +28,22 @@ class DjenPrazoExtractor(
             ?.let { it == "úteis" || it == "uteis" }
             ?: false
 
+        val resultado = dataDisponibilizacao?.let { data ->
+            calculadoraPrazos.calcularDataLimite(
+                dataBase = data,
+                quantidade = quantidade,
+                unidade = unidade,
+                diasUteis = diasUteis,
+                tribunal = tribunal,
+            )
+        }
         return PublicacaoPrazo(
             quantidade = quantidade,
             unidade = unidade,
             diasUteis = diasUteis,
             textoOriginal = match.value.trim(),
-            dataLimiteEstimada = dataDisponibilizacao?.let { data ->
-                calculadoraPrazos.calcularDataLimite(
-                    dataBase = data,
-                    quantidade = quantidade,
-                    unidade = unidade,
-                    diasUteis = diasUteis,
-                )
-            },
+            dataLimiteEstimada = resultado?.data,
+            confiancaCalculo = resultado?.toConfianca() ?: ConfiancaCalculo.ESTIMADO,
         )
     }
 
