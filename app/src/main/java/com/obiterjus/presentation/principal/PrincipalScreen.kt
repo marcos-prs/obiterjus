@@ -3,7 +3,6 @@ package com.obiterjus.presentation.principal
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,7 +19,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -32,13 +30,13 @@ import androidx.navigation.compose.rememberNavController
 import com.obiterjus.R
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.barras.BarraNavegacaoObiter
-import com.obiterjus.presentation.componentes.barras.BarraSuperiorPrincipal
 import com.obiterjus.presentation.componentes.barras.BarraSuperiorSecundaria
 import com.obiterjus.presentation.componentes.barras.ItemNavegacao
 import com.obiterjus.presentation.navegacao.ObiterNavGraph
 import com.obiterjus.presentation.navegacao.ObiterRota
 import com.obiterjus.presentation.navegacao.rotasBarraInferior
 import com.obiterjus.presentation.autenticacao.ModoAutenticacao
+import com.obiterjus.ui.theme.ObiterTheme
 
 @Composable
 fun PrincipalScreen(
@@ -50,9 +48,8 @@ fun PrincipalScreen(
     val estadoInicio by viewModels.inicio.estado.collectAsStateWithLifecycle()
     val estadoPerfil by viewModels.perfil.estado.collectAsStateWithLifecycle()
     val mostrarMenuConta by viewModels.perfil.mostrarMenuConta.collectAsStateWithLifecycle()
-    val primeiroNomeUsuario = estadoInicio.nomeUsuario.primeiroNome()
-    val isDark = isSystemInDarkTheme()
-    val textColorBarra = if (isDark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
+    val colors = ObiterTheme.colors
+    val textColorBarra = Color(0xFFF4F6F8)
 
     val isDetailScreen = destinoAtual?.hasRoute<ObiterRota.DetalheProcesso>() == true
     val isDetailPublicacaoScreen = destinoAtual?.hasRoute<ObiterRota.DetalhePublicacao>() == true
@@ -88,14 +85,7 @@ fun PrincipalScreen(
                 exit = fadeOut(),
             ) {
                 when (abaAtual) {
-                    ObiterRota.Inicio -> BarraSuperiorPrincipal(
-                        nomeUsuario = primeiroNomeUsuario.ifEmpty {
-                            stringResource(R.string.saudacao_advogado)
-                        },
-                        numeroOab = estadoInicio.oab,
-                        ufOab = estadoInicio.uf,
-                        ultimaSincronizacao = estadoInicio.ultimaSincronizacaoTexto,
-                    )
+                    ObiterRota.Inicio -> Unit
                     ObiterRota.Publicacoes -> BarraSuperiorSecundaria(
                         titulo = stringResource(R.string.nav_publicacoes),
                         onVoltar = { navController.popBackStack() },
@@ -130,8 +120,6 @@ fun PrincipalScreen(
                         titulo = stringResource(R.string.nav_perfil),
                         onVoltar = { navController.popBackStack() },
                         mostrarVoltar = false,
-                        corFundo = Color.Transparent,
-                        corConteudo = MaterialTheme.colorScheme.onSurface,
                         acoes = {
                             if (estadoPerfil.autenticado) {
                                 Box {
@@ -139,7 +127,7 @@ fun PrincipalScreen(
                                         Icon(
                                             imageVector = Icons.Default.MoreVert,
                                             contentDescription = stringResource(R.string.perfil_menu_conta),
-                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f),
+                                            tint = textColorBarra.copy(alpha = 0.92f),
                                         )
                                     }
                                     DropdownMenu(
@@ -150,8 +138,7 @@ fun PrincipalScreen(
                                             text = { Text(stringResource(R.string.perfil_editar_dados)) },
                                             onClick = {
                                                 viewModels.perfil.aoFecharMenu()
-                                                viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
-                                                navController.navigate(ObiterRota.Autenticacao) {
+                                                navController.navigate(ObiterRota.EditarPerfil) {
                                                     launchSingleTop = true
                                                 }
                                             },
@@ -186,14 +173,7 @@ fun PrincipalScreen(
                         titulo = stringResource(R.string.nav_auditoria),
                         onVoltar = { navController.popBackStack() },
                     )
-                    else -> BarraSuperiorPrincipal(
-                        nomeUsuario = primeiroNomeUsuario.ifEmpty {
-                            stringResource(R.string.saudacao_advogado)
-                        },
-                        numeroOab = estadoInicio.oab,
-                        ufOab = estadoInicio.uf,
-                        ultimaSincronizacao = estadoInicio.ultimaSincronizacaoTexto,
-                    )
+                    else -> Unit
                 }
             }
         },
@@ -227,9 +207,6 @@ fun PrincipalScreen(
         )
     }
 }
-
-private fun String.primeiroNome(): String =
-    trim().substringBefore(' ').trim()
 
 @Composable
 private fun lembrarAbasNavegacao(): List<ItemNavegacao> {

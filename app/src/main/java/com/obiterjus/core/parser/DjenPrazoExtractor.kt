@@ -1,8 +1,8 @@
 package com.obiterjus.core.parser
 
 import com.obiterjus.core.time.CalculadoraPrazos
-import com.obiterjus.core.time.ResultadoCalculoPrazo
 import com.obiterjus.domain.model.ConfiancaCalculo
+import com.obiterjus.domain.model.NaturezaProcesso
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.model.toConfianca
 import java.time.LocalDate
@@ -18,15 +18,23 @@ class DjenPrazoExtractor(
         texto: String?,
         dataDisponibilizacao: LocalDate?,
         tribunal: String? = null,
+        natureza: NaturezaProcesso? = null,
     ): PublicacaoPrazo? {
         if (texto.isNullOrBlank()) return null
         val match = prazoRegex.find(texto) ?: return null
         val quantidade = match.groupValues[1].toIntOrNull() ?: return null
         val unidade = match.groupValues[2].lowercase().normalizeUnidade()
-        val diasUteis = match.groupValues.getOrNull(3)
+
+        val qualificador = match.groupValues.getOrNull(3)
             ?.lowercase()
-            ?.let { it == "úteis" || it == "uteis" }
-            ?: false
+            ?.takeIf { it.isNotBlank() }
+        val diasUteis = when {
+            qualificador == "úteis" || qualificador == "uteis" -> true
+            qualificador != null -> false // "corrido(s)" explícito
+            // Sem qualificador, o default segue a natureza do processo:
+            // cível → dias úteis (CPC art. 219); penal → corridos (CPP 798).
+            else -> natureza != NaturezaProcesso.PENAL
+        }
 
         val resultado = dataDisponibilizacao?.let { data ->
             calculadoraPrazos.calcularDataLimite(
@@ -35,6 +43,7 @@ class DjenPrazoExtractor(
                 unidade = unidade,
                 diasUteis = diasUteis,
                 tribunal = tribunal,
+                natureza = natureza,
             )
         }
         return PublicacaoPrazo(
@@ -43,7 +52,7 @@ class DjenPrazoExtractor(
             diasUteis = diasUteis,
             textoOriginal = match.value.trim(),
             dataLimiteEstimada = resultado?.data,
-            confiancaCalculo = resultado?.toConfianca() ?: ConfiancaCalculo.ESTIMADO,
+            confiancaCalculo = resultado?.toConfianca() ?: ConfiancaCalculo.PENDENTE,
         )
     }
 

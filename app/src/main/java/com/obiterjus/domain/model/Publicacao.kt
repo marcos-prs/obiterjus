@@ -5,12 +5,12 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
 
-enum class ConfiancaCalculo { CONFIAVEL, INCERTO, ESTIMADO }
+enum class ConfiancaCalculo { CONFIAVEL, INCERTO, PENDENTE }
 
 fun ResultadoCalculoPrazo.toConfianca(): ConfiancaCalculo = when (this) {
     is ResultadoCalculoPrazo.Confiavel -> ConfiancaCalculo.CONFIAVEL
     is ResultadoCalculoPrazo.Incerto -> ConfiancaCalculo.INCERTO
-    is ResultadoCalculoPrazo.Estimado -> ConfiancaCalculo.ESTIMADO
+    is ResultadoCalculoPrazo.Pendente -> ConfiancaCalculo.PENDENTE
 }
 
 data class Publicacao(
@@ -52,5 +52,5 @@ data class PublicacaoPrazo(
     val isConfirmado: Boolean = false,
     val idExternoCalendario: String? = null,
     val provedorCalendario: String? = null,
-    val confiancaCalculo: ConfiancaCalculo = ConfiancaCalculo.ESTIMADO,
+    val confiancaCalculo: ConfiancaCalculo = ConfiancaCalculo.PENDENTE,
 )

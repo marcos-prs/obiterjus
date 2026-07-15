@@ -204,6 +204,7 @@ fun PrazosScreen(
         val tituloSemana = stringResource(R.string.prazos_secao_semana)
         val tituloProximos = stringResource(R.string.prazos_secao_proximos)
         val tituloSemData = stringResource(R.string.prazos_secao_sem_data)
+        val tituloPendentes = stringResource(R.string.prazos_secao_pendentes)
 
         LazyColumn(
             modifier = Modifier
@@ -291,38 +292,22 @@ fun PrazosScreen(
 
             when (estado.abaSelecionada) {
                 AbaPrazos.TODOS -> {
+                    item {
+                        CalendarioPrazos(
+                            datasComPrazo = estado.datasComPrazo,
+                            hoje = estado.hoje,
+                            modifier = Modifier.padding(horizontal = dimens.screenMargin),
+                        )
+                    }
                     secaoPrazos(
-                        titulo = tituloUrgente,
-                        itens = estado.urgente,
-                        prioridade = VarianteBadge.URGENTE,
-                        confirmandoPrazoId = estado.confirmandoPrazoId,
-                        onSolicitarConfirmacao = { prazoEmDialogo = it },
-                    )
-                    secaoPrazos(
-                        titulo = tituloSemana,
-                        itens = estado.estaSemana,
-                        prioridade = VarianteBadge.SENTENCA,
-                        confirmandoPrazoId = estado.confirmandoPrazoId,
-                        onSolicitarConfirmacao = { prazoEmDialogo = it },
-                    )
-                    secaoPrazos(
-                        titulo = tituloProximos,
-                        itens = estado.proximos,
-                        prioridade = VarianteBadge.DESPACHO,
-                        confirmandoPrazoId = estado.confirmandoPrazoId,
-                        onSolicitarConfirmacao = { prazoEmDialogo = it },
-                    )
-                    secaoPrazos(
-                        titulo = tituloExpirados,
-                        itens = estado.expirados,
-                        prioridade = VarianteBadge.URGENTE,
+                        titulo = tituloPendentes,
+                        itens = estado.pendentes,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
                     secaoPrazos(
                         titulo = tituloSemData,
                         itens = estado.semData,
-                        prioridade = VarianteBadge.DESPACHO,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
@@ -330,7 +315,6 @@ fun PrazosScreen(
                 AbaPrazos.VENCIDOS -> secaoPrazos(
                     titulo = tituloExpirados,
                     itens = estado.expirados,
-                    prioridade = VarianteBadge.URGENTE,
                     confirmandoPrazoId = estado.confirmandoPrazoId,
                     onSolicitarConfirmacao = { prazoEmDialogo = it },
                 )
@@ -338,21 +322,18 @@ fun PrazosScreen(
                     secaoPrazos(
                         titulo = tituloUrgente,
                         itens = estado.urgente,
-                        prioridade = VarianteBadge.URGENTE,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
                     secaoPrazos(
                         titulo = tituloSemana,
                         itens = estado.estaSemana,
-                        prioridade = VarianteBadge.SENTENCA,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
                     secaoPrazos(
                         titulo = tituloProximos,
                         itens = estado.proximos,
-                        prioridade = VarianteBadge.DESPACHO,
                         confirmandoPrazoId = estado.confirmandoPrazoId,
                         onSolicitarConfirmacao = { prazoEmDialogo = it },
                     )
@@ -361,7 +342,6 @@ fun PrazosScreen(
                 AbaPrazos.SEM_DATA -> secaoPrazos(
                     titulo = tituloSemData,
                     itens = estado.semData,
-                    prioridade = VarianteBadge.DESPACHO,
                     confirmandoPrazoId = estado.confirmandoPrazoId,
                     onSolicitarConfirmacao = { prazoEmDialogo = it },
                 )
@@ -442,7 +422,6 @@ fun PrazosScreen(
 private fun androidx.compose.foundation.lazy.LazyListScope.secaoPrazos(
     titulo: String,
     itens: List<PrazoUiItem>,
-    prioridade: VarianteBadge,
     confirmandoPrazoId: Long?,
     onSolicitarConfirmacao: (PrazoUiItem) -> Unit,
 ) {
@@ -462,7 +441,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.secaoPrazos(
     ) { prazo ->
         CardPrazo(
             prazo = prazo,
-            prioridade = prioridade,
             confirmando = confirmandoPrazoId == prazo.item.publicacao.id,
             onSolicitarConfirmacao = { onSolicitarConfirmacao(prazo) },
             modifier = Modifier.padding(horizontal = ObiterTheme.dimens.screenMargin),
@@ -473,11 +451,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.secaoPrazos(
 @Composable
 private fun CardPrazo(
     prazo: PrazoUiItem,
-    prioridade: VarianteBadge,
     confirmando: Boolean,
     onSolicitarConfirmacao: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val prioridade = prazo.grupo.prioridade()
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
     val colorScheme = MaterialTheme.colorScheme
@@ -557,13 +535,7 @@ private fun CardPrazo(
                 ) {
                     BadgeTipoAto(
                         texto = diasBadge,
-                        variante = when (prazo.grupo) {
-                            GrupoPrazo.EXPIRADOS -> VarianteBadge.URGENTE
-                            GrupoPrazo.URGENTE -> VarianteBadge.URGENTE
-                            GrupoPrazo.ESTA_SEMANA -> VarianteBadge.SENTENCA
-                            GrupoPrazo.PROXIMOS -> VarianteBadge.DESPACHO
-                            GrupoPrazo.SEM_DATA -> VarianteBadge.DESPACHO
-                        },
+                        variante = prioridade,
                     )
                     if (confirmado) {
                         BadgeTipoAto(
@@ -749,6 +721,13 @@ private fun DialogConfirmarPrazo(
         },
     )
 }
+
+private fun GrupoPrazo.prioridade(): VarianteBadge =
+    when (this) {
+        GrupoPrazo.EXPIRADOS, GrupoPrazo.URGENTE -> VarianteBadge.URGENTE
+        GrupoPrazo.ESTA_SEMANA -> VarianteBadge.SENTENCA
+        GrupoPrazo.PROXIMOS, GrupoPrazo.SEM_DATA -> VarianteBadge.DESPACHO
+    }
 
 @Composable
 private fun PrazoUiItem.rotuloDias(): String =

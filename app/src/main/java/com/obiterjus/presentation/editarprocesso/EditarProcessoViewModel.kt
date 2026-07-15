@@ -2,10 +2,12 @@ package com.obiterjus.presentation.editarprocesso
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.obiterjus.domain.model.NaturezaProcesso
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.repository.ProcessosRepository
 import com.obiterjus.domain.usecase.ExcluirProcessoUseCase
+import com.obiterjus.data.viacep.ViaCepApi
 import com.obiterjus.domain.usecase.RessincronizarProcessoUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +20,7 @@ class EditarProcessoViewModel(
     private val repositorio: ProcessosRepository,
     private val excluirProcesso: ExcluirProcessoUseCase,
     private val ressincronizarProcesso: RessincronizarProcessoUseCase,
+    private val viaCepApi: ViaCepApi,
 ) : ViewModel() {
     private val _estado = MutableStateFlow(EstadoEditarProcesso())
     val estado: StateFlow<EstadoEditarProcesso> = _estado
@@ -52,6 +55,11 @@ class EditarProcessoViewModel(
                         terceirosAuxiliares = processo.terceirosAuxiliares.orEmpty(),
                         assuntoPrincipal = processo.assuntos.firstOrNull().orEmpty(),
                         segredoJustica = if ((processo.nivelSigilo ?: 0) > 0) "Sim" else "Não",
+                        natureza = when (processo.natureza) {
+                            NaturezaProcesso.CIVEL -> OPCAO_NATUREZA_CIVEL
+                            NaturezaProcesso.PENAL -> OPCAO_NATUREZA_PENAL
+                            null -> ""
+                        },
                     )
                 }
             }
@@ -78,6 +86,7 @@ class EditarProcessoViewModel(
     fun aoAlterarTerceiros(valor: String) { _estado.update { it.copy(terceirosAuxiliares = valor) } }
     fun aoAlterarAssunto(valor: String) { _estado.update { it.copy(assuntoPrincipal = valor) } }
     fun aoAlterarSegredo(valor: String) { _estado.update { it.copy(segredoJustica = valor) } }
+    fun aoAlterarNatureza(valor: String) { _estado.update { it.copy(natureza = valor) } }
 
     fun aoAlterarParticipante(idLocal: String, participante: ParticipanteProcesso) {
         _estado.update { atual ->
@@ -90,15 +99,15 @@ class EditarProcessoViewModel(
         }
     }
 
-    fun aoAdicionarParticipante(polo: String) {
+    fun aoAdicionarParticipante() {
         _estado.update { atual ->
             val novo = ParticipanteProcesso(
                 idLocal = UUID.randomUUID().toString(),
                 numeroProcesso = atual.numeroProcesso,
-                polo = polo,
+                polo = null,
                 nome = "",
                 tipoPessoa = null,
-                tipoParticipacao = null
+                tipoParticipacao = null,
             )
             atual.copy(participantes = atual.participantes + novo)
         }
@@ -110,9 +119,58 @@ class EditarProcessoViewModel(
         }
     }
 
+    fun aoMoverParticipante(idLocal: String, paraCima: Boolean) {
+        _estado.update { atual ->
+            val lista = atual.participantes.toMutableList()
+            val idx = lista.indexOfFirst { it.idLocal == idLocal }
+            val destino = if (paraCima) idx - 1 else idx + 1
+            if (idx == -1 || destino !in lista.indices) return@update atual
+            val tmp = lista[idx]; lista[idx] = lista[destino]; lista[destino] = tmp
+            atual.copy(participantes = lista)
+        }
+    }
+
+    fun aoBuscarCep(idLocal: String, cep: String) {
+        if (cep.length != 8) return
+        _estado.update { it.copy(cepBuscandoIdLocal = idLocal, cepErroIdLocal = null) }
+        viewModelScope.launch {
+            try {
+                val response = viaCepApi.buscarCep(cep)
+                val dto = response.body()
+                if (response.isSuccessful && dto != null && !dto.erro) {
+                    _estado.update { atual ->
+                        val lista = atual.participantes.toMutableList()
+                        val idx = lista.indexOfFirst { it.idLocal == idLocal }
+                        if (idx != -1) {
+                            lista[idx] = lista[idx].copy(logradouro = dto.logradouro.orEmpty())
+                        }
+                        atual.copy(participantes = lista, cepBuscandoIdLocal = null, cepErroIdLocal = null)
+                    }
+                } else {
+                    _estado.update { it.copy(cepBuscandoIdLocal = null, cepErroIdLocal = idLocal) }
+                }
+            } catch (_: Exception) {
+                _estado.update { it.copy(cepBuscandoIdLocal = null, cepErroIdLocal = idLocal) }
+            }
+        }
+    }
+
+    fun aoDescartarErroValidacao() {
+        _estado.update { it.copy(erroNomeParticipanteVazio = false) }
+    }
+
+    fun aoDescartarSalvo() { _estado.update { it.copy(salvo = false) } }
+    fun aoDescartarErroExclusao() { _estado.update { it.copy(erroExclusao = false) } }
+    fun aoDescartarRessincronizado() { _estado.update { it.copy(ressincronizado = false) } }
+    fun aoDescartarErroRessincronizacao() { _estado.update { it.copy(erroRessincronizacao = false) } }
+
     fun aoSalvar() {
         val atual = _estado.value
         val original = atual.processoOriginal ?: return
+        if (atual.participantes.any { it.nome.isNullOrBlank() }) {
+            _estado.update { it.copy(erroNomeParticipanteVazio = true) }
+            return
+        }
         _estado.update { it.copy(salvando = true) }
         viewModelScope.launch {
             repositorio.salvarProcesso(
@@ -138,6 +196,11 @@ class EditarProcessoViewModel(
                     terceirosAuxiliares = atual.terceirosAuxiliares.ifBlank { null },
                     assuntos = listOf(atual.assuntoPrincipal).filter { it.isNotBlank() },
                     nivelSigilo = if (atual.segredoJustica == "Sim") 1 else 0,
+                    natureza = when (atual.natureza) {
+                        OPCAO_NATUREZA_CIVEL -> NaturezaProcesso.CIVEL
+                        OPCAO_NATUREZA_PENAL -> NaturezaProcesso.PENAL
+                        else -> original.natureza
+                    },
                 ),
             )
             _estado.update { it.copy(salvando = false, salvo = true) }
@@ -189,6 +252,9 @@ data class EstadoEditarProcesso(
     val ressincronizando: Boolean = false,
     val ressincronizado: Boolean = false,
     val erroRessincronizacao: Boolean = false,
+    val erroNomeParticipanteVazio: Boolean = false,
+    val cepBuscandoIdLocal: String? = null,
+    val cepErroIdLocal: String? = null,
     // Campos expandidos
     val dataDistribuicao: Instant? = null,
     val comarcaSecao: String = "",
@@ -206,4 +272,8 @@ data class EstadoEditarProcesso(
     val terceirosAuxiliares: String = "",
     val assuntoPrincipal: String = "",
     val segredoJustica: String = "Não",
+    val natureza: String = "",
 )
+
+const val OPCAO_NATUREZA_CIVEL = "Cível"
+const val OPCAO_NATUREZA_PENAL = "Penal"

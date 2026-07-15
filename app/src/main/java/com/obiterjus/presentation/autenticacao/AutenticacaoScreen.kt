@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,13 +35,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,12 +50,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +82,7 @@ fun AutenticacaoScreen(
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val dimens = ObiterTheme.dimens
-    val colors = ObiterTheme.colors
+    ObiterTheme.colors
 
     val acaoRetry = when {
         estado.modo == ModoAutenticacao.ENTRAR -> viewModel::aoEntrar
@@ -140,6 +141,7 @@ fun AutenticacaoScreen(
                     aoAlterarEmail = viewModel::aoAlterarEmail,
                     aoAlterarSenha = viewModel::aoAlterarSenha,
                     aoEntrar = viewModel::aoEntrar,
+                    aoEnviarRedefinicaoSenha = viewModel::aoEnviarRedefinicaoSenha,
                     aoIrParaCadastro = viewModel::aoIrParaCadastro,
                 )
             }
@@ -221,6 +223,7 @@ private fun ConteudoLogin(
     aoAlterarEmail: (String) -> Unit,
     aoAlterarSenha: (String) -> Unit,
     aoEntrar: () -> Unit,
+    aoEnviarRedefinicaoSenha: () -> Unit,
     aoIrParaCadastro: () -> Unit,
 ) {
     val dimens = ObiterTheme.dimens
@@ -231,40 +234,14 @@ private fun ConteudoLogin(
             color = ObiterTheme.colors.textMuted,
         )
 
-        OutlinedTextField(
-            value = estado.email,
-            onValueChange = aoAlterarEmail,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text(stringResource(R.string.autenticacao_label_email)) },
+        CardLoginEmail(
+            estado = estado,
+            aoAlterarEmail = aoAlterarEmail,
+            aoAlterarSenha = aoAlterarSenha,
+            aoEntrar = aoEntrar,
+            aoEnviarRedefinicaoSenha = aoEnviarRedefinicaoSenha,
         )
-        OutlinedTextField(
-            value = estado.senha,
-            onValueChange = aoAlterarSenha,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text(stringResource(R.string.autenticacao_label_password)) },
-        )
-        Button(
-            onClick = aoEntrar,
-            enabled = !estado.carregando,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (estado.carregando) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-            Text(
-                text = if (estado.carregando) {
-                    stringResource(R.string.autenticacao_action_loading)
-                } else {
-                    stringResource(R.string.autenticacao_action_login_email)
-                },
-            )
-        }
+
         TextButton(
             onClick = aoIrParaCadastro,
             modifier = Modifier.fillMaxWidth(),
@@ -275,24 +252,242 @@ private fun ConteudoLogin(
 }
 
 @Composable
+private fun CardLoginEmail(
+    estado: EstadoAutenticacao,
+    aoAlterarEmail: (String) -> Unit,
+    aoAlterarSenha: (String) -> Unit,
+    aoEntrar: () -> Unit,
+    aoEnviarRedefinicaoSenha: () -> Unit,
+) {
+    val dimens = ObiterTheme.dimens
+    var senhaVisivel by remember { mutableStateOf(false) }
+    var manterConectado by remember { mutableStateOf(true) }
+
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(dimens.borderWidth, ObiterTheme.colors.border),
+        shape = RoundedCornerShape(dimens.cardRadius),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = dimens.space4, vertical = dimens.space5),
+            verticalArrangement = Arrangement.spacedBy(dimens.space4),
+        ) {
+            CampoLogin(
+                label = stringResource(R.string.autenticacao_label_email_institucional),
+                value = estado.email,
+                onValueChange = aoAlterarEmail,
+                leadingIcon = {
+                    Icon(
+                        imageVector = ObiterIcones.Email,
+                        contentDescription = null,
+                    )
+                },
+                placeholder = stringResource(R.string.autenticacao_placeholder_email),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next,
+                ),
+            )
+
+            CampoLogin(
+                label = stringResource(R.string.autenticacao_label_password),
+                value = estado.senha,
+                onValueChange = aoAlterarSenha,
+                leadingIcon = {
+                    Icon(
+                        imageVector = ObiterIcones.Sigilo,
+                        contentDescription = null,
+                    )
+                },
+                placeholder = stringResource(R.string.autenticacao_placeholder_senha),
+                visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                    autoCorrectEnabled = false,
+                ),
+                keyboardActions = KeyboardActions(onDone = { aoEntrar() }),
+                trailingIcon = {
+                    IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
+                        Icon(
+                            imageVector = if (senhaVisivel) {
+                                ObiterIcones.VisibilidadeOculta
+                            } else {
+                                ObiterIcones.Visibilidade
+                            },
+                            contentDescription = stringResource(
+                                if (senhaVisivel) {
+                                    R.string.cd_ocultar_senha
+                                } else {
+                                    R.string.cd_mostrar_senha
+                                },
+                            ),
+                        )
+                    }
+                },
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = manterConectado,
+                    onCheckedChange = { manterConectado = it },
+                    enabled = !estado.carregando,
+                )
+                Text(
+                    text = stringResource(R.string.autenticacao_manter_conectado),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    onClick = aoEnviarRedefinicaoSenha,
+                    enabled = !estado.carregando,
+                ) {
+                    Text(stringResource(R.string.autenticacao_esqueci_senha))
+                }
+            }
+
+            Button(
+                onClick = aoEntrar,
+                enabled = !estado.carregando,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+            ) {
+                if (estado.carregando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Icon(
+                        imageVector = ObiterIcones.Login,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Text(
+                    text = if (estado.carregando) {
+                        stringResource(R.string.autenticacao_action_loading)
+                    } else {
+                        stringResource(R.string.autenticacao_action_entrar_sistema)
+                    },
+                    modifier = Modifier.padding(start = dimens.space2),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                )
+            }
+
+            HorizontalDivider(color = ObiterTheme.colors.divider)
+
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(dimens.space2),
+            ) {
+                Icon(
+                    imageVector = ObiterIcones.Seguranca,
+                    contentDescription = null,
+                    tint = ObiterTheme.colors.textMuted,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.autenticacao_rodape_seguranca),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ObiterTheme.colors.textMuted,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CampoLogin(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    leadingIcon: @Composable () -> Unit,
+    placeholder: String,
+    keyboardOptions: KeyboardOptions,
+    modifier: Modifier = Modifier,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    trailingIcon: (@Composable () -> Unit)? = null,
+) {
+    val dimens = ObiterTheme.dimens
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ObiterTheme.colors.textMuted,
+                )
+            },
+            visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
+            shape = RoundedCornerShape(dimens.cardRadius),
+            textStyle = MaterialTheme.typography.bodyLarge,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = ObiterTheme.colors.border,
+                focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                unfocusedLeadingIconColor = ObiterTheme.colors.textMuted,
+                focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
+                unfocusedTrailingIconColor = ObiterTheme.colors.textMuted,
+                cursorColor = MaterialTheme.colorScheme.primary,
+            ),
+        )
+    }
+}
+
+@Composable
 private fun CabecalhoCadastro(
     etapaAtual: EtapaCadastro,
     onVoltar: () -> Unit,
 ) {
     val dimens = ObiterTheme.dimens
+    val colors = ObiterTheme.colors
     val etapas = EtapaCadastro.entries
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(dimens.borderWidth, ObiterTheme.colors.border),
-        modifier = Modifier.fillMaxWidth(),
+        color = colors.topAppBarBackground,
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
     ) {
-        Column(modifier = Modifier.padding(dimens.cardPaddingH)) {
+        Column(
+            modifier = Modifier
+                .heightIn(min = dimens.topAppBarHeight)
+                .padding(
+                    horizontal = dimens.topAppBarPaddingH,
+                    vertical = dimens.cardPaddingV,
+                ),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onVoltar) {
                     Icon(
                         imageVector = ObiterIcones.Voltar,
                         contentDescription = stringResource(R.string.cd_voltar),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = colors.onTopAppBar.copy(alpha = 0.60f),
                         modifier = Modifier.size(dimens.iconBackSize),
                     )
                 }
@@ -300,12 +495,12 @@ private fun CabecalhoCadastro(
                     Text(
                         text = stringResource(R.string.autenticacao_title_cadastro),
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = colors.onTopAppBar,
                     )
                     Text(
                         text = stringResource(R.string.autenticacao_subtitle_cadastro, etapaAtual.ordinal + 1, etapas.size),
                         style = MaterialTheme.typography.bodySmall,
-                        color = ObiterTheme.colors.textMuted,
+                        color = colors.onTopAppBar.copy(alpha = 0.60f),
                     )
                 }
             }
@@ -770,7 +965,7 @@ private fun CampoTexto(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(),
+    modifier: Modifier = Modifier,
     oculto: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
 ) {
@@ -957,7 +1152,7 @@ private fun Surface(
     content: @Composable () -> Unit,
 ) {
     if (onClick == null) {
-        androidx.compose.material3.Surface(
+        Surface(
             color = color,
             border = border,
             shape = shape,
@@ -965,7 +1160,7 @@ private fun Surface(
             content = content,
         )
     } else {
-        androidx.compose.material3.Surface(
+        Surface(
             color = color,
             border = border,
             shape = shape,

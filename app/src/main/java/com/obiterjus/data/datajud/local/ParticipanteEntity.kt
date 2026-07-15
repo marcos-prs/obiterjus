@@ -24,4 +24,11 @@ data class ParticipanteEntity(
     val profissao: String? = null,
     val endereco: String? = null,
     val contatos: String? = null,
+    // Endereço estruturado
+    val cep: String? = null,
+    val logradouro: String? = null,
+    val numeroEndereco: String? = null,
+    // Contatos estruturados
+    val telefone: String? = null,
+    val email: String? = null,
 )

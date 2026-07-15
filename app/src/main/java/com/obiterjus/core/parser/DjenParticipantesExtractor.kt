@@ -4,9 +4,9 @@ import com.obiterjus.domain.model.PublicacaoParticipante
 
 object DjenParticipantesExtractor {
     private val labelRegex = Regex(
-        pattern = """(?i)\b(destinat[aá]rios?|advogad[oa]s?|adv\.?|parte(?:s)?|autor(?:a)?|r[eé]u|requerente|requerido|exequente|executado|impetrante|impetrado|agravante|agravado|apelante|apelado)\s*[:\-]\s*([^\n;]+)""",
+        pattern = """(?i)\b(destinat[aá]rios?|advogad[oa]s?|adv\.?|polo\s+ativo|polo\s+passivo|parte(?:s)?|autor(?:a)?|r[eé]u|requerente|requerido|exequente|executado|impetrante|impetrado|agravante|agravado|apelante|apelado)\s*[:\-]\s*([^\n;]+)""",
     )
-    private val oabRegex = Regex("""(?i)\bOAB\s*/?\s*([A-Z]{2})?\s*(\d{2,8}[A-Z]?)\b""")
+    private val oabRegex = Regex("""(?i)\bOAB\s*(?::|/)?\s*([A-Z]{2})?\s*(\d{2,8}[A-Z]?)(?:\s*/\s*([A-Z]{2}))?\b""")
 
     fun extract(texto: String?): List<PublicacaoParticipante> {
         if (texto.isNullOrBlank()) return emptyList()
@@ -19,7 +19,7 @@ object DjenParticipantesExtractor {
                 val nome = rawNome
                     .replace(oabRegex, "")
                     .replace(Regex("""(?i)\bCPF\s*:?\s*[\d.*-]+"""), "")
-                    .trim(' ', '-', ',', '.', ':')
+                    .trim(' ', '-', ',', ':')
                     .takeIf { it.length >= MIN_NOME_LENGTH }
 
                 nome?.let {
@@ -41,6 +41,8 @@ object DjenParticipantesExtractor {
         return when {
             normalized.startsWith("destinat") -> "Destinatário"
             normalized.startsWith("adv") -> "Advogado"
+            normalized.startsWith("polo ativo") -> "Ativo"
+            normalized.startsWith("polo passivo") -> "Passivo"
             normalized.startsWith("autor") -> "Autor"
             normalized == "réu" || normalized == "reu" -> "Réu"
             normalized.startsWith("requerente") -> "Requerente"

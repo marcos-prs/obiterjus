@@ -111,6 +111,7 @@ data class ProcessoFirestoreDto(
     val capturadoEm: Timestamp? = null,
     val atualizadoEm: Timestamp? = null,
     val dataJudTentativasRestantes: Int = 0,
+    val natureza: String? = null,
 )
 
 fun ProcessoEntity.toFirestoreDto() = ProcessoFirestoreDto(
@@ -128,6 +129,7 @@ fun ProcessoEntity.toFirestoreDto() = ProcessoFirestoreDto(
     capturadoEm = capturadoEm.toTimestamp(),
     atualizadoEm = atualizadoEm.toTimestamp(),
     dataJudTentativasRestantes = dataJudTentativasRestantes,
+    natureza = natureza,
 )
 
 fun ProcessoFirestoreDto.toEntity(): ProcessoEntity? =
@@ -150,6 +152,7 @@ fun ProcessoFirestoreDto.toEntity(): ProcessoEntity? =
             capturadoEm = capturadoEm.toJavaInstant(),
             atualizadoEm = atualizadoEm.toJavaInstant(),
             dataJudTentativasRestantes = dataJudTentativasRestantes,
+            natureza = natureza,
         )
     }
 

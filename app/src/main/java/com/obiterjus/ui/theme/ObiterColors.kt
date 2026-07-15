@@ -48,14 +48,14 @@ fun obiterLightColors(): ObiterExtendedColors = ObiterExtendedColors(
     surfacePergaminho = Pergaminho,
     primaryDark = SanJuanDark,
     primaryPale = SanJuanPale,
-    textMuted = MutedGray,
+    textMuted = Color(0xFF8FA0B0),
     border = Border,
     divider = Divider,
     mulledWine = MulledWine,
     tribunalBadgeBackground = SanJuan,
     tribunalBadgeText = Color.White,
     topAppBarBackground = SanJuan,
-    onTopAppBar = Color.White,
+    onTopAppBar = Husk,
     topAppBarAccent = Husk,
 )
 
@@ -72,14 +72,14 @@ fun obiterDarkColors(): ObiterExtendedColors = ObiterExtendedColors(
     surfacePergaminho = DarkPergaminho,
     primaryDark = SanJuanLighter,
     primaryPale = DarkPrimaryContainer,
-    textMuted = DarkTextMuted,
+    textMuted = Color(0xFF4A5E6A),  // Dark muted text color
     border = DarkBorder,
     divider = DarkDivider,
     mulledWine = MulledWineLight,
     tribunalBadgeBackground = DarkPrimaryContainer,
     tribunalBadgeText = DarkTribunalBadgeText,
-    topAppBarBackground = Tiber,
-    onTopAppBar = Color.White,
+    topAppBarBackground = Color(0xFF111111),  // Dark top bar background
+    onTopAppBar = Color(0xFFC9AA70),  // Light text/icon color for dark top bar
     topAppBarAccent = Husk,
 )
 

@@ -18,17 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -39,9 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
 import com.obiterjus.presentation.componentes.SnackbarErroEffect
 import com.obiterjus.presentation.componentes.ToggleObiter
+import com.obiterjus.presentation.componentes.texto.TextoNomeUmaLinha
 import com.obiterjus.ui.theme.ObiterTheme
 import com.obiterjus.ui.theme.TipoTema
 
@@ -62,19 +53,15 @@ fun PerfilScreen(
     viewModel: PerfilViewModel,
     aoAbrirAuditoria: () -> Unit,
     aoForcarSincronizacao: () -> Unit,
-    aoLogout: () -> Unit,
     aoEntrar: () -> Unit,
     aoCriarConta: () -> Unit,
-    aoEditarPerfil: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val mensagemSucesso by viewModel.mensagemSucesso.collectAsStateWithLifecycle()
     val mensagemErro by viewModel.mensagemErro.collectAsStateWithLifecycle()
-    val menuContaAberto by viewModel.mostrarMenuConta.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val dimens = ObiterTheme.dimens
-    val colors = ObiterTheme.colors
 
     val nome = estado.nomeUsuario ?: stringResource(R.string.perfil_usuario_anonimo)
     val iniciais = iniciaisDoNome(nome)
@@ -113,11 +100,6 @@ fun PerfilScreen(
                     nome = nome,
                     subtitulo = subtituloPerfil,
                     iniciais = iniciais,
-                    menuAberto = menuContaAberto,
-                    aoAbrirMenu = viewModel::aoAbrirMenu,
-                    aoFecharMenu = viewModel::aoFecharMenu,
-                    aoEditarPerfil = aoEditarPerfil,
-                    aoLogout = aoLogout,
                     modifier = Modifier.padding(
                         start = dimens.screenMargin,
                         end = dimens.screenMargin,
@@ -258,11 +240,6 @@ private fun CabecalhoUsuario(
     nome: String,
     subtitulo: String,
     iniciais: String,
-    menuAberto: Boolean,
-    aoAbrirMenu: () -> Unit,
-    aoFecharMenu: () -> Unit,
-    aoEditarPerfil: () -> Unit,
-    aoLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dimens = ObiterTheme.dimens
@@ -277,8 +254,8 @@ private fun CabecalhoUsuario(
                 .weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text(
-                text = nome,
+            TextoNomeUmaLinha(
+                nome = nome,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -287,46 +264,6 @@ private fun CabecalhoUsuario(
                 style = MaterialTheme.typography.bodyMedium,
                 color = ObiterTheme.colors.textMuted,
             )
-        }
-        Box {
-            IconButton(onClick = aoAbrirMenu) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.cd_abrir_menu_perfil),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            DropdownMenu(
-                expanded = menuAberto,
-                onDismissRequest = aoFecharMenu,
-            ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.perfil_editar_dados)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        aoFecharMenu()
-                        aoEditarPerfil()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.perfil_logout)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        aoFecharMenu()
-                        aoLogout()
-                    },
-                )
-            }
         }
     }
 }

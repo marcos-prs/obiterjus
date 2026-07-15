@@ -227,6 +227,9 @@ class MonitoramentoViewModelTest {
         override suspend fun signUpWithEmail(email: String, password: String): Result<AuthUser> =
             Result.success(user.copy(email = email, isAnonymous = false))
 
+        override suspend fun sendPasswordResetEmail(email: String): Result<Unit> =
+            Result.success(Unit)
+
         override suspend fun updatePassword(
             currentPassword: String,
             newPassword: String,

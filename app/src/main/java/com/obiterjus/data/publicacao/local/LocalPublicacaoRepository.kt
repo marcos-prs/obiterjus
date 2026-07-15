@@ -77,6 +77,7 @@ class LocalPublicacaoRepository(
             } else {
                 publicacoesExistentesPorHash[hash]?.let { existente ->
                     publicacao.copy(id = existente.id, hash = hash)
+                        .preservandoPrazoDe(existente)
                 } ?: publicacao.copy(hash = hash)
             }
         }
@@ -161,6 +162,24 @@ data class UpsertPublicacoesResult(
 private fun PublicacaoEntity.normalizarHash(): PublicacaoEntity =
     copy(hash = hash?.trim()?.takeIf { it.isNotEmpty() })
 
+/**
+ * Um resultado já obtido da API (data-limite presente) nunca é rebaixado por
+ * uma re-sincronização em que a API estava indisponível (prazo PENDENTE/nulo).
+ */
+private fun PublicacaoEntity.preservandoPrazoDe(existente: PublicacaoEntity): PublicacaoEntity =
+    if (prazoDataLimite == null && existente.prazoDataLimite != null) {
+        copy(
+            prazoQuantidade = existente.prazoQuantidade,
+            prazoUnidade = existente.prazoUnidade,
+            prazoDiasUteis = existente.prazoDiasUteis,
+            prazoTexto = existente.prazoTexto,
+            prazoDataLimite = existente.prazoDataLimite,
+            prazoConfianca = existente.prazoConfianca,
+        )
+    } else {
+        this
+    }
+
 private fun List<PublicacaoEntity>.deduplicarConflitosHash(): List<PublicacaoEntity> {
     val comparator = compareByDescending<PublicacaoEntity> { it.atualizadoEm }
         .thenByDescending { it.capturadoEm }
@@ -214,8 +233,11 @@ private fun PublicacaoEntity.prazo(): PublicacaoPrazo? {
     val quantidade = prazoQuantidade ?: return null
     val unidade = prazoUnidade?.takeIf { it.isNotBlank() } ?: return null
     val texto = prazoTexto?.takeIf { it.isNotBlank() } ?: return null
+    // Valores legados (ex.: "ESTIMADO", da época do cálculo local) caem no
+    // valueOf com falha e são tratados como PENDENTE — recalculados via API
+    // na próxima sincronização.
     val confianca = prazoConfianca?.let { runCatching { ConfiancaCalculo.valueOf(it) }.getOrNull() }
-        ?: ConfiancaCalculo.ESTIMADO
+        ?: ConfiancaCalculo.PENDENTE
     return PublicacaoPrazo(
         quantidade = quantidade,
         unidade = unidade,

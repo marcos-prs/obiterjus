@@ -7,6 +7,7 @@ import com.obiterjus.data.datajud.mapper.toParticipanteEntities
 import com.obiterjus.data.datajud.mapper.toProcessoEntity
 import com.obiterjus.data.datajud.remote.DataJudRemoteDataSource
 import com.obiterjus.data.datajud.remote.UnknownDataJudTribunalException
+import com.obiterjus.data.processo.ProcessoDadosResolver
 import com.obiterjus.data.processo.local.LocalProcessoRepository
 import com.obiterjus.data.processo.local.ProcessoEntity
 import com.obiterjus.domain.model.ProcessoDataJudSyncResultado
@@ -76,9 +77,17 @@ class DataJudRepositoryImpl(
                     val participantes = processoDto.toParticipanteEntities(processo.numeroProcesso)
                     Log.d(TAG, "  → FOUND: classe=${processo.classeNome} | movimentos=${movimentos.size} | participantes=${participantes.size} | sigilo=${processo.nivelSigilo}")
 
-                    localProcessoRepository.upsertProcesso(processo)
+                    val processoMesclado = ProcessoDadosResolver.mesclarProcesso(
+                        existente = localProcessoRepository.getProcesso(processo.numeroProcesso),
+                        novo = processo,
+                    )
+                    val participantesMesclados = ProcessoDadosResolver.mesclarParticipantes(
+                        existentes = localProcessoRepository.getParticipantes(processo.numeroProcesso),
+                        novos = participantes,
+                    )
+                    localProcessoRepository.upsertProcesso(processoMesclado)
                     localProcessoRepository.replaceMovimentos(processo.numeroProcesso, movimentos)
-                    localProcessoRepository.replaceParticipantes(processo.numeroProcesso, participantes)
+                    localProcessoRepository.replaceParticipantes(processo.numeroProcesso, participantesMesclados)
                     movimentosSalvos += movimentos.size
 
                     resultados += ProcessoDataJudSyncResultado(
@@ -142,14 +151,25 @@ class DataJudRepositoryImpl(
         )
     }
 
-    private fun processoStatusEntity(
+    // Preserva o que já se sabe do processo (dados semeados pelo DJEN ou
+    // editados pelo usuário): a falha no DataJud só atualiza o status.
+    private suspend fun processoStatusEntity(
         numeroProcesso: String,
         tribunal: String?,
         status: ProcessoSyncStatus,
         syncedAt: java.time.Instant,
         tentativasRestantes: Int = 0,
-    ): ProcessoEntity =
-        ProcessoEntity(
+    ): ProcessoEntity {
+        val existente = localProcessoRepository.getProcesso(numeroProcesso)
+        if (existente != null) {
+            return existente.copy(
+                tribunal = existente.tribunal ?: tribunal,
+                syncStatus = status,
+                atualizadoEm = syncedAt,
+                dataJudTentativasRestantes = tentativasRestantes,
+            )
+        }
+        return ProcessoEntity(
             numeroProcesso = numeroProcesso,
             tribunal = tribunal,
             grau = null,
@@ -165,6 +185,7 @@ class DataJudRepositoryImpl(
             atualizadoEm = syncedAt,
             dataJudTentativasRestantes = tentativasRestantes,
         )
+    }
 
     private suspend fun proximaTentativaRestante(numeroProcesso: String): Int {
         val processoLocal = localProcessoRepository.getProcesso(numeroProcesso)

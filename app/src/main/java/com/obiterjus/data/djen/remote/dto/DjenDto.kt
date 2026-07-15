@@ -31,4 +31,30 @@ data class DjenComunicacaoDto(
     @JsonNames("numeroProcesso")
     val numeroProcesso: String? = null,
     val ativo: Boolean? = null,
+    val destinatarios: List<DjenDestinatarioDto> = emptyList(),
+    @SerialName("destinatarioadvogados")
+    @JsonNames("destinatarioAdvogados")
+    val destinatarioAdvogados: List<DjenDestinatarioAdvogadoDto> = emptyList(),
+)
+
+@Serializable
+data class DjenDestinatarioDto(
+    val nome: String? = null,
+    val polo: String? = null,
+)
+
+@Serializable
+data class DjenDestinatarioAdvogadoDto(
+    val advogado: DjenAdvogadoDto? = null,
+)
+
+@Serializable
+data class DjenAdvogadoDto(
+    val nome: String? = null,
+    @SerialName("numero_oab")
+    @JsonNames("numeroOab")
+    val numeroOab: String? = null,
+    @SerialName("uf_oab")
+    @JsonNames("ufOab")
+    val ufOab: String? = null,
 )

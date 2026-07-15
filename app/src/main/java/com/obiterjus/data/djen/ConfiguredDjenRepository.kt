@@ -20,6 +20,7 @@ class ConfiguredDjenRepository(
     private val localProcessoRepository: ProcessosRepository,
     private val djenMapper: DjenMapper,
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
+    private val partesResolver: DjenPartesResolver? = null,
     private val clock: Clock = Clock.systemUTC(),
 ) : DjenRepository {
 
@@ -58,6 +59,7 @@ class ConfiguredDjenRepository(
             localProcessoRepository = localProcessoRepository,
             djenMapper = djenMapper,
             publicacaoPrazoMapper = publicacaoPrazoMapper,
+            partesResolver = partesResolver,
             clock = clock,
         )
         cachedRepository = repository

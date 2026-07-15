@@ -1,13 +1,18 @@
 package com.obiterjus.ui.theme
 
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.core.view.WindowCompat
 
 enum class TipoTema {
     SISTEMA, CLARO, ESCURO
@@ -93,6 +98,13 @@ fun ObiterJusTheme(
     }
     val colorScheme = if (darkTheme) ObiterDarkColorScheme else ObiterLightColorScheme
     val extendedColors = if (darkTheme) obiterDarkColors() else obiterLightColors()
+    val view = LocalView.current
+
+    SideEffect {
+        val window = (view.context as? Activity)?.window ?: return@SideEffect
+        window.statusBarColor = extendedColors.topAppBarBackground.toArgb()
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+    }
 
     CompositionLocalProvider(
         LocalObiterColors provides extendedColors,

@@ -11,6 +11,7 @@ import com.obiterjus.data.djen.remote.dto.DjenComunicacaoDto
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.domain.model.ConfiancaMatch
+import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MonitorarDjenResumo
 import com.obiterjus.domain.model.MonitorarDjenStopReason
@@ -31,6 +32,7 @@ class DjenRepositoryImpl(
     private val localProcessoRepository: ProcessosRepository,
     private val djenMapper: DjenMapper,
     private val publicacaoPrazoMapper: PublicacaoPrazoMapper,
+    private val partesResolver: DjenPartesResolver? = null,
     private val clock: Clock = Clock.systemUTC(),
 ) : DjenRepository {
 
@@ -122,10 +124,46 @@ class DjenRepositoryImpl(
         val novasIds = upsertResult.novasIds.toSet()
         val publicacoesNovas = publicacoes.filter { it.id in novasIds }
 
-        val processosParaSincronizar = publicacoesNovas
-            .mapNotNull { publicacao -> publicacao.resolverProcessoParaSincronizar() }
+        // Semeia processos e registra partes para TODAS as publicações desta
+        // sincronização — não apenas as novas. Numa re-sincronização as
+        // publicações já existem localmente (novas=0) e, se limitássemos às
+        // novas, partes e processos nunca seriam registrados para elas.
+        // No modo MANUAL, aproveita para varrer todo o acervo local, cobrindo
+        // publicações captadas antes desta regra existir.
+        val numerosDaSincronizacao = publicacoes.mapNotNull { it.numeroProcesso }
+        val numerosParaResolver = if (params.modo == MonitorarDjenModo.MANUAL) {
+            numerosDaSincronizacao + localPublicacaoRepository.getNumerosProcessoDistintos()
+        } else {
+            numerosDaSincronizacao
+        }.distinct()
+        val resumoPartes = partesResolver?.atualizarPartesDosProcessos(numerosParaResolver)
+        if (resumoPartes != null) {
+            Log.d(
+                TAG,
+                "Partes: processosSemeados=${resumoPartes.processosSemeados} | " +
+                    "processosAtualizados=${resumoPartes.processosAtualizados} | " +
+                    "participantesInseridos=${resumoPartes.participantesInseridos}",
+            )
+        }
+
+        // Considera TODAS as publicações da sincronização (não só as novas):
+        // um processo já SYNCED cujas publicações passaram a vir de outro
+        // tribunal (ex.: STJ após AREsp) precisa do gatilho mesmo quando a
+        // publicação já existia localmente.
+        val migracoesDeInstancia = publicacoes
+            .mapNotNull { publicacao -> publicacao.resolverMigracaoDeInstancia() }
+        val processosParaSincronizar = (
+            publicacoesNovas.mapNotNull { publicacao -> publicacao.resolverProcessoParaSincronizar() } +
+                migracoesDeInstancia
+            )
             .distinctBy { it.numeroProcesso to it.tribunal?.uppercase() }
             .toList()
+        if (migracoesDeInstancia.isNotEmpty()) {
+            Log.d(
+                TAG,
+                "Migração de instância detectada: ${migracoesDeInstancia.map { "${it.numeroProcesso}→${it.tribunal}" }}",
+            )
+        }
 
         val paginasNome = resultadosPorNome.sumOf(DjenFetchResult::paginasConsultadas)
         val totalRemotoNome = resultadosPorNome.firstNotNullOfOrNull { it.totalRemoto }
@@ -192,6 +230,24 @@ class DjenRepositoryImpl(
         return ProcessoDataJudSyncRequest(
             numeroProcesso = numeroProcesso,
             tribunal = tribunal,
+        )
+    }
+
+    // Publicação vinda de tribunal diferente do registrado sinaliza migração
+    // de instância (o DataJud indexa o mesmo número CNJ em cada tribunal por
+    // onde o processo tramita) — re-consulta o índice do novo tribunal mesmo
+    // com o processo SYNCED. Funciona nos dois sentidos: subida ao STJ e
+    // retorno à origem se o recurso for provido.
+    private suspend fun PublicacaoEntity.resolverMigracaoDeInstancia(): ProcessoDataJudSyncRequest? {
+        val numero = NumeroProcessoNormalizer.normalize(numeroProcesso) ?: return null
+        val tribunalPublicacao = tribunal?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val processoLocal = localProcessoRepository.obterProcesso(numero) ?: return null
+        val tribunalLocal = processoLocal.tribunal?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (tribunalPublicacao.equals(tribunalLocal, ignoreCase = true)) return null
+
+        return ProcessoDataJudSyncRequest(
+            numeroProcesso = numero,
+            tribunal = tribunalPublicacao,
         )
     }
 

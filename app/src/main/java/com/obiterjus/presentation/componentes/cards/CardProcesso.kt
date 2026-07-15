@@ -35,6 +35,7 @@ import com.obiterjus.R
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
+import com.obiterjus.presentation.componentes.texto.TextoAjustavelUmaLinha
 import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.ui.theme.ObiterTheme
 
@@ -80,25 +81,34 @@ fun CardProcesso(
             ),
             verticalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
         ) {
-            // Linha 1: número + estrela
+            // Linha 1: número + ícones
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = numeroProcesso.formatarCnj(),
+                TextoAjustavelUmaLinha(
+                    texto = numeroProcesso.formatarCnj(),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (temPrazoAtivo) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (temPrazoAtivo) {
+                        Icon(
+                            imageVector = ObiterIcones.Aviso,
+                            contentDescription = stringResource(R.string.cd_prazo_ativo),
+                            tint = colors.danger,
+                            modifier = Modifier.size(dimens.iconStarSize),
+                        )
+                    }
                     Icon(
-                        imageVector = ObiterIcones.Aviso,
-                        contentDescription = stringResource(R.string.cd_prazo_ativo),
-                        tint = colors.danger,
+                        imageVector = ObiterIcones.ExpandirAbaixo,
+                        contentDescription = null,
+                        tint = colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(dimens.iconStarSize),
                     )
                 }

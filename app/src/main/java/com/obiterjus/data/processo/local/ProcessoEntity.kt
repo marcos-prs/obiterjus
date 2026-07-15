@@ -45,4 +45,5 @@ data class ProcessoEntity(
     val defensoriaPublica: String? = null,
     val ministerioPublico: String? = null,
     val terceirosAuxiliares: String? = null,
+    val natureza: String? = null,
 )

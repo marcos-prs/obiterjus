@@ -13,16 +13,16 @@ import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
 import com.obiterjus.data.auth.FirebaseAuthRepository
 import com.obiterjus.data.config.FirebaseRemoteAppConfigRepository
-import com.obiterjus.data.time.BrasilApiDataSource
-import com.obiterjus.data.time.BrasilApiRetrofitFactory
+import com.obiterjus.data.minuta.remote.ObiterMinutaDataSource
+import com.obiterjus.data.minuta.remote.ObiterMinutaRetrofitFactory
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.CalendarioForenseRetrofitFactory
 import com.obiterjus.data.viacep.ViaCepApi
 import com.obiterjus.data.viacep.ViaCepRetrofitFactory
-import com.obiterjus.data.time.FeriadoRepository
 import com.obiterjus.core.time.CalculadoraPrazos
 import com.obiterjus.core.parser.DjenPrazoExtractor
 import com.obiterjus.domain.usecase.CalcularPrazoRegraUC
+import com.obiterjus.domain.usecase.ResolverNaturezaProcessoUC
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.agenda.remote.CalendarRetrofitFactory
@@ -101,12 +101,10 @@ private val coreModule = module {
     single { get<ObiterDatabase>().prazoSugeridoDao() }
     single { PublicacaoNotificationHelper(androidContext()) }
 
-    // Feriados e Prazos
-    single<BrasilApiDataSource> { BrasilApiRetrofitFactory.createApi() }
+    // Prazos — API CalendárioForense é a única fonte de cálculo
     single<CalendarioForenseDataSource> { CalendarioForenseRetrofitFactory.createApi() }
     single<ViaCepApi> { ViaCepRetrofitFactory.createApi() }
-    single { FeriadoRepository(get()) }
-    single { CalculadoraPrazos(get(), get()) }
+    single { CalculadoraPrazos(get()) }
     single { DjenPrazoExtractor(get()) }
 }
 
@@ -117,6 +115,11 @@ private val dataModule = module {
         )
     }
     single<AuthRepository> { FirebaseAuthRepository() }
+    single<ObiterMinutaDataSource> {
+        ObiterMinutaRetrofitFactory.createApi(
+            tokenProvider = { get<AuthRepository>().getIdToken() },
+        )
+    }
     single<CadastroOabRepository> { PreferencesCadastroOabRepository(androidContext()) }
     single<PerfilPreferencesRepository> { DataStorePerfilPreferencesRepository(androidContext()) }
     single { LocalPublicacaoRepository(get()) } bind PublicacoesRepository::class
@@ -140,9 +143,10 @@ private val dataModule = module {
         )
     } bind ProcessosRepository::class
     
+    single { ResolverNaturezaProcessoUC(get()) }
     single { CalcularPrazoRegraUC(get(), get()) }
-    single { PublicacaoPrazoMapper(get()) }
-    single { DjenMapper(get()) }
+    single { PublicacaoPrazoMapper(get(), get()) }
+    single { DjenMapper() }
     single { DjenPartesResolver(get(), get()) }
 
     single<DjenRepository> {
@@ -198,7 +202,7 @@ private val domainModule = module {
             repositorioProcessos = get(),
         )
     }
-    factory { ClassificarPublicacaoUC(get()) }
+    factory { ClassificarPublicacaoUC(get(), get()) }
     factory { ExportarRelatorioUC(get()) }
     factory { ObservarPublicacoes(get()) }
     factory { ObterPublicacaoPorId(get()) }
@@ -236,7 +240,7 @@ private val presentationModule = module {
     viewModel { PerfilViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { AutenticacaoViewModel(androidContext(), get(), get(), get(), get(), get()) }
     viewModel { EditarPerfilViewModel(get(), get(), get(), get(), androidContext()) }
-    viewModel { DetalheProcessoViewModel(get(), get(), get(), get()) }
+    viewModel { DetalheProcessoViewModel(get(), get(), get(), get(), get()) }
     viewModel { DetalhePublicacaoViewModel(get(), get()) }
     viewModel { AdicionarProcessoViewModel(get()) }
     viewModel { EditarProcessoViewModel(get(), get(), get(), get()) }
@@ -249,6 +253,7 @@ private val workerModule = module {
             workerParams = params.get<WorkerParameters>(),
             djenSyncExecutor = get(),
             notificationHelper = get(),
+            perfilPreferencesRepository = get(),
         )
     }
     worker { params ->

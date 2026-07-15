@@ -1,31 +1,46 @@
 package com.obiterjus.presentation.detalheprocesso
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,9 +53,12 @@ import com.obiterjus.presentation.componentes.cards.CardPublicacao
 import com.obiterjus.presentation.componentes.cards.PrioridadeStripe
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
+import com.obiterjus.presentation.componentes.barras.BarraSuperiorSecundaria
 import com.obiterjus.presentation.componentes.timeline.ItemTimeline
 import com.obiterjus.ui.theme.ObiterTheme
-import com.obiterjus.ui.theme.Tiber
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import java.util.Locale
 
 @Composable
 fun DetalheProcessoScreen(
@@ -48,6 +66,8 @@ fun DetalheProcessoScreen(
     numeroProcesso: String,
     onVoltar: () -> Unit,
     aoEditarProcesso: () -> Unit,
+    aoExcluirProcesso: () -> Unit,
+    aoAbrirPublicacao: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(numeroProcesso) {
@@ -56,53 +76,97 @@ fun DetalheProcessoScreen(
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
-    val isDark = isSystemInDarkTheme()
-    val barraCor = if (isDark) MaterialTheme.colorScheme.surface else Tiber
-    val textoCor = if (isDark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
+
+    var menuExpandido by remember { mutableStateOf(false) }
+    var mostrarConfirmacaoExclusao by remember { mutableStateOf(false) }
+
+    LaunchedEffect(estado.excluido) {
+        if (estado.excluido) aoExcluirProcesso()
+    }
+
+    if (mostrarConfirmacaoExclusao) {
+        AlertDialog(
+            onDismissRequest = { mostrarConfirmacaoExclusao = false },
+            title = { Text(stringResource(R.string.editar_processo_action_excluir)) },
+            text = { Text(stringResource(R.string.excluir_processo_confirmacao, estado.numeroProcesso.formatarCnj())) },
+            confirmButton = {
+                TextButton(onClick = { mostrarConfirmacaoExclusao = false; viewModel.aoExcluir() }) {
+                    Text(stringResource(R.string.excluir_processo_confirmar), color = colors.danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmacaoExclusao = false }) {
+                    Text(stringResource(R.string.excluir_processo_cancelar))
+                }
+            },
+        )
+    }
+
+    if (estado.erroExclusao) {
+        AlertDialog(
+            onDismissRequest = { viewModel.aoDescartarErroExclusao() },
+            title = { Text(stringResource(R.string.editar_processo_action_excluir)) },
+            text = { Text(stringResource(R.string.excluir_processo_falha)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.aoDescartarErroExclusao() }) {
+                    Text(stringResource(R.string.excluir_processo_cancelar))
+                }
+            },
+        )
+    }
+    val subtituloBarra = listOf(estado.tribunal, estado.orgaoJulgador)
+        .filter(String::isNotBlank)
+        .joinToString(" · ")
+        .takeIf(String::isNotBlank)
 
     Column(modifier = modifier.fillMaxSize()) {
-        Surface(
-            color = barraCor,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(
-                    horizontal = dimens.topAppBarPaddingH,
-                    vertical = dimens.cardPaddingV,
-                ),
-                verticalArrangement = Arrangement.spacedBy(dimens.space1),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.IconButton(onClick = onVoltar) {
-                        androidx.compose.material3.Icon(
-                            imageVector = ObiterIcones.Voltar,
-                            contentDescription = stringResource(R.string.cd_voltar),
-                            tint = textoCor,
+        BarraSuperiorSecundaria(
+            titulo = estado.numeroProcesso.formatarCnj(),
+            subtitulo = subtituloBarra,
+            onVoltar = onVoltar,
+            acoes = {
+                Box {
+                    IconButton(onClick = { menuExpandido = true }) {
+                        Icon(
+                            imageVector = ObiterIcones.MaisOpcoes,
+                            contentDescription = stringResource(R.string.cd_mais_opcoes),
+                            tint = colors.onTopAppBar.copy(alpha = 0.70f),
                         )
                     }
-                    Text(
-                        text = estado.numeroProcesso.formatarCnj(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = textoCor,
-                        modifier = Modifier.weight(1f),
-                    )
-                    androidx.compose.material3.IconButton(onClick = aoEditarProcesso) {
-                        androidx.compose.material3.Icon(
-                            imageVector = ObiterIcones.Editar,
-                            contentDescription = stringResource(R.string.cd_editar_processo),
-                            tint = textoCor.copy(alpha = 0.70f),
+                    DropdownMenu(
+                        expanded = menuExpandido,
+                        onDismissRequest = { menuExpandido = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.detalhe_menu_editar)) },
+                            onClick = { menuExpandido = false; aoEditarProcesso() },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = ObiterIcones.Editar,
+                                    contentDescription = null,
+                                )
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.detalhe_menu_excluir),
+                                    color = colors.danger,
+                                )
+                            },
+                            onClick = { menuExpandido = false; mostrarConfirmacaoExclusao = true },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = ObiterIcones.Excluir,
+                                    contentDescription = null,
+                                    tint = colors.danger,
+                                )
+                            },
                         )
                     }
                 }
-                Text(
-                    text = listOf(estado.tribunal, estado.orgaoJulgador)
-                        .filter(String::isNotBlank)
-                        .joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = textoCor.copy(alpha = 0.5f),
-                )
-            }
-        }
+            },
+        )
 
         Column(
             modifier = Modifier
@@ -165,10 +229,12 @@ fun DetalheProcessoScreen(
             )
             1 -> ConteudoPublicacoes(
                 publicacoes = estado.publicacoes,
+                aoAbrirPublicacao = aoAbrirPublicacao,
                 modifier = Modifier.weight(1f),
             )
             2 -> ConteudoPrazos(
                 prazos = estado.prazos,
+                aoAbrirPublicacao = aoAbrirPublicacao,
                 modifier = Modifier.weight(1f),
             )
             else -> ConteudoInformacoes(
@@ -183,6 +249,12 @@ fun DetalheProcessoScreen(
 private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
+    var expandido by remember { mutableStateOf(false) }
+    val rotacaoChevron by animateFloatAsState(
+        targetValue = if (expandido) 180f else 0f,
+        animationSpec = tween(durationMillis = 250),
+        label = "chevronRotacao",
+    )
 
     Column(
         modifier = Modifier
@@ -190,6 +262,7 @@ private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
             .padding(dimens.cardPaddingH),
         verticalArrangement = Arrangement.spacedBy(dimens.space1),
     ) {
+        // ── Conteúdo sempre visível ──
         Row(horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap)) {
             BadgeTipoAto(
                 texto = estado.tribunal.ifBlank { stringResource(R.string.processos_nao_informado) },
@@ -230,6 +303,128 @@ private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
                 color = colors.textMuted,
             )
         }
+
+        // ── Toggle: divider + chevron ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expandido = !expandido }
+                .padding(top = dimens.space1),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = colors.divider,
+                thickness = dimens.borderWidth,
+            )
+            Icon(
+                imageVector = ObiterIcones.ExpandirAbaixo,
+                contentDescription = if (expandido)
+                    stringResource(R.string.cd_recolher)
+                else
+                    stringResource(R.string.cd_expandir),
+                tint = colors.textMuted,
+                modifier = Modifier
+                    .size(dimens.iconStarSize)
+                    .rotate(rotacaoChevron),
+            )
+        }
+
+        // ── Painel expansível com dados completos ──
+        AnimatedVisibility(
+            visible = expandido,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            val info = estado.informacoes
+            Column(verticalArrangement = Arrangement.spacedBy(dimens.space1)) {
+                Spacer(Modifier.height(dimens.space1))
+
+                // IDENTIFICAÇÃO
+                SecaoDropdown(stringResource(R.string.editar_processo_secao_identificacao), colors.accent)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_data_distribuicao), info?.dataDistribuicao?.formatarSoData())
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_assunto), info?.assuntoPrincipal)
+                LinhaDetalhe(
+                    stringResource(R.string.editar_processo_label_segredo),
+                    info?.nivelSigilo?.let { if (it > 0) stringResource(R.string.opcao_sim) else stringResource(R.string.opcao_nao) },
+                )
+
+                // JUDICIÁRIO
+                SecaoDropdown(stringResource(R.string.editar_processo_secao_judiciario), colors.accent)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_tribunal), info?.tribunal)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_comarca), info?.comarcaSecao)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_juizo), info?.juizo)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_classe), info?.classeProcessual)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_orgao), info?.orgaoJulgador)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_prioridade), info?.prioridadeTramitacao)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_gratuidade), info?.gratuidadeJustica)
+
+                // REPRESENTAÇÃO
+                SecaoDropdown(stringResource(R.string.editar_processo_secao_representacao), colors.accent)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_advogados_ativo), info?.advogadosAtivo)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_advogados_passivo), info?.advogadosPassivo)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_defensoria), info?.defensoriaPublica)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_mp), info?.ministerioPublico)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_terceiros), info?.terceirosAuxiliares)
+
+                // FINANCEIRO
+                SecaoDropdown(stringResource(R.string.editar_processo_secao_financeiro), colors.accent)
+                LinhaDetalhe(
+                    stringResource(R.string.editar_processo_label_valor_causa),
+                    info?.valorCausa?.let { java.text.NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(it) },
+                )
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_fase), info?.faseProcessual)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_situacao), info?.situacaoAtual)
+
+                // URGÊNCIA
+                SecaoDropdown(stringResource(R.string.editar_processo_secao_urgencia), colors.accent)
+                LinhaDetalhe(stringResource(R.string.editar_processo_label_tutela), info?.tutelaAntecipadaLiminar)
+
+                Spacer(Modifier.height(dimens.space1))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecaoDropdown(titulo: String, corAccent: androidx.compose.ui.graphics.Color) {
+    val dimens = ObiterTheme.dimens
+    val colors = ObiterTheme.colors
+    Column {
+        Spacer(Modifier.height(dimens.space1))
+        Text(
+            text = titulo.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = corAccent,
+        )
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 2.dp),
+            color = colors.divider,
+        )
+    }
+}
+
+@Composable
+private fun LinhaDetalhe(label: String, valor: String?) {
+    if (valor.isNullOrBlank()) return
+    val colors = ObiterTheme.colors
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.textMuted,
+            modifier = Modifier.weight(0.4f),
+        )
+        Text(
+            text = valor,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(0.6f),
+        )
     }
 }
 
@@ -288,6 +483,7 @@ private fun ConteudoTimeline(
 @Composable
 private fun ConteudoPublicacoes(
     publicacoes: List<com.obiterjus.domain.model.Publicacao>,
+    aoAbrirPublicacao: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -314,8 +510,8 @@ private fun ConteudoPublicacoes(
                 },
                 trechoTexto = publicacao.textoLimpo,
                 prioridade = publicacao.prioridadeStripe(),
-                aoClicar = {},
-                onVerDetalhes = {},
+                aoClicar = { aoAbrirPublicacao(publicacao.id) },
+                onVerDetalhes = { aoAbrirPublicacao(publicacao.id) },
             )
         }
         if (publicacoes.isEmpty()) {
@@ -333,6 +529,7 @@ private fun ConteudoPublicacoes(
 @Composable
 private fun ConteudoPrazos(
     prazos: List<com.obiterjus.domain.model.PrazoAgendaItem>,
+    aoAbrirPublicacao: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -359,8 +556,8 @@ private fun ConteudoPrazos(
                 prazoDias = prazo.diasBadge(),
                 trechoTexto = prazo.prazo.textoOriginal,
                 prioridade = prioridadePrazo(prazo),
-                aoClicar = {},
-                onVerDetalhes = {},
+                aoClicar = { aoAbrirPublicacao(prazo.publicacao.id) },
+                onVerDetalhes = { aoAbrirPublicacao(prazo.publicacao.id) },
             )
         }
         if (prazos.isEmpty()) {
@@ -467,9 +664,13 @@ private fun com.obiterjus.domain.model.PrazoAgendaItem.diasBadge(): String =
         }
     } ?: stringResource(R.string.prazos_badge_sem_data)
 
+private fun java.time.Instant.formatarSoData(): String =
+    atZone(java.time.ZoneId.systemDefault()).toLocalDate().let(FormatadorData::formatarData)
+
 private fun prioridadePrazo(prazo: com.obiterjus.domain.model.PrazoAgendaItem): PrioridadeStripe =
     when {
         prazo.prazo.dataLimiteEstimada == null -> PrioridadeStripe.ROTINEIRO
         prazo.prazo.dataLimiteEstimada.isBefore(java.time.LocalDate.now()) -> PrioridadeStripe.ROTINEIRO
         else -> PrioridadeStripe.FAVORAVEL
     }
+

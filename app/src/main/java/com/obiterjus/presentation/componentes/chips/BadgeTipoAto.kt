@@ -37,11 +37,11 @@ fun BadgeTipoAto(
 
     val (fundo, textoCor) = when (variante) {
         VarianteBadge.URGENTE -> colors.dangerPale to colors.danger
-        VarianteBadge.SENTENCA -> colors.accentPale to colors.warning
+        VarianteBadge.SENTENCA -> colors.warningPale to colors.warning
         VarianteBadge.DECISAO -> colors.primaryPale to colors.primaryDark
         VarianteBadge.DESPACHO -> colors.divider to colorScheme.onSurfaceVariant
         VarianteBadge.FAVORAVEL -> colors.successPale to colors.success
-        VarianteBadge.TRIBUNAL -> colorScheme.primary to Color.White
+        VarianteBadge.TRIBUNAL -> colors.primaryPale to colors.primaryDark
         VarianteBadge.CONFIANCA_ALTA -> colors.successPale to colors.success
         VarianteBadge.CONFIANCA_MEDIA -> colors.accentPale to colors.warning
         VarianteBadge.CONFIANCA_BAIXA -> colors.dangerPale to colors.danger

@@ -25,6 +25,7 @@ object ObiterDatabaseFactory {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                MIGRATION_11_12,
             )
             .build()
 
@@ -138,6 +139,12 @@ object ObiterDatabaseFactory {
     private val MIGRATION_10_11 = object : Migration(10, 11) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE publicacoes ADD COLUMN prazoConfianca TEXT")
+        }
+    }
+
+    private val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE processos ADD COLUMN natureza TEXT")
         }
     }
 }

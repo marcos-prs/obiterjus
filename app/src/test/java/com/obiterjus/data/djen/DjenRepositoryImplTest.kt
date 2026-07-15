@@ -11,9 +11,9 @@ import com.obiterjus.data.djen.remote.dto.DjenResponseDto
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.publicacao.local.PublicacaoDao
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
-import com.obiterjus.data.time.BrasilApiDataSource
-import com.obiterjus.data.time.FeriadoDto
-import com.obiterjus.data.time.FeriadoRepository
+import com.obiterjus.data.time.CalendarioForenseDataSource
+import com.obiterjus.data.time.PedidoCalculoPrazo
+import com.obiterjus.data.time.RespostaPrazo
 import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MovimentoProcesso
@@ -34,20 +34,13 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import retrofit2.Response
 
 class DjenRepositoryImplTest {
 
-    private val feriadoRepository = FeriadoRepository(
-        brasilApiDataSource = object : BrasilApiDataSource {
-            override suspend fun getFeriadosNacionais(ano: Int): Response<List<FeriadoDto>> =
-                Response.success(emptyList())
-        }
-    )
-    private val calculadoraPrazos = CalculadoraPrazos(feriadoRepository)
+    private val calculadoraPrazos = CalculadoraPrazos(FakeCalendarioForenseDataSource())
     private val djenPrazoExtractor = DjenPrazoExtractor(calculadoraPrazos)
     private val calcularPrazoRegraUC = CalcularPrazoRegraUC(calculadoraPrazos, djenPrazoExtractor)
-    private val djenMapper = DjenMapper(calcularPrazoRegraUC)
+    private val djenMapper = DjenMapper()
     private val publicacaoPrazoMapper = PublicacaoPrazoMapper(calcularPrazoRegraUC)
 
     @Test
@@ -123,6 +116,49 @@ class DjenRepositoryImplTest {
         assertTrue(resumo.processosParaSincronizar.isEmpty())
     }
 
+    @Test
+    fun publicacaoDeOutroTribunalDisparaResincronizacaoMesmoComProcessoSynced() = runBlocking {
+        // Processo registrado como TJMG/SYNCED passa a publicar pelo STJ
+        // (migração de instância via AREsp): o DataJud deve ser re-consultado
+        // no índice do STJ, apesar do SYNCED.
+        val repository = DjenRepositoryImpl(
+            remoteDataSource = DjenRemoteDataSource(
+                api = FakeDjenApi(
+                    response = DjenResponseDto(
+                        count = 1,
+                        items = listOf(
+                            DjenComunicacaoDto(
+                                id = 2L,
+                                siglaTribunal = "STJ",
+                                numeroProcesso = "5011087-95.2025.8.13.0245",
+                                texto = "Processo distribuído pelo sistema automático. OAB/MG 12345.",
+                            ),
+                        ),
+                    ),
+                ),
+                itensPorPagina = 100,
+            ),
+            localPublicacaoRepository = LocalPublicacaoRepository(FakePublicacaoDao(existingIds = emptyList())),
+            localProcessoRepository = FakeProcessoRepository(
+                processos = mapOf(
+                    "50110879520258130245" to processoLocal(
+                        numeroProcesso = "50110879520258130245",
+                        status = ProcessoSyncStatus.SYNCED,
+                    ),
+                ),
+            ),
+            djenMapper = djenMapper,
+            publicacaoPrazoMapper = publicacaoPrazoMapper,
+            clock = Clock.fixed(Instant.parse("2026-06-11T12:00:00Z"), ZoneOffset.UTC),
+        )
+
+        val resumo = repository.monitorar(params())
+
+        assertEquals(1, resumo.processosParaSincronizar.size)
+        assertEquals("STJ", resumo.processosParaSincronizar.first().tribunal)
+        assertEquals("50110879520258130245", resumo.processosParaSincronizar.first().numeroProcesso)
+    }
+
     private fun params(): MonitorarDjenParams =
         MonitorarDjenParams(
             numeroOab = "12345",
@@ -167,6 +203,11 @@ class DjenRepositoryImplTest {
 
         override suspend fun baixarCertidao(hash: String): ResponseBody =
             ByteArray(0).toResponseBody()
+    }
+
+    private class FakeCalendarioForenseDataSource : CalendarioForenseDataSource {
+        override suspend fun calcularPrazo(pedido: PedidoCalculoPrazo): RespostaPrazo =
+            RespostaPrazo(estado = "INDISPONIVEL")
     }
 
     private class FakePublicacaoDao(

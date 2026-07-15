@@ -1,10 +1,10 @@
 package com.obiterjus.presentation.componentes.barras
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -23,8 +23,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.obiterjus.R
 import com.obiterjus.presentation.componentes.ObiterIcones
+import com.obiterjus.presentation.componentes.texto.TextoAjustavelUmaLinha
 import com.obiterjus.ui.theme.ObiterTheme
-import com.obiterjus.ui.theme.Tiber
 
 @Composable
 fun BarraSuperiorSecundaria(
@@ -35,19 +35,19 @@ fun BarraSuperiorSecundaria(
     acoes: @Composable RowScope.() -> Unit = {},
     mostrarVoltar: Boolean = true,
     corFundo: Color = ObiterTheme.colors.topAppBarBackground,
-    corConteudo: Color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
+    corConteudo: Color = ObiterTheme.colors.onTopAppBar,
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
-    val colorScheme = MaterialTheme.colorScheme
-    val isDark = isSystemInDarkTheme()
-    val textColor = if (isDark) colorScheme.onSurface else colorScheme.onPrimary
+    val lightTopBarText = Color(0xFFF4F6F8)
+    val lightTopBarMuted = Color(0xFFDAE2E8)
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = dimens.topAppBarHeight)
             .then(
-                if (isDark) {
+                if (corFundo == colors.topAppBarBackground) {
                     Modifier.drawBehind {
                         drawLine(
                             color = colors.divider,
@@ -61,7 +61,7 @@ fun BarraSuperiorSecundaria(
                 }
             ),
         color = corFundo,
-        shadowElevation = if (isSystemInDarkTheme()) 0.dp else if (corFundo == Color.Transparent) 0.dp else 2.dp,
+        shadowElevation = 0.dp,
     ) {
         Row(
             modifier = Modifier
@@ -79,23 +79,24 @@ fun BarraSuperiorSecundaria(
                     Icon(
                         imageVector = ObiterIcones.Voltar,
                         contentDescription = stringResource(R.string.cd_voltar),
-                        tint = corConteudo.copy(alpha = 0.60f),
+                        tint = lightTopBarMuted,
                         modifier = Modifier.size(dimens.iconBackSize),
                     )
                 }
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = titulo,
+                TextoAjustavelUmaLinha(
+                    texto = titulo,
                     style = MaterialTheme.typography.titleLarge,
-                    color = corConteudo,
+                    color = lightTopBarText,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 if (subtitulo != null) {
                     Text(
                         text = subtitulo,
                         style = MaterialTheme.typography.bodySmall,
-                        color = textColor.copy(alpha = 0.50f),
+                        color = lightTopBarMuted,
                     )
                 }
             }

@@ -21,7 +21,7 @@ data class ObiterDimens(
     val cardPaddingH: Dp = 12.dp,
     val cardPaddingV: Dp = 10.dp,
     val topAppBarPaddingH: Dp = 12.dp,
-    val topAppBarHeight: Dp = 64.dp,
+    val topAppBarHeight: Dp = 84.dp,
     val bottomNavHeight: Dp = 60.dp,
     val bottomNavIconLabelGap: Dp = 1.dp,
     val settingsGroupTopMargin: Dp = 16.dp,

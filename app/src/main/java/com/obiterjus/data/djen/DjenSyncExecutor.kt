@@ -39,6 +39,7 @@ class DjenSyncExecutorImpl(
                     executadoEm = executadoEm,
                     duracaoMs = clock.instant().toEpochMilli() - executadoEm.toEpochMilli(),
                     mensagem = mensagem,
+                    modo = modo,
                 )
                 throw DjenSyncExecutionException(mensagem)
             }
@@ -98,6 +99,7 @@ class DjenSyncExecutorImpl(
                     executadoEm = executadoEm,
                     duracaoMs = duracaoMs,
                     resumo = resumo,
+                    modo = modo,
                 )
                 resumo
             } else {
@@ -107,6 +109,7 @@ class DjenSyncExecutorImpl(
                     executadoEm = executadoEm,
                     duracaoMs = duracaoMs,
                     mensagem = mensagem,
+                    modo = modo,
                 )
                 throw DjenSyncExecutionException(mensagem)
             }
@@ -118,6 +121,7 @@ class DjenSyncExecutorImpl(
                 executadoEm = executadoEm,
                 duracaoMs = clock.instant().toEpochMilli() - executadoEm.toEpochMilli(),
                 mensagem = error.message ?: error::class.java.simpleName,
+                modo = modo,
             )
             throw error
         }
@@ -127,6 +131,7 @@ class DjenSyncExecutorImpl(
         executadoEm: Instant,
         duracaoMs: Long,
         resumo: MonitorarCnjResumo,
+        modo: MonitorarDjenModo,
     ) {
         repositorioCadastroOab.registrarSucesso(
             executadoEm = executadoEm,
@@ -136,7 +141,7 @@ class DjenSyncExecutorImpl(
             SyncLogEntity(
                 executadoEm = executadoEm,
                 duracaoMs = duracaoMs,
-                fonte = "DJEN + DataJud",
+                fonte = fonteAuditoria(modo),
                 novasPublicacoes = resumo.djen.novas,
                 processosSincronizados = resumo.totalProcessosSincronizados,
                 sucesso = true,
@@ -150,6 +155,7 @@ class DjenSyncExecutorImpl(
         executadoEm: Instant,
         duracaoMs: Long?,
         mensagem: String,
+        modo: MonitorarDjenModo,
     ) {
         repositorioCadastroOab.registrarFalha(
             executadoEm = executadoEm,
@@ -159,7 +165,7 @@ class DjenSyncExecutorImpl(
             SyncLogEntity(
                 executadoEm = executadoEm,
                 duracaoMs = duracaoMs,
-                fonte = "DJEN",
+                fonte = fonteAuditoria(modo),
                 novasPublicacoes = 0,
                 processosSincronizados = 0,
                 sucesso = false,
@@ -167,6 +173,12 @@ class DjenSyncExecutorImpl(
             ),
         )
     }
+
+    private fun fonteAuditoria(modo: MonitorarDjenModo): String =
+        when (modo) {
+            MonitorarDjenModo.BACKGROUND -> "DJEN + DataJud · Diária"
+            MonitorarDjenModo.MANUAL -> "DJEN + DataJud · Manual"
+        }
 
     private class DjenSyncExecutionException(
         message: String,

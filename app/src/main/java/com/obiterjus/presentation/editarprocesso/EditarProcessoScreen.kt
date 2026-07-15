@@ -1,8 +1,8 @@
 package com.obiterjus.presentation.editarprocesso
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -33,11 +32,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,12 +48,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.presentation.componentes.CarregandoCentral
 import com.obiterjus.presentation.componentes.ObiterIcones
+import com.obiterjus.presentation.componentes.barras.BarraSuperiorSecundaria
 import com.obiterjus.ui.theme.ObiterDimens
 import com.obiterjus.ui.theme.ObiterExtendedColors
 import com.obiterjus.ui.theme.ObiterTheme
@@ -74,12 +84,43 @@ fun EditarProcessoScreen(
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
-    val isDark = isSystemInDarkTheme()
-    val barBackground = if (isDark) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary
-    val barContent = if (isDark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
+    val subtituloBarra = listOf(estado.tribunal, estado.orgaoJulgadorNome)
+        .filter(String::isNotBlank)
+        .joinToString(" · ")
+        .takeIf(String::isNotBlank)
 
-    androidx.compose.runtime.LaunchedEffect(numeroProcesso) { viewModel.aoCarregar(numeroProcesso) }
-    androidx.compose.runtime.LaunchedEffect(estado.excluido) { if (estado.excluido) onExcluido() }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val msgSalvo = stringResource(R.string.editar_processo_salvo)
+    val msgErroExclusao = stringResource(R.string.editar_processo_erro_excluir)
+    val msgRessincronizado = stringResource(R.string.editar_processo_ressincronizado)
+    val msgErroRessincronizacao = stringResource(R.string.editar_processo_erro_ressincronizar)
+
+    LaunchedEffect(numeroProcesso) { viewModel.aoCarregar(numeroProcesso) }
+    LaunchedEffect(estado.excluido) { if (estado.excluido) onExcluido() }
+    LaunchedEffect(estado.salvo) {
+        if (estado.salvo) {
+            snackbarHostState.showSnackbar(msgSalvo)
+            viewModel.aoDescartarSalvo()
+        }
+    }
+    LaunchedEffect(estado.erroExclusao) {
+        if (estado.erroExclusao) {
+            snackbarHostState.showSnackbar(msgErroExclusao)
+            viewModel.aoDescartarErroExclusao()
+        }
+    }
+    LaunchedEffect(estado.ressincronizado) {
+        if (estado.ressincronizado) {
+            snackbarHostState.showSnackbar(msgRessincronizado)
+            viewModel.aoDescartarRessincronizado()
+        }
+    }
+    LaunchedEffect(estado.erroRessincronizacao) {
+        if (estado.erroRessincronizacao) {
+            snackbarHostState.showSnackbar(msgErroRessincronizacao)
+            viewModel.aoDescartarErroRessincronizacao()
+        }
+    }
 
     var mostrarConfirmacaoExclusao by remember { mutableStateOf(false) }
 
@@ -101,33 +142,70 @@ fun EditarProcessoScreen(
         )
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        Surface(color = barBackground, modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(start = dimens.space1, end = dimens.topAppBarPaddingH, top = dimens.cardPaddingV, bottom = dimens.cardPaddingV),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onVoltar) {
-                    Icon(ObiterIcones.Voltar, contentDescription = stringResource(R.string.cd_voltar), tint = barContent.copy(alpha = 0.60f), modifier = Modifier.size(dimens.iconBackSize))
+    if (estado.erroNomeParticipanteVazio) {
+        AlertDialog(
+            onDismissRequest = { viewModel.aoDescartarErroValidacao() },
+            title = { Text(stringResource(R.string.participante_erro_nome_vazio_titulo)) },
+            text = { Text(stringResource(R.string.participante_erro_nome_vazio_msg)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.aoDescartarErroValidacao() }) {
+                    Text(stringResource(R.string.participante_erro_ok))
                 }
-                Text(stringResource(R.string.editar_processo_title), style = MaterialTheme.typography.titleLarge, color = barContent, modifier = Modifier.weight(1f))
-            }
-        }
+            },
+        )
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        BarraSuperiorSecundaria(
+            titulo = stringResource(R.string.editar_processo_title),
+            subtitulo = subtituloBarra,
+            onVoltar = onVoltar,
+        )
 
         if (!estado.carregado) {
             CarregandoCentral()
         } else {
+            val nomesDuplicados = estado.participantes
+                .mapNotNull { it.nome?.trim()?.lowercase()?.takeIf(String::isNotBlank) }
+                .groupingBy { it }.eachCount()
+                .filterValues { it > 1 }.keys
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = dimens.screenMargin),
                 verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
             ) {
                 item { Spacer(Modifier.height(dimens.space1)) }
+                item { Text(stringResource(R.string.editar_processo_numero, estado.numeroProcesso), style = MaterialTheme.typography.titleSmall) }
+
+                // ── PARTES ──
+                item {
+                    SecaoTitulo(
+                        titulo = stringResource(R.string.partes_secao),
+                        colors = colors,
+                        dimens = dimens,
+                        aoAdicionar = { viewModel.aoAdicionarParticipante() },
+                        adicionarHabilitado = !estado.salvando && estado.participantes.all { !it.nome.isNullOrBlank() && it.polo != null },
+                    )
+                }
+                itemsIndexed(items = estado.participantes, key = { _, p -> p.idLocal }) { index, participante ->
+                    CardParticipante(
+                        participante = participante,
+                        aoAlterar = { viewModel.aoAlterarParticipante(participante.idLocal, it) },
+                        aoRemover = { viewModel.aoRemoverParticipante(participante.idLocal) },
+                        nomeDuplicado = participante.nome?.trim()?.lowercase() in nomesDuplicados,
+                        podeSubir = index > 0,
+                        podeDescer = index < estado.participantes.lastIndex,
+                        aoSubir = { viewModel.aoMoverParticipante(participante.idLocal, true) },
+                        aoDescer = { viewModel.aoMoverParticipante(participante.idLocal, false) },
+                        buscandoCep = estado.cepBuscandoIdLocal == participante.idLocal,
+                        erroCep = estado.cepErroIdLocal == participante.idLocal,
+                        aoBuscarCep = { cep -> viewModel.aoBuscarCep(participante.idLocal, cep) },
+                        enabled = !estado.salvando, colors = colors, dimens = dimens,
+                    )
+                }
 
                 // ── IDENTIFICAÇÃO ──
                 item { SecaoTitulo(stringResource(R.string.editar_processo_secao_identificacao), colors, dimens) }
-                item { Text(stringResource(R.string.editar_processo_numero, estado.numeroProcesso), style = MaterialTheme.typography.titleSmall) }
                 item {
                     CampoData(
                         label = stringResource(R.string.editar_processo_label_data_distribuicao),
@@ -143,6 +221,18 @@ fun EditarProcessoScreen(
                         valor = estado.segredoJustica,
                         opcoes = listOf(stringResource(R.string.opcao_sim), stringResource(R.string.opcao_nao)),
                         aoAlterar = viewModel::aoAlterarSegredo,
+                        enabled = !estado.salvando, colors = colors, dimens = dimens,
+                    )
+                }
+                item {
+                    CampoDropdown(
+                        label = stringResource(R.string.editar_processo_label_natureza),
+                        valor = estado.natureza,
+                        opcoes = listOf(
+                            stringResource(R.string.opcao_natureza_civel),
+                            stringResource(R.string.opcao_natureza_penal),
+                        ),
+                        aoAlterar = viewModel::aoAlterarNatureza,
                         enabled = !estado.salvando, colors = colors, dimens = dimens,
                     )
                 }
@@ -179,62 +269,6 @@ fun EditarProcessoScreen(
                 item { CampoEdicao(stringResource(R.string.editar_processo_label_advogados_passivo), estado.advogadosPassivo, viewModel::aoAlterarAdvogadosPassivo, !estado.salvando, colors, dimens) }
                 item { CampoEdicao(stringResource(R.string.editar_processo_label_defensoria), estado.defensoriaPublica, viewModel::aoAlterarDefensoria, !estado.salvando, colors, dimens) }
                 item { CampoEdicao(stringResource(R.string.editar_processo_label_mp), estado.ministerioPublico, viewModel::aoAlterarMP, !estado.salvando, colors, dimens) }
-
-                // ── POLO ATIVO ──
-                item { 
-                    SecaoTitulo(
-                        titulo = stringResource(R.string.editar_processo_polo_ativo), 
-                        colors = colors, 
-                        dimens = dimens,
-                        aoAdicionar = { viewModel.aoAdicionarParticipante(VALOR_POLO_ATIVO) }
-                    ) 
-                }
-                val participantesAtivos = estado.participantes.filter { it.ehParteAtiva() }
-                if (participantesAtivos.isNotEmpty()) {
-                    itemsIndexed(items = participantesAtivos, key = { _, p -> p.idLocal }) { _, participante ->
-                        CardParticipante(
-                            participante = participante,
-                            aoAlterar = { viewModel.aoAlterarParticipante(participante.idLocal, it) },
-                            aoRemover = { viewModel.aoRemoverParticipante(participante.idLocal) },
-                            enabled = !estado.salvando, colors = colors, dimens = dimens,
-                        )
-                    }
-                }
-
-                // ── POLO PASSIVO ──
-                item { 
-                    SecaoTitulo(
-                        titulo = stringResource(R.string.editar_processo_polo_passivo), 
-                        colors = colors, 
-                        dimens = dimens,
-                        aoAdicionar = { viewModel.aoAdicionarParticipante(VALOR_POLO_PASSIVO) }
-                    ) 
-                }
-                val participantesPassivos = estado.participantes.filter { it.ehPartePassiva() }
-                if (participantesPassivos.isNotEmpty()) {
-                    itemsIndexed(items = participantesPassivos, key = { _, p -> p.idLocal }) { _, participante ->
-                        CardParticipante(
-                            participante = participante,
-                            aoAlterar = { viewModel.aoAlterarParticipante(participante.idLocal, it) },
-                            aoRemover = { viewModel.aoRemoverParticipante(participante.idLocal) },
-                            enabled = !estado.salvando, colors = colors, dimens = dimens,
-                        )
-                    }
-                }
-                
-                // ── OUTROS PARTICIPANTES ──
-                val outrosParticipantes = estado.participantes.filter { !it.ehParteAtiva() && !it.ehPartePassiva() }
-                if (outrosParticipantes.isNotEmpty()) {
-                    item { SecaoTitulo(stringResource(R.string.editar_processo_secao_participantes), colors, dimens) }
-                    itemsIndexed(items = outrosParticipantes, key = { _, p -> p.idLocal }) { _, participante ->
-                        CardParticipante(
-                            participante = participante,
-                            aoAlterar = { viewModel.aoAlterarParticipante(participante.idLocal, it) },
-                            aoRemover = { viewModel.aoRemoverParticipante(participante.idLocal) },
-                            enabled = !estado.salvando, colors = colors, dimens = dimens,
-                        )
-                    }
-                }
                 item { CampoEdicao(stringResource(R.string.editar_processo_label_terceiros), estado.terceirosAuxiliares, viewModel::aoAlterarTerceiros, !estado.salvando, colors, dimens) }
 
                 // ── FINANCEIRO ──
@@ -336,6 +370,12 @@ fun EditarProcessoScreen(
             }
         }
     }
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter),
+        snackbar = { data -> Snackbar(snackbarData = data) },
+    )
+    } // Box
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -347,7 +387,8 @@ private fun SecaoTitulo(
     titulo: String,
     colors: ObiterExtendedColors,
     dimens: ObiterDimens,
-    aoAdicionar: (() -> Unit)? = null
+    aoAdicionar: (() -> Unit)? = null,
+    adicionarHabilitado: Boolean = true,
 ) {
     Column {
         Spacer(Modifier.height(dimens.space2))
@@ -358,11 +399,11 @@ private fun SecaoTitulo(
         ) {
             Text(titulo.uppercase(), style = MaterialTheme.typography.labelSmall, color = colors.accent)
             if (aoAdicionar != null) {
-                IconButton(onClick = aoAdicionar, modifier = Modifier.size(24.dp)) {
+                IconButton(onClick = aoAdicionar, enabled = adicionarHabilitado, modifier = Modifier.size(24.dp)) {
                     Icon(
                         imageVector = ObiterIcones.Adicionar,
                         contentDescription = stringResource(R.string.cd_adicionar_participante),
-                        tint = colors.accent,
+                        tint = if (adicionarHabilitado) colors.accent else colors.textMuted,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -486,75 +527,371 @@ private fun CampoData(
     }
 }
 
+private fun ParticipanteProcesso.registrado(): Boolean =
+    !nome.isNullOrBlank() && polo != null
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CardParticipante(
     participante: ParticipanteProcesso,
     aoAlterar: (ParticipanteProcesso) -> Unit,
     aoRemover: () -> Unit,
+    nomeDuplicado: Boolean,
+    podeSubir: Boolean,
+    podeDescer: Boolean,
+    aoSubir: () -> Unit,
+    aoDescer: () -> Unit,
+    buscandoCep: Boolean,
+    erroCep: Boolean,
+    aoBuscarCep: (String) -> Unit,
     enabled: Boolean,
     colors: ObiterExtendedColors,
     dimens: ObiterDimens,
 ) {
-    var expandido by remember { mutableStateOf(false) }
+    var mostrarConfirmRemover by remember { mutableStateOf(false) }
+
+    if (mostrarConfirmRemover) {
+        val nome = participante.nome?.trim().orEmpty()
+        AlertDialog(
+            onDismissRequest = { mostrarConfirmRemover = false },
+            title = { Text(stringResource(R.string.participante_remover_titulo)) },
+            text = {
+                Text(
+                    if (nome.isNotBlank()) stringResource(R.string.participante_remover_confirmacao, nome)
+                    else stringResource(R.string.participante_remover_confirmacao_sem_nome),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarConfirmRemover = false; aoRemover() }) {
+                    Text(stringResource(R.string.participante_remover_confirmar), color = colors.danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmRemover = false }) {
+                    Text(stringResource(R.string.participante_remover_cancelar))
+                }
+            },
+        )
+    }
+
+    val ativo = stringResource(R.string.opcao_polo_ativo)
+    val passivo = stringResource(R.string.opcao_polo_passivo)
+    val outro = stringResource(R.string.opcao_polo_outro)
+    val labelPolo = when {
+        participante.ehParteAtiva() -> ativo
+        participante.ehPartePassiva() -> passivo
+        participante.polo != null -> outro
+        else -> ""
+    }
+    var poloExpandido by remember { mutableStateOf(false) }
+
+    var emEdicao by remember(participante.idLocal) { mutableStateOf(!participante.registrado()) }
+
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = dimens.space1)) {
+        if (!emEdicao && participante.registrado()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(enabled = enabled) { emEdicao = true }
+                        .padding(vertical = dimens.space1),
+                ) {
+                    Text(labelPolo, style = MaterialTheme.typography.labelSmall, color = colors.accent)
+                    Text(
+                        participante.nome.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (nomeDuplicado) colors.danger else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                IconButton(onClick = { emEdicao = true }, enabled = enabled) {
+                    Icon(ObiterIcones.Editar, contentDescription = stringResource(R.string.cd_editar_participante), tint = if (enabled) colors.accent else colors.textMuted)
+                }
+                IconButton(onClick = aoSubir, enabled = enabled && podeSubir) {
+                    Icon(ObiterIcones.MoverCima, contentDescription = stringResource(R.string.cd_mover_participante_cima), tint = if (enabled && podeSubir) colors.accent else colors.textMuted)
+                }
+                IconButton(onClick = aoDescer, enabled = enabled && podeDescer) {
+                    Icon(ObiterIcones.MoverBaixo, contentDescription = stringResource(R.string.cd_mover_participante_baixo), tint = if (enabled && podeDescer) colors.accent else colors.textMuted)
+                }
+                IconButton(onClick = { mostrarConfirmRemover = true }, enabled = enabled) {
+                    Icon(ObiterIcones.Excluir, contentDescription = stringResource(R.string.cd_remover_participante), tint = MaterialTheme.colorScheme.error)
+                }
+            }
+            return@Column
+        }
+
+        // ── Cabeçalho: polo + ações ──
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                // Polo (editável)
+            ExposedDropdownMenuBox(
+                expanded = poloExpandido && enabled,
+                onExpandedChange = { if (enabled) poloExpandido = it },
+                modifier = Modifier.weight(1f),
+            ) {
                 OutlinedTextField(
-                    value = participante.polo.orEmpty(),
-                    onValueChange = { aoAlterar(participante.copy(polo = it)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    value = labelPolo,
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled).fillMaxWidth(),
                     label = { Text(stringResource(R.string.editar_processo_label_polo), style = MaterialTheme.typography.labelSmall) },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.labelMedium,
+                    textStyle = MaterialTheme.typography.bodyMedium,
                     shape = RoundedCornerShape(dimens.searchBarRadius),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = colors.border),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = poloExpandido) },
                     enabled = enabled,
                 )
-                Spacer(Modifier.height(dimens.space1))
-                // Nome
+                ExposedDropdownMenu(expanded = poloExpandido, onDismissRequest = { poloExpandido = false }) {
+                    listOf(ativo, passivo, outro).forEach { opcao ->
+                        DropdownMenuItem(text = { Text(opcao) }, onClick = {
+                            aoAlterar(participante.copy(polo = when (opcao) {
+                                ativo -> VALOR_POLO_ATIVO
+                                passivo -> VALOR_POLO_PASSIVO
+                                else -> if (participante.ehParteAtiva() || participante.ehPartePassiva()) "" else participante.polo.orEmpty()
+                            }))
+                            poloExpandido = false
+                        })
+                    }
+                }
+            }
+            IconButton(onClick = aoSubir, enabled = enabled && podeSubir) {
+                Icon(ObiterIcones.MoverCima, contentDescription = stringResource(R.string.cd_mover_participante_cima), tint = if (enabled && podeSubir) colors.accent else colors.textMuted)
+            }
+            IconButton(onClick = aoDescer, enabled = enabled && podeDescer) {
+                Icon(ObiterIcones.MoverBaixo, contentDescription = stringResource(R.string.cd_mover_participante_baixo), tint = if (enabled && podeDescer) colors.accent else colors.textMuted)
+            }
+            IconButton(onClick = { mostrarConfirmRemover = true }, enabled = enabled) {
+                Icon(ObiterIcones.Excluir, contentDescription = stringResource(R.string.cd_remover_participante), tint = MaterialTheme.colorScheme.error)
+            }
+        }
+
+        // ── Campos (visíveis após polo ser selecionado) ──
+        if (participante.polo != null) {
+            Column(
+                modifier = Modifier.padding(top = dimens.space1).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(dimens.space1),
+            ) {
+                if (labelPolo == outro) {
+                    CampoQualificacao(stringResource(R.string.participante_label_polo_personalizado), participante.polo.orEmpty(), { aoAlterar(participante.copy(polo = it)) }, enabled, colors, dimens)
+                }
                 OutlinedTextField(
                     value = participante.nome.orEmpty(),
                     onValueChange = { aoAlterar(participante.copy(nome = it)) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.editar_processo_label_nome_parte), style = MaterialTheme.typography.labelSmall) },
+                    isError = nomeDuplicado,
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium,
                     shape = RoundedCornerShape(dimens.searchBarRadius),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = colors.border),
                     enabled = enabled,
                 )
-            }
-            Column {
-                IconButton(onClick = { expandido = !expandido }) {
-                    Icon(
-                        imageVector = if (expandido) ObiterIcones.Recolher else ObiterIcones.Expandir,
-                        contentDescription = stringResource(R.string.participante_action_qualificacao),
-                        tint = colors.accent,
-                    )
+                if (nomeDuplicado) {
+                    Text(stringResource(R.string.participante_nome_duplicado), style = MaterialTheme.typography.labelSmall, color = colors.danger, modifier = Modifier.padding(start = dimens.space1))
                 }
-                IconButton(onClick = aoRemover, enabled = enabled) {
-                    Icon(
-                        imageVector = ObiterIcones.Excluir,
-                        contentDescription = stringResource(R.string.cd_remover_participante),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-        if (expandido) {
-            Column(
-                modifier = Modifier.padding(start = dimens.space2, top = dimens.space1).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(dimens.space1),
-            ) {
-                CampoQualificacao(stringResource(R.string.participante_label_cpf_cnpj), participante.cpfCnpj.orEmpty(), { aoAlterar(participante.copy(cpfCnpj = it)) }, enabled, colors, dimens)
-                CampoQualificacao(stringResource(R.string.participante_label_estado_civil), participante.estadoCivil.orEmpty(), { aoAlterar(participante.copy(estadoCivil = it)) }, enabled, colors, dimens)
+                CampoPessoaTipo(participante = participante, aoAlterar = aoAlterar, enabled = enabled, colors = colors, dimens = dimens)
+                CampoCpfCnpj(participante.cpfCnpj.orEmpty(), { aoAlterar(participante.copy(cpfCnpj = it)) }, enabled, colors, dimens)
+                CampoEstadoCivil(participante = participante, aoAlterar = aoAlterar, enabled = enabled, colors = colors, dimens = dimens)
                 CampoQualificacao(stringResource(R.string.participante_label_profissao), participante.profissao.orEmpty(), { aoAlterar(participante.copy(profissao = it)) }, enabled, colors, dimens)
-                CampoQualificacao(stringResource(R.string.participante_label_endereco), participante.endereco.orEmpty(), { aoAlterar(participante.copy(endereco = it)) }, enabled, colors, dimens)
-                CampoQualificacao(stringResource(R.string.participante_label_contatos), participante.contatos.orEmpty(), { aoAlterar(participante.copy(contatos = it)) }, enabled, colors, dimens)
+                SubsecaoLabel(stringResource(R.string.participante_secao_endereco), colors, dimens)
+                CampoCep(participante.cep.orEmpty(), { aoAlterar(participante.copy(cep = it)) }, buscandoCep, erroCep, aoBuscarCep, enabled, colors, dimens)
+                CampoQualificacao(stringResource(R.string.participante_label_logradouro), participante.logradouro.orEmpty(), { aoAlterar(participante.copy(logradouro = it)) }, enabled, colors, dimens)
+                CampoQualificacao(stringResource(R.string.participante_label_numero_endereco), participante.numeroEndereco.orEmpty(), { aoAlterar(participante.copy(numeroEndereco = it)) }, enabled, colors, dimens)
+                SubsecaoLabel(stringResource(R.string.participante_secao_contatos), colors, dimens)
+                CampoQualificacao(stringResource(R.string.participante_label_telefone), participante.telefone.orEmpty(), { aoAlterar(participante.copy(telefone = it)) }, enabled, colors, dimens)
+                CampoQualificacao(stringResource(R.string.participante_label_email), participante.email.orEmpty(), { aoAlterar(participante.copy(email = it)) }, enabled, colors, dimens)
+                Spacer(Modifier.height(dimens.space1))
+                Button(
+                    onClick = { emEdicao = false },
+                    enabled = enabled && participante.registrado(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(ObiterIcones.Confirmar, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(dimens.space1))
+                    Text(stringResource(R.string.participante_registrar))
+                }
             }
         }
     }
+}
+
+@Composable
+private fun SubsecaoLabel(titulo: String, colors: ObiterExtendedColors, dimens: ObiterDimens) {
+    Column {
+        Spacer(Modifier.height(dimens.space1))
+        Text(titulo.uppercase(), style = MaterialTheme.typography.labelSmall, color = colors.accent)
+        HorizontalDivider(modifier = Modifier.padding(top = 2.dp), color = colors.divider)
+    }
+}
+
+@Composable
+private fun CampoPessoaTipo(
+    participante: ParticipanteProcesso,
+    aoAlterar: (ParticipanteProcesso) -> Unit,
+    enabled: Boolean,
+    colors: ObiterExtendedColors,
+    dimens: ObiterDimens,
+) {
+    val fisica = stringResource(R.string.opcao_pessoa_fisica)
+    val juridica = stringResource(R.string.opcao_pessoa_juridica)
+    val valorAtual = when (participante.tipoPessoa?.trim()?.uppercase()) {
+        "F" -> fisica
+        "J" -> juridica
+        else -> ""
+    }
+    CampoDropdown(
+        label = stringResource(R.string.participante_label_tipo_pessoa),
+        valor = valorAtual,
+        opcoes = listOf(fisica, juridica),
+        aoAlterar = { sel -> aoAlterar(participante.copy(tipoPessoa = if (sel == fisica) "F" else "J")) },
+        enabled = enabled, colors = colors, dimens = dimens,
+    )
+}
+
+@Composable
+private fun CampoEstadoCivil(
+    participante: ParticipanteProcesso,
+    aoAlterar: (ParticipanteProcesso) -> Unit,
+    enabled: Boolean,
+    colors: ObiterExtendedColors,
+    dimens: ObiterDimens,
+) {
+    CampoDropdown(
+        label = stringResource(R.string.participante_label_estado_civil),
+        valor = participante.estadoCivil.orEmpty(),
+        opcoes = listOf(
+            stringResource(R.string.opcao_estado_civil_solteiro),
+            stringResource(R.string.opcao_estado_civil_casado),
+            stringResource(R.string.opcao_estado_civil_divorciado),
+            stringResource(R.string.opcao_estado_civil_separado),
+            stringResource(R.string.opcao_estado_civil_viuvo),
+            stringResource(R.string.opcao_estado_civil_uniao_estavel),
+        ),
+        aoAlterar = { aoAlterar(participante.copy(estadoCivil = it)) },
+        enabled = enabled, colors = colors, dimens = dimens,
+    )
+}
+
+@Composable
+private fun CampoCpfCnpj(
+    valor: String,
+    aoAlterar: (String) -> Unit,
+    enabled: Boolean,
+    colors: ObiterExtendedColors,
+    dimens: ObiterDimens,
+) {
+    val digitos = valor.filter(Char::isDigit).take(14)
+    Column {
+        Text(stringResource(R.string.participante_label_cpf_cnpj), style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
+        Spacer(Modifier.height(dimens.space1))
+        OutlinedTextField(
+            value = digitos,
+            onValueChange = { entrada -> aoAlterar(entrada.filter(Char::isDigit).take(14)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            visualTransformation = CpfCnpjVisualTransformation,
+            textStyle = MaterialTheme.typography.bodySmall,
+            shape = RoundedCornerShape(dimens.searchBarRadius),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = colors.border),
+            enabled = enabled,
+        )
+    }
+}
+
+@Composable
+private fun CampoCep(
+    valor: String,
+    aoAlterar: (String) -> Unit,
+    buscando: Boolean,
+    erro: Boolean,
+    aoBuscarCep: (String) -> Unit,
+    enabled: Boolean,
+    colors: ObiterExtendedColors,
+    dimens: ObiterDimens,
+) {
+    val digitos = valor.filter(Char::isDigit).take(8)
+    Column {
+        Text(stringResource(R.string.participante_label_cep), style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
+        Spacer(Modifier.height(dimens.space1))
+        OutlinedTextField(
+            value = digitos,
+            onValueChange = { entrada ->
+                val novos = entrada.filter(Char::isDigit).take(8)
+                aoAlterar(novos)
+                if (novos.length == 8) aoBuscarCep(novos)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = erro,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            visualTransformation = CepVisualTransformation,
+            textStyle = MaterialTheme.typography.bodySmall,
+            shape = RoundedCornerShape(dimens.searchBarRadius),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = colors.border),
+            trailingIcon = {
+                if (buscando) CircularProgressIndicator(modifier = Modifier.size(dimens.iconWarningSize), strokeWidth = dimens.borderWidth * 2, color = colors.accent)
+            },
+            enabled = enabled,
+        )
+        if (erro) {
+            Text(stringResource(R.string.participante_cep_nao_encontrado), style = MaterialTheme.typography.labelSmall, color = colors.danger, modifier = Modifier.padding(top = dimens.space1, start = dimens.space1))
+        }
+    }
+}
+
+private val CpfCnpjVisualTransformation = VisualTransformation { text ->
+    val digitos = text.text.filter(Char::isDigit).take(14)
+    val sb = StringBuilder()
+    val ehCpf = digitos.length <= 11
+    digitos.forEachIndexed { i, c ->
+        if (ehCpf) {
+            if (i == 3 || i == 6) sb.append('.')
+            if (i == 9) sb.append('-')
+        } else {
+            if (i == 2 || i == 5) sb.append('.')
+            if (i == 8) sb.append('/')
+            if (i == 12) sb.append('-')
+        }
+        sb.append(c)
+    }
+    val saida = sb.toString()
+    val mapeamento = object : OffsetMapping {
+        override fun originalToTransformed(offset: Int): Int {
+            var add = 0
+            if (ehCpf) {
+                if (offset > 3) add++
+                if (offset > 6) add++
+                if (offset > 9) add++
+            } else {
+                if (offset > 2) add++
+                if (offset > 5) add++
+                if (offset > 8) add++
+                if (offset > 12) add++
+            }
+            return (offset + add).coerceAtMost(saida.length)
+        }
+        override fun transformedToOriginal(offset: Int): Int =
+            saida.substring(0, offset.coerceAtMost(saida.length)).count(Char::isDigit)
+    }
+    TransformedText(AnnotatedString(saida), mapeamento)
+}
+
+private val CepVisualTransformation = VisualTransformation { text ->
+    val d = text.text.filter(Char::isDigit).take(8)
+    val sb = StringBuilder()
+    d.forEachIndexed { i, c ->
+        if (i == 5) sb.append('-')
+        sb.append(c)
+    }
+    val saida = sb.toString()
+    val mapeamento = object : OffsetMapping {
+        override fun originalToTransformed(offset: Int): Int =
+            if (offset > 5) (offset + 1).coerceAtMost(saida.length) else offset
+        override fun transformedToOriginal(offset: Int): Int =
+            saida.substring(0, offset.coerceAtMost(saida.length)).count(Char::isDigit)
+    }
+    TransformedText(AnnotatedString(saida), mapeamento)
 }
 
 @Composable

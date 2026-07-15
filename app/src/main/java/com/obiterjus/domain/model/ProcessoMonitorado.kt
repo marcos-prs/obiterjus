@@ -33,6 +33,9 @@ data class ProcessoMonitorado(
     val defensoriaPublica: String? = null,
     val ministerioPublico: String? = null,
     val terceirosAuxiliares: String? = null,
+    // Natureza para contagem de prazo (inferida da classe/assuntos CNJ,
+    // corrigível pelo usuário); null = não declarada → tratada como cível.
+    val natureza: NaturezaProcesso? = null,
 )
 
 data class ParticipanteProcesso(
@@ -48,6 +51,13 @@ data class ParticipanteProcesso(
     val profissao: String? = null,
     val endereco: String? = null,
     val contatos: String? = null,
+    // Endereço estruturado
+    val cep: String? = null,
+    val logradouro: String? = null,
+    val numeroEndereco: String? = null,
+    // Contatos estruturados
+    val telefone: String? = null,
+    val email: String? = null,
 )
 
 data class MovimentoProcesso(

@@ -9,21 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
 import com.obiterjus.presentation.componentes.ObiterIcones
+import com.obiterjus.presentation.componentes.barras.BarraSuperiorSecundaria
 import com.obiterjus.ui.theme.ObiterTheme
 
 @Composable
@@ -44,45 +41,13 @@ fun AdicionarProcessoScreen(
     val estado by viewModel.estado.collectAsStateWithLifecycle()
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
-    val isDark = isSystemInDarkTheme()
-    val barBackground = if (isDark) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary
-    val barContent = if (isDark) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary
 
     Column(modifier = modifier.fillMaxSize()) {
-        Surface(color = barBackground, modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(
-                        start = dimens.space1,
-                        end = dimens.topAppBarPaddingH,
-                        top = dimens.cardPaddingV,
-                        bottom = dimens.cardPaddingV,
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onVoltar) {
-                    Icon(
-                        imageVector = ObiterIcones.Voltar,
-                        contentDescription = stringResource(R.string.cd_voltar),
-                        tint = barContent.copy(alpha = 0.60f),
-                        modifier = Modifier.size(dimens.iconBackSize),
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.adicionar_processo_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = barContent,
-                    )
-                    Text(
-                        text = stringResource(R.string.adicionar_processo_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = barContent.copy(alpha = 0.50f),
-                    )
-                }
-            }
-        }
+        BarraSuperiorSecundaria(
+            titulo = stringResource(R.string.adicionar_processo_title),
+            subtitulo = stringResource(R.string.adicionar_processo_subtitle),
+            onVoltar = onVoltar,
+        )
 
         Column(
             modifier = Modifier

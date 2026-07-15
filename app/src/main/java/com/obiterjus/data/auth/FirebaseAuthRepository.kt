@@ -57,6 +57,10 @@ class FirebaseAuthRepository(
         result.user?.toAuthUser() ?: throw IllegalStateException("Usuário nulo após cadastro com e-mail")
     }
 
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = executarComResultado {
+        auth.sendPasswordResetEmail(email).await()
+    }
+
     override suspend fun updatePassword(currentPassword: String, newPassword: String): Result<Unit> = executarComResultado {
         val user = auth.currentUser ?: throw IllegalStateException("Nenhum usuário autenticado")
         val email = user.email ?: throw IllegalStateException("Usuário sem e-mail")
@@ -68,6 +72,15 @@ class FirebaseAuthRepository(
     override suspend fun signOut() {
         auth.signOut()
     }
+
+    override suspend fun getIdToken(forceRefresh: Boolean): String? =
+        try {
+            auth.currentUser?.getIdToken(forceRefresh)?.await()?.token
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            null
+        }
 
     private fun FirebaseUser.toAuthUser() = AuthUser(
         uid = uid,

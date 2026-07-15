@@ -68,8 +68,12 @@ class PrazosViewModel internal constructor(
                     diasRestantes = prazo.diasRestantes(hoje),
                 )
             }
+        val pendentes = filtrados
+            .filter { it.grupo != GrupoPrazo.EXPIRADOS && it.grupo != GrupoPrazo.SEM_DATA }
+            .sortedBy { it.item.prazo.dataLimiteEstimada }
 
         EstadoPrazos(
+            hoje = hoje,
             itens = filtrados,
             itensExibidos = filtrados.itensDaAba(abaAtiva),
             filtros = filtrosAtuais,
@@ -77,10 +81,14 @@ class PrazosViewModel internal constructor(
             abaSelecionada = abaAtiva,
             confirmandoPrazoId = idConfirmando,
             resultadoConfirmacao = resultado,
-            urgente = filtrados.filter { it.grupo == GrupoPrazo.URGENTE },
-            estaSemana = filtrados.filter { it.grupo == GrupoPrazo.ESTA_SEMANA },
-            proximos = filtrados.filter { it.grupo == GrupoPrazo.PROXIMOS },
-            expirados = filtrados.filter { it.grupo == GrupoPrazo.EXPIRADOS },
+            pendentes = pendentes,
+            datasComPrazo = pendentes.mapNotNull { it.item.prazo.dataLimiteEstimada }.toSet(),
+            urgente = pendentes.filter { it.grupo == GrupoPrazo.URGENTE },
+            estaSemana = pendentes.filter { it.grupo == GrupoPrazo.ESTA_SEMANA },
+            proximos = pendentes.filter { it.grupo == GrupoPrazo.PROXIMOS },
+            expirados = filtrados
+                .filter { it.grupo == GrupoPrazo.EXPIRADOS }
+                .sortedByDescending { it.item.prazo.dataLimiteEstimada },
             semData = filtrados.filter { it.grupo == GrupoPrazo.SEM_DATA },
         )
     }.stateIn(
@@ -194,7 +202,7 @@ class PrazosViewModel internal constructor(
 
     private fun List<PrazoUiItem>.itensDaAba(aba: AbaPrazos): List<PrazoUiItem> =
         when (aba) {
-            AbaPrazos.TODOS -> this
+            AbaPrazos.TODOS -> filter { it.grupo != GrupoPrazo.EXPIRADOS }
             AbaPrazos.VENCIDOS -> filter { it.grupo == GrupoPrazo.EXPIRADOS }
             AbaPrazos.PROXIMOS -> filter {
                 it.grupo == GrupoPrazo.URGENTE || it.grupo == GrupoPrazo.ESTA_SEMANA || it.grupo == GrupoPrazo.PROXIMOS
@@ -209,6 +217,7 @@ class PrazosViewModel internal constructor(
 }
 
 data class EstadoPrazos(
+    val hoje: LocalDate = LocalDate.now(),
     val itens: List<PrazoUiItem> = emptyList(),
     val itensExibidos: List<PrazoUiItem> = emptyList(),
     val filtros: FiltrosPrazos = FiltrosPrazos(),
@@ -216,6 +225,8 @@ data class EstadoPrazos(
     val abaSelecionada: AbaPrazos = AbaPrazos.TODOS,
     val confirmandoPrazoId: Long? = null,
     val resultadoConfirmacao: ConfirmacaoPrazoResultado? = null,
+    val pendentes: List<PrazoUiItem> = emptyList(),
+    val datasComPrazo: Set<LocalDate> = emptySet(),
     val urgente: List<PrazoUiItem> = emptyList(),
     val estaSemana: List<PrazoUiItem> = emptyList(),
     val proximos: List<PrazoUiItem> = emptyList(),

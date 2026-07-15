@@ -15,6 +15,25 @@ class DjenTextCleanerTest {
     }
 
     @Test
+    fun cleanRemovesStyleAndScriptBlocksIncludingTheirContent() {
+        val html = """
+            <html><head><style type="text/css">
+            body { padding: 10px; font-family: Arial, sans-serif; }
+            </style></head>
+            <body><script>console.log('x');</script>
+            <p>Intime-se a parte.</p></body></html>
+        """.trimIndent()
+
+        val result = DjenTextCleaner.clean(html)
+
+        assertTrue(result.hasHtml)
+        assertFalse(result.clean.contains("padding"))
+        assertFalse(result.clean.contains("font-family"))
+        assertFalse(result.clean.contains("console.log"))
+        assertEquals("Intime-se a parte.", result.clean)
+    }
+
+    @Test
     fun cleanPreservesPlainTextAndDetectsTemplateError() {
         val result = DjenTextCleaner.clean("Falha no template da comunicação")
 

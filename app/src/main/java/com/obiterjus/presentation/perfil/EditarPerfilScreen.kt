@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +61,7 @@ fun EditarPerfilScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             BarraSuperiorSecundaria(
-                titulo = stringResource(R.string.perfil_editar_dados),
+                titulo = stringResource(R.string.perfil_editar_dados_topbar),
                 onVoltar = aoVoltar
             )
         }
@@ -457,7 +455,7 @@ private fun CampoEstadoOab(
                 estadosBrasileiros.firstOrNull { est -> est.sigla.equals(it, ignoreCase = true) || est.nome.normalizarBusca() == it.normalizarBusca() }?.let { est -> aoAlterarUf(est.sigla) }
             },
             label = { Text(stringResource(R.string.autenticacao_label_estado)) },
-            modifier = Modifier.menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryEditable, true).fillMaxWidth(),
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true).fillMaxWidth(),
             singleLine = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
         )
@@ -481,7 +479,7 @@ private fun CampoTexto(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(),
+    modifier: Modifier = Modifier,
     oculto: Boolean = false,
     enabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,

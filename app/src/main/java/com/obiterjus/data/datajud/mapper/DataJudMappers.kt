@@ -8,6 +8,7 @@ import com.obiterjus.data.datajud.remote.dto.DataJudMovimentoDto
 import com.obiterjus.data.datajud.remote.dto.DataJudProcessoDto
 import com.obiterjus.data.processo.local.ProcessoEntity
 import com.obiterjus.data.publicacao.local.toAssuntosJsonOrNull
+import com.obiterjus.domain.model.NaturezaProcessoInferencia
 import com.obiterjus.domain.model.ProcessoSyncStatus
 import java.security.MessageDigest
 import java.time.Instant
@@ -28,15 +29,17 @@ fun DataJudProcessoDto.toProcessoEntity(
     val numeroNormalizado = NumeroProcessoNormalizer.normalize(numeroProcesso)
         ?: fallbackNumeroProcesso
 
+    val nomesAssuntos = assuntos.mapNotNull { assunto ->
+        assunto.nome?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     return ProcessoEntity(
         numeroProcesso = numeroNormalizado,
         tribunal = tribunal?.trim()?.takeIf { it.isNotEmpty() } ?: fallbackTribunal,
         grau = grau?.trim()?.takeIf { it.isNotEmpty() },
         classeCodigo = classe?.codigo,
         classeNome = classe?.nome?.trim()?.takeIf { it.isNotEmpty() },
-        assuntosJson = assuntos.mapNotNull { assunto ->
-            assunto.nome?.trim()?.takeIf { it.isNotEmpty() }
-        }.toAssuntosJsonOrNull(),
+        assuntosJson = nomesAssuntos.toAssuntosJsonOrNull(),
         orgaoJulgadorCodigo = orgaoJulgador?.codigo,
         orgaoJulgadorNome = orgaoJulgador?.nome?.trim()?.takeIf { it.isNotEmpty() },
         nivelSigilo = nivelSigilo,
@@ -45,6 +48,10 @@ fun DataJudProcessoDto.toProcessoEntity(
         capturadoEm = syncedAt,
         atualizadoEm = syncedAt,
         dataJudTentativasRestantes = 0,
+        natureza = NaturezaProcessoInferencia.inferir(
+            classeNome = classe?.nome,
+            assuntos = nomesAssuntos,
+        )?.name,
     )
 }
 

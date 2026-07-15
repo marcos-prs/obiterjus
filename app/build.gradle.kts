@@ -11,6 +11,9 @@ val dataJudApiKey = providers.gradleProperty("DATAJUD_API_KEY")
     .get()
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
+val releaseStoreFile = providers.gradleProperty("RELEASE_STORE_FILE").orNull
+    ?.let(::file)
+    ?.takeIf { it.exists() }
 val releaseStorePassword = providers.gradleProperty("RELEASE_STORE_PASSWORD").orElse("").get()
 val releaseKeyAlias = providers.gradleProperty("RELEASE_KEY_ALIAS").orElse("").get()
 val releaseKeyPassword = providers.gradleProperty("RELEASE_KEY_PASSWORD").orElse("").get()
@@ -24,11 +27,15 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file("C:/Users/marcos/OneDrive/APP/ANDROID/ObiterJus/Chave/Build aab")
-            storePassword = releaseStorePassword
-            keyAlias = releaseKeyAlias
-            keyPassword = releaseKeyPassword
+        // Só existe quando RELEASE_STORE_FILE aponta para um keystore presente na máquina.
+        // Sem ele, o release sai sem assinatura em vez de quebrar o build.
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -46,7 +53,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

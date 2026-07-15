@@ -1,10 +1,12 @@
 package com.obiterjus.data.djen.mapper
 
 import com.obiterjus.domain.usecase.CalcularPrazoRegraUC
+import com.obiterjus.domain.usecase.ResolverNaturezaProcessoUC
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
 
 class PublicacaoPrazoMapper(
-    private val calcularPrazoRegraUC: CalcularPrazoRegraUC
+    private val calcularPrazoRegraUC: CalcularPrazoRegraUC,
+    private val resolverNatureza: ResolverNaturezaProcessoUC? = null,
 ) {
     suspend fun comPrazoCalculado(entity: PublicacaoEntity): PublicacaoEntity {
         if (entity.prazoQuantidade != null && entity.prazoDataLimite != null) return entity
@@ -16,6 +18,7 @@ class PublicacaoPrazoMapper(
             tipoComunicacao = entity.tipoComunicacao,
             dataDisponibilizacao = entity.dataDisponibilizacao,
             tribunal = entity.tribunal,
+            natureza = resolverNatureza?.invoke(entity.numeroProcesso),
         ) ?: return entity
 
         return entity.copy(

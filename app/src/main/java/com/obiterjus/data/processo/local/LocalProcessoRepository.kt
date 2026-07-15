@@ -4,6 +4,7 @@ import com.obiterjus.data.datajud.local.MovimentoDao
 import com.obiterjus.data.datajud.local.MovimentoEntity
 import com.obiterjus.data.publicacao.local.toAssuntos
 import com.obiterjus.domain.model.MovimentoProcesso
+import com.obiterjus.domain.model.NaturezaProcesso
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.repository.ProcessosRepository
@@ -169,6 +170,7 @@ private fun ProcessoEntity.paraDominio(
         defensoriaPublica = defensoriaPublica,
         ministerioPublico = ministerioPublico,
         terceirosAuxiliares = terceirosAuxiliares,
+        natureza = NaturezaProcesso.fromNome(natureza),
     )
 
 private fun MovimentoEntity.paraDominio(): MovimentoProcesso =
@@ -194,6 +196,11 @@ private fun ParticipanteEntity.paraDominio(): com.obiterjus.domain.model.Partici
         profissao = profissao,
         endereco = endereco,
         contatos = contatos,
+        cep = cep,
+        logradouro = logradouro ?: endereco,
+        numeroEndereco = numeroEndereco,
+        telefone = telefone,
+        email = email,
     )
 
 private fun ProcessoMonitorado.paraEntidade(): ProcessoEntity =
@@ -226,6 +233,7 @@ private fun ProcessoMonitorado.paraEntidade(): ProcessoEntity =
         defensoriaPublica = defensoriaPublica,
         ministerioPublico = ministerioPublico,
         terceirosAuxiliares = terceirosAuxiliares,
+        natureza = natureza?.name,
     )
 
 private fun com.obiterjus.domain.model.ParticipanteProcesso.paraEntidade(): ParticipanteEntity =
@@ -241,4 +249,9 @@ private fun com.obiterjus.domain.model.ParticipanteProcesso.paraEntidade(): Part
         profissao = profissao,
         endereco = endereco,
         contatos = contatos,
+        cep = cep,
+        logradouro = logradouro,
+        numeroEndereco = numeroEndereco,
+        telefone = telefone,
+        email = email,
     )

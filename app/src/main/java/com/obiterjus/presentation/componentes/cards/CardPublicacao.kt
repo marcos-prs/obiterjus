@@ -66,6 +66,10 @@ fun CardPublicacao(
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
     val colorScheme = MaterialTheme.colorScheme
+    val subtituloLinha = listOfNotNull(
+        tribunal?.takeIf { it.isNotBlank() },
+        juizo?.takeIf { it.isNotBlank() },
+    ).joinToString(" · ")
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
@@ -96,10 +100,9 @@ fun CardPublicacao(
         border = BorderStroke(dimens.borderWidth, colors.border),
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // Stripe lateral
             Box(
                 modifier = Modifier
-                    .width(dimens.stripeWidth)
+                    .width(4.dp)
                     .fillMaxHeight()
                     .clip(
                         RoundedCornerShape(
@@ -115,11 +118,10 @@ fun CardPublicacao(
                     .weight(1f)
                     .padding(
                         horizontal = dimens.cardPaddingH,
-                        vertical = dimens.cardPaddingV,
+                        vertical = dimens.cardPaddingV + 2.dp,
                     ),
                 verticalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
             ) {
-                // Linha 1: ordem, tribunal e data
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -171,18 +173,17 @@ fun CardPublicacao(
                     }
                 }
 
-                // Linha 2: tipo do ato
                 Text(
                     text = tituloAto,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                if (!tribunal.isNullOrBlank()) {
+                if (subtituloLinha.isNotBlank()) {
                     Text(
-                        text = "Tribunal: $tribunal",
+                        text = subtituloLinha,
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.textMuted,
                         maxLines = 1,
@@ -190,25 +191,6 @@ fun CardPublicacao(
                     )
                 }
 
-                if (!juizo.isNullOrBlank()) {
-                    Text(
-                        text = "Juízo: $juizo",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                Text(
-                    text = "Tipo do ato: $tipoAto",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                // Trecho opcional, mantido para telas antigas.
                 if (!trechoTexto.isNullOrBlank()) {
                     Text(
                         text = trechoTexto,
@@ -219,7 +201,6 @@ fun CardPublicacao(
                     )
                 }
 
-                // Linha 4: chips rodapé
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
                     verticalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
@@ -236,7 +217,6 @@ fun CardPublicacao(
                     }
                 }
 
-                // Linha 5: Ver Detalhes (Opcional)
                 if (mostrarBotaoDetalhes) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),

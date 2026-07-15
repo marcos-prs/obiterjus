@@ -201,6 +201,9 @@ class AutenticacaoViewModelTest {
         override suspend fun signUpWithEmail(email: String, password: String): Result<AuthUser> =
             signInWithEmail(email, password)
 
+        override suspend fun sendPasswordResetEmail(email: String): Result<Unit> =
+            Result.success(Unit)
+
         override suspend fun updatePassword(
             currentPassword: String,
             newPassword: String,

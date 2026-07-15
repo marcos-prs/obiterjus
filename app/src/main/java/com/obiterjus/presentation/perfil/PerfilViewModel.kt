@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
+import com.obiterjus.core.worker.DjenSyncScheduler
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
@@ -116,6 +117,11 @@ class PerfilViewModel(
     fun aoAlternarSincronizacaoAutomatica(ativo: Boolean) {
         viewModelScope.launch {
             perfilPreferencesRepository.saveSincronizacaoAutomatica(ativo)
+            if (ativo) {
+                DjenSyncScheduler.schedulePeriodic(context)
+            } else {
+                DjenSyncScheduler.cancel(context)
+            }
             syncPerfilToCloud()
         }
     }

@@ -1,7 +1,11 @@
 package com.obiterjus.presentation.inicio
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +27,7 @@ import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.presentation.componentes.EstadoVazioObiter
 import com.obiterjus.presentation.componentes.ObiterIcones
+import com.obiterjus.presentation.componentes.barras.BarraSuperiorPrincipal
 import com.obiterjus.presentation.componentes.cards.CardEstatistica
 import com.obiterjus.presentation.componentes.cards.CardPublicacao
 import com.obiterjus.presentation.componentes.cards.PrioridadeStripe
@@ -47,83 +51,93 @@ fun InicioScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(dimens.screenMargin),
-        verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
     ) {
-        val mensagemPrazoUrgente = estado.prazoUrgenteMensagem
-        if (estado.temPrazoUrgente && !mensagemPrazoUrgente.isNullOrBlank()) {
-            AlertaStrip(
-                mensagem = mensagemPrazoUrgente,
-                aoClicar = aoNavegarParaPrazos,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(dimens.cardGap),
-        ) {
-            CardEstatistica(
-                valor = estado.totalPublicacoes.toString(),
-                rotulo = stringResource(R.string.inicio_estatistica_publicacoes),
-                corPonto = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(PESO_CARD_ESTATISTICA).clickable { aoVerTodasPublicacoes() },
-            )
-            CardEstatistica(
-                valor = (estado.prazosUrgentes + estado.prazosProximos).toString(),
-                rotulo = stringResource(R.string.inicio_estatistica_prazos_ativos),
-                corPonto = colors.accent,
-                modifier = Modifier.weight(PESO_CARD_ESTATISTICA).clickable { aoNavegarParaPrazos() },
-            )
-            CardEstatistica(
-                valor = estado.totalProcessos.toString(),
-                rotulo = stringResource(R.string.inicio_estatistica_processos),
-                corPonto = colors.success,
-                modifier = Modifier.weight(PESO_CARD_ESTATISTICA).clickable { aoNavegarParaProcessos() },
-            )
-        }
-
-        Text(
-            text = stringResource(R.string.inicio_publicacoes_recentes),
-            style = MaterialTheme.typography.labelSmall.copy(
-                letterSpacing = MaterialTheme.typography.labelSmall.fontSize * 0.07f,
-            ),
-            color = colors.textMuted,
-            modifier = Modifier.padding(top = dimens.sectionGap),
+        BarraSuperiorPrincipal(
+            nomeUsuario = estado.nomeUsuario,
+            numeroOab = estado.oab,
+            ufOab = estado.uf,
+            ultimaSincronizacao = estado.ultimaSincronizacaoTexto,
         )
 
-        if (estado.publicacoesRecentes.isEmpty()) {
-            Text(
-                text = stringResource(R.string.inicio_sem_publicacoes_recentes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textMuted,
-            )
-        } else {
-            estado.publicacoesRecentes.forEach { publicacao ->
-                CardPublicacaoInicio(
-                    publicacao = publicacao,
-                    ordemNoDia = estado.metadadosOrdemPublicacoes[publicacao.id]?.first,
-                    aoClicar = { aoAbrirPublicacao(publicacao.id) },
+        Column(
+            modifier = Modifier.padding(dimens.screenMargin),
+            verticalArrangement = Arrangement.spacedBy(dimens.cardGap),
+        ) {
+            val mensagemPrazoUrgente = estado.prazoUrgenteMensagem
+            if (estado.temPrazoUrgente && !mensagemPrazoUrgente.isNullOrBlank()) {
+                AlertaStrip(
+                    mensagem = mensagemPrazoUrgente,
+                    aoClicar = aoNavegarParaPrazos,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            TextButton(
-                onClick = aoVerTodasPublicacoes,
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(
-                    text = stringResource(R.string.inicio_ver_todas),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        }
 
-        if (estado.totalProcessos == 0 && estado.totalPublicacoes == 0) {
-            EstadoVazioObiter(
-                titulo = stringResource(R.string.inicio_empty_title),
-                corpo = stringResource(R.string.inicio_empty_body),
-                icone = ObiterIcones.InicioInativo,
-                modifier = Modifier.padding(top = dimens.space4),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(dimens.cardGap),
+            ) {
+                CardEstatistica(
+                    valor = estado.totalPublicacoes.toString(),
+                    rotulo = stringResource(R.string.inicio_estatistica_publicacoes),
+                    corPonto = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(PESO_CARD_ESTATISTICA).clickable { aoVerTodasPublicacoes() },
+                )
+                CardEstatistica(
+                    valor = (estado.prazosUrgentes + estado.prazosProximos).toString(),
+                    rotulo = stringResource(R.string.inicio_estatistica_prazos_ativos),
+                    corPonto = colors.accent,
+                    modifier = Modifier.weight(PESO_CARD_ESTATISTICA).clickable { aoNavegarParaPrazos() },
+                )
+                CardEstatistica(
+                    valor = estado.totalProcessos.toString(),
+                    rotulo = stringResource(R.string.inicio_estatistica_processos),
+                    corPonto = colors.success,
+                    modifier = Modifier.weight(PESO_CARD_ESTATISTICA).clickable { aoNavegarParaProcessos() },
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.inicio_publicacoes_recentes),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    letterSpacing = MaterialTheme.typography.labelSmall.fontSize * 0.07f,
+                ),
+                color = colors.textMuted,
+                modifier = Modifier.padding(top = dimens.sectionGap),
             )
+
+            if (estado.publicacoesRecentes.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.inicio_sem_publicacoes_recentes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textMuted,
+                )
+            } else {
+                estado.publicacoesRecentes.forEach { publicacao ->
+                    CardPublicacaoInicio(
+                        publicacao = publicacao,
+                        ordemNoDia = estado.metadadosOrdemPublicacoes[publicacao.id]?.first,
+                        aoClicar = { aoAbrirPublicacao(publicacao.id) },
+                    )
+                }
+                TextButton(
+                    onClick = aoVerTodasPublicacoes,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text(
+                        text = stringResource(R.string.inicio_ver_todas),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+
+            if (estado.totalProcessos == 0 && estado.totalPublicacoes == 0) {
+                EstadoVazioObiter(
+                    titulo = stringResource(R.string.inicio_empty_title),
+                    corpo = stringResource(R.string.inicio_empty_body),
+                    icone = ObiterIcones.InicioInativo,
+                    modifier = Modifier.padding(top = dimens.space4),
+                )
+            }
         }
     }
 }

@@ -19,4 +19,20 @@ class DjenParticipantesExtractorTest {
         assertEquals("Maria Silva", result[0].nome)
         assertEquals("OAB/MG 12345", result[1].documento)
     }
+
+    @Test
+    fun extractsPoloLabelsFromDjenText() {
+        val result = DjenParticipantesExtractor.extract(
+            """
+            POLO ATIVO: Antonio Araujo
+            POLO PASSIVO: Banco Exemplo S.A.
+            ADVOGADO: Marcos Paulo Rocha de Souza - OAB: 140213/MG
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("Ativo", "Passivo", "Advogado"), result.map { it.tipo })
+        assertEquals("Antonio Araujo", result[0].nome)
+        assertEquals("Banco Exemplo S.A.", result[1].nome)
+        assertEquals("OAB: 140213/MG", result[2].documento)
+    }
 }

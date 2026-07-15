@@ -9,6 +9,11 @@ data class DjenCleanText(
 
 object DjenTextCleaner {
     private val tagRegex = Regex("<[^>]+>")
+    private val styleOrScriptRegex = Regex(
+        pattern = "<(style|script)\\b[^>]*>.*?</\\1\\s*>",
+        options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+    )
+    private val htmlCommentRegex = Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL)
     private val multilineWhitespaceRegex = Regex("[ \\t\\x0B\\f]+")
     private val repeatedBlankLinesRegex = Regex("\\n{2,}")
     private val templateErrorRegex = Regex(
@@ -52,7 +57,9 @@ object DjenTextCleaner {
     }
 
     private fun String.htmlToText(): String =
-        replace(Regex("(?i)<br\\s*/?>"), "\n")
+        replace(styleOrScriptRegex, "")
+            .replace(htmlCommentRegex, "")
+            .replace(Regex("(?i)<br\\s*/?>"), "\n")
             .replace(Regex("(?i)</p\\s*>"), "\n")
             .replace(Regex("(?i)</div\\s*>"), "\n")
             .replace(Regex("(?i)</?(p|div|tr|li|h[1-6])\\s*>"), "\n")

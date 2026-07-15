@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterList
@@ -24,8 +25,12 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
@@ -34,6 +39,9 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.GridView
@@ -74,6 +82,7 @@ object ObiterIcones {
     val Adicionar: ImageVector get() = Icons.Default.Add
     val Editar: ImageVector get() = Icons.Default.Edit
     val Excluir: ImageVector get() = Icons.Default.Delete
+    val MaisOpcoes: ImageVector get() = Icons.Default.MoreVert
 
     // ── Status ───────────────────────────────────────────────
     val Sucesso: ImageVector get() = Icons.Default.CheckCircle
@@ -94,10 +103,18 @@ object ObiterIcones {
     val Conta: ImageVector get() = Icons.Default.AccountCircle
     val Login: ImageVector get() = Icons.AutoMirrored.Filled.Login
     val Pasta: ImageVector get() = Icons.Default.Folder
+    val Email: ImageVector get() = Icons.Default.Email
+    val Visibilidade: ImageVector get() = Icons.Default.Visibility
+    val VisibilidadeOculta: ImageVector get() = Icons.Default.VisibilityOff
+    val Seguranca: ImageVector get() = Icons.Default.Security
 
     // ── UI Helpers ───────────────────────────────────────────
     val Expandir: ImageVector get() = Icons.Default.Add
     val Recolher: ImageVector get() = Icons.Default.Close
+    val MoverCima: ImageVector get() = Icons.Default.KeyboardArrowUp
+    val MoverBaixo: ImageVector get() = Icons.Default.KeyboardArrowDown
+    val Anterior: ImageVector get() = Icons.AutoMirrored.Filled.KeyboardArrowLeft
+    val Proximo: ImageVector get() = Icons.AutoMirrored.Filled.KeyboardArrowRight
 
     // ── Sincronização na nuvem ───────────────────────────────
     val NuvemSincronizando: ImageVector get() = Icons.Default.CloudSync

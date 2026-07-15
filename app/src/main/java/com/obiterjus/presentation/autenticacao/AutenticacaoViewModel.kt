@@ -229,6 +229,7 @@ class AutenticacaoViewModel internal constructor(
             authRepository.signInWithEmail(email, senha).fold(
                 onSuccess = { authUser ->
                     repositorioSincronizacao.restaurarPerfil(authUser.uid)
+                    repositorioSincronizacao.restaurarTudo(authUser.uid)
                     _estado.update {
                         it.copy(
                             carregando = false,
@@ -241,6 +242,39 @@ class AutenticacaoViewModel internal constructor(
                         it.copy(
                             carregando = false,
                             mensagemErro = textos.get(R.string.autenticacao_error_login_email),
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun aoEnviarRedefinicaoSenha() {
+        val estadoAtual = _estado.value
+        if (estadoAtual.carregando) return
+
+        val email = estadoAtual.email.trim()
+        if (email.isBlank()) {
+            _estado.update { it.copy(mensagemErro = textos.get(R.string.autenticacao_error_email_required)) }
+            return
+        }
+
+        viewModelScope.launch {
+            _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
+            authRepository.sendPasswordResetEmail(email).fold(
+                onSuccess = {
+                    _estado.update {
+                        it.copy(
+                            carregando = false,
+                            mensagemSucesso = textos.get(R.string.autenticacao_sucesso_redefinicao_senha),
+                        )
+                    }
+                },
+                onFailure = {
+                    _estado.update {
+                        it.copy(
+                            carregando = false,
+                            mensagemErro = textos.get(R.string.autenticacao_error_redefinicao_senha),
                         )
                     }
                 },

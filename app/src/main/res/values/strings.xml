@@ -162,11 +162,18 @@
     <string name="autenticacao_action_logout">Sair da conta</string>
     <string name="autenticacao_action_loading">Aguarde...</string>
     <string name="autenticacao_label_email">E-mail</string>
+    <string name="autenticacao_label_email_institucional">E-mail</string>
     <string name="autenticacao_label_password">Senha</string>
+    <string name="autenticacao_placeholder_email">seunome@escritorio.com.br</string>
+    <string name="autenticacao_placeholder_senha">Digite sua senha</string>
     <string name="autenticacao_action_signup">Criar conta</string>
     <string name="autenticacao_title_acesso">Acesso</string>
     <string name="autenticacao_subtitle_login">Acesse sua conta para sincronizar dados e continuar o monitoramento.</string>
     <string name="autenticacao_login_hint">Use seu e-mail profissional e sua senha para entrar.</string>
+    <string name="autenticacao_manter_conectado">Manter conectado</string>
+    <string name="autenticacao_esqueci_senha">Esqueci a senha</string>
+    <string name="autenticacao_action_entrar_sistema">Entrar no sistema</string>
+    <string name="autenticacao_rodape_seguranca">Acesso protegido · OAB verificada · Criptografia TLS</string>
     <string name="autenticacao_title_cadastro">Criar conta</string>
     <string name="autenticacao_subtitle_cadastro">Etapa %1$d de %2$d</string>
     <string name="autenticacao_step_dados_acesso">Dados de acesso</string>
@@ -235,16 +242,19 @@
     <string name="autenticacao_sync_success">%1$d registro(s) restaurado(s) da nuvem.</string>
     <string name="autenticacao_sync_error">Não foi possível restaurar os dados da nuvem agora.</string>
     <string name="autenticacao_error_required_fields">Informe e-mail e senha para continuar.</string>
+    <string name="autenticacao_error_email_required">Informe seu e-mail para redefinir a senha.</string>
     <string name="autenticacao_error_password_short">A senha precisa ter pelo menos 8 caracteres, 1 letra maiúscula e 1 número.</string>
     <string name="autenticacao_error_conta_invalida">Informe nome, e-mail, senha válida, confirmação igual e aceite os termos.</string>
     <string name="autenticacao_error_confirm_password">A confirmação de senha não confere.</string>
     <string name="autenticacao_error_oab_invalida">Informe UF e número da OAB para continuar.</string>
     <string name="autenticacao_error_login_email">Não foi possível entrar com esse e-mail e senha.</string>
+    <string name="autenticacao_error_redefinicao_senha">Não foi possível enviar a redefinição de senha agora.</string>
     <string name="autenticacao_error_signup">Não foi possível criar a conta agora.</string>
     <string name="autenticacao_error_guest">Não foi possível entrar como convidado agora.</string>
     <string name="autenticacao_error_login_google">Não foi possível entrar com Google agora.</string>
     <string name="autenticacao_error_logout">Não foi possível sair da conta agora.</string>
     <string name="autenticacao_sucesso_login">Login concluído com sucesso.</string>
+    <string name="autenticacao_sucesso_redefinicao_senha">Enviamos as instruções de redefinição para seu e-mail.</string>
     <string name="autenticacao_sucesso_cadastro">Conta criada com sucesso.</string>
     <string name="autenticacao_sucesso_visitante">Você entrou como convidado.</string>
     <string name="autenticacao_action_continuar_convidado">Continuar como convidado</string>
@@ -348,6 +358,9 @@
     <string name="prazos_secao_proximos">Próximos</string>
     <string name="prazos_secao_expirados">Expirados</string>
     <string name="prazos_secao_sem_data">Sem data estimada</string>
+    <string name="prazos_secao_pendentes">Pendentes</string>
+    <string name="prazos_calendario_mes_anterior">Mês anterior</string>
+    <string name="prazos_calendario_proximo_mes">Próximo mês</string>
     <string name="prazos_aba_todos">Todos</string>
     <string name="prazos_aba_vencidos">Vencidos</string>
     <string name="prazos_aba_proximos">Próximos</string>
@@ -405,6 +418,7 @@
     <string name="perfil_dados_conta">DADOS DA CONTA</string>
     <string name="perfil_menu_conta">Menu da conta</string>
     <string name="perfil_editar_dados">Editar Dados</string>
+    <string name="perfil_editar_dados_topbar">editar dados</string>
     <string name="perfil_nome_usuario">Nome</string>
     <string name="perfil_oab_rotulo">OAB</string>
     <string name="perfil_oab_nao_cadastrada">OAB não cadastrada</string>
@@ -492,7 +506,10 @@
     <string name="editar_processo_action_excluir">Excluir processo</string>
     <string name="editar_processo_ressincronizando">Re-sincronizando…</string>
     <string name="editar_processo_salvo">Processo atualizado.</string>
+    <string name="editar_processo_erro_salvar">Erro ao salvar as alterações.</string>
     <string name="editar_processo_ressincronizado">Processo re-sincronizado com sucesso.</string>
+    <string name="editar_processo_erro_ressincronizar">Erro ao ressincronizar o processo.</string>
+    <string name="editar_processo_erro_excluir">Erro ao excluir o processo.</string>
 
     <!-- Novos labels de edição -->
     <string name="editar_processo_label_data_distribuicao">Data de Distribuição</string>
@@ -511,6 +528,7 @@
     <string name="editar_processo_label_terceiros">Terceiros e Auxiliares</string>
     <string name="editar_processo_label_segredo">Segredo de Justiça</string>
     <string name="editar_processo_label_assunto">Assunto Principal</string>
+    <string name="editar_processo_label_natureza">Natureza (contagem de prazo)</string>
 
     <!-- Seções -->
     <string name="editar_processo_secao_identificacao">Identificação do Processo</string>
@@ -523,6 +541,8 @@
     <!-- Opções de Dropdown -->
     <string name="opcao_sim">Sim</string>
     <string name="opcao_nao">Não</string>
+    <string name="opcao_natureza_civel">Cível</string>
+    <string name="opcao_natureza_penal">Penal</string>
     <string name="opcao_deferido">Deferido</string>
     <string name="opcao_indeferido">Indeferido</string>
     <string name="opcao_parcialmente_deferido">Parcialmente Deferido</string>
@@ -536,12 +556,48 @@
     <string name="opcao_prioridade_nenhuma">Nenhuma</string>
 
     <!-- Qualificação de Participante -->
+    <string name="partes_secao">Partes</string>
     <string name="participante_label_cpf_cnpj">CPF/CNPJ</string>
     <string name="participante_label_estado_civil">Estado Civil</string>
     <string name="participante_label_profissao">Profissão</string>
     <string name="participante_label_endereco">Endereço</string>
     <string name="participante_label_contatos">Contatos (Fone/E-mail)</string>
+    <string name="participante_registrar">Registrar parte</string>
+    <string name="cd_editar_participante">Editar parte</string>
+    <string name="participante_label_tipo_pessoa">Tipo de pessoa</string>
     <string name="participante_action_qualificacao">Qualificação completa</string>
+    <string name="participante_secao_endereco">Endereço</string>
+    <string name="participante_label_cep">CEP</string>
+    <string name="participante_label_logradouro">Logradouro</string>
+    <string name="participante_label_numero_endereco">Número</string>
+    <string name="participante_buscando_cep">Buscando endereço…</string>
+    <string name="participante_cep_nao_encontrado">CEP não encontrado</string>
+    <string name="participante_secao_contatos">Contatos</string>
+    <string name="participante_label_telefone">Telefone</string>
+    <string name="participante_label_email">E-mail</string>
+    <string name="opcao_estado_civil_solteiro">Solteiro(a)</string>
+    <string name="opcao_estado_civil_casado">Casado(a)</string>
+    <string name="opcao_estado_civil_divorciado">Divorciado(a)</string>
+    <string name="opcao_estado_civil_separado">Separado(a) judicialmente</string>
+    <string name="opcao_estado_civil_viuvo">Viúvo(a)</string>
+    <string name="opcao_estado_civil_uniao_estavel">União estável</string>
+    <string name="opcao_pessoa_fisica">Pessoa física</string>
+    <string name="opcao_pessoa_juridica">Pessoa jurídica</string>
+    <string name="participante_remover_titulo">Remover participante</string>
+    <string name="participante_remover_confirmacao">Remover \"%1$s\" deste processo?</string>
+    <string name="participante_remover_confirmacao_sem_nome">Remover este participante deste processo?</string>
+    <string name="participante_remover_confirmar">Remover</string>
+    <string name="participante_remover_cancelar">Cancelar</string>
+    <string name="participante_nome_duplicado">Já existe outro participante com este nome.</string>
+    <string name="participante_erro_nome_vazio_titulo">Nome obrigatório</string>
+    <string name="participante_erro_nome_vazio_msg">Todos os participantes precisam ter um nome preenchido antes de salvar.</string>
+    <string name="participante_erro_ok">Entendi</string>
+    <string name="opcao_polo_ativo">Ativo</string>
+    <string name="opcao_polo_passivo">Passivo</string>
+    <string name="opcao_polo_outro">Outro</string>
+    <string name="participante_label_polo_personalizado">Polo personalizado</string>
+    <string name="cd_mover_participante_cima">Mover para cima</string>
+    <string name="cd_mover_participante_baixo">Mover para baixo</string>
 
     <!-- Exclusão de processo -->
     <string name="excluir_processo_confirmacao">Remover o processo %1$s? Publicações, movimentações, prazos e participantes vinculados também serão removidos.</string>
@@ -554,6 +610,9 @@
     <string name="cd_adicionar_processo">Adicionar processo</string>
     <string name="cd_editar_processo">Editar processo</string>
     <string name="cd_excluir_processo">Excluir processo</string>
+    <string name="cd_mais_opcoes">Mais opções</string>
+    <string name="detalhe_menu_editar">Editar</string>
+    <string name="detalhe_menu_excluir">Excluir</string>
 
     <!-- Detalhe da Publicação -->
     <string name="label_autos">Autos</string>
@@ -603,6 +662,8 @@
     <string name="cd_abrir_menu_perfil">Abrir menu do perfil</string>
     <string name="cd_editar_perfil">Editar perfil</string>
     <string name="cd_sair_conta">Sair da conta</string>
+    <string name="cd_mostrar_senha">Mostrar senha</string>
+    <string name="cd_ocultar_senha">Ocultar senha</string>
 
     <!-- Edição de Processo - Polos -->
     <string name="editar_processo_polo_ativo">Polo Ativo (Requerentes)</string>

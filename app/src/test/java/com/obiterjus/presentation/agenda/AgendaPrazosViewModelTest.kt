@@ -1,12 +1,17 @@
 package com.obiterjus.presentation.prazos
 
+import com.obiterjus.core.time.CalculadoraPrazos
 import com.obiterjus.data.agenda.local.PrazoSugeridoDao
 import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
+import com.obiterjus.data.time.CalendarioForenseDataSource
+import com.obiterjus.data.time.PedidoCalculoPrazo
+import com.obiterjus.data.time.RespostaPrazo
 import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CalendarSyncRepository
 import com.obiterjus.domain.repository.PublicacoesRepository
+import com.obiterjus.domain.usecase.ClassificarPublicacaoUC
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
 import java.time.Clock
@@ -54,7 +59,11 @@ class AgendaPrazosViewModelTest {
             ),
         )
         val viewModel = PrazosViewModel(
-            observarAgendaPrazos = ObservarAgendaPrazos(repositorio, prazoSugeridoDao),
+            observarAgendaPrazos = ObservarAgendaPrazos(
+                repository = repositorio,
+                prazoSugeridoDao = prazoSugeridoDao,
+                classificarPublicacaoUC = classificarPublicacaoUC(),
+            ),
             confirmarPrazoUC = ConfirmarPrazoUC(
                 prazoSugeridoDao = prazoSugeridoDao,
                 calendarSyncRepository = FakeCalendarSyncRepository(),
@@ -68,12 +77,13 @@ class AgendaPrazosViewModelTest {
 
         advanceUntilIdle()
 
-        assertEquals(3, viewModel.estado.value.itens.size)
+        assertEquals(4, viewModel.estado.value.itens.size)
         assertEquals(1, viewModel.estado.value.expirados.size)
         assertEquals(1, viewModel.estado.value.urgente.size)
-        assertEquals(1, viewModel.estado.value.semData.size)
+        assertEquals(2, viewModel.estado.value.estaSemana.size)
+        assertEquals(0, viewModel.estado.value.semData.size)
         assertEquals(
-            listOf(1L, 2L, 3L),
+            listOf(1L, 2L, 3L, 4L),
             viewModel.estado.value.itens.map { prazo -> prazo.item.publicacao.id },
         )
     }
@@ -105,6 +115,9 @@ class AgendaPrazosViewModelTest {
             capturadoEm = Instant.parse("2026-04-29T12:00:00Z"),
             atualizadoEm = Instant.parse("2026-04-29T12:00:00Z"),
         )
+
+    private fun classificarPublicacaoUC(): ClassificarPublicacaoUC =
+        ClassificarPublicacaoUC(CalculadoraPrazos(FakeCalendarioForenseDataSource()))
 
     private class FakePublicacoesRepository(
         publicacoes: List<Publicacao>,
@@ -144,6 +157,13 @@ class AgendaPrazosViewModelTest {
             idExterno: String,
             provedor: ProvedorCalendario,
         ): Result<Unit> = Result.success(Unit)
+    }
+
+    // O app não calcula prazos localmente: a data-limite dos itens 3 e 4 vem
+    // da API CalendárioForense (aqui simulada com vencimento em 05/05).
+    private class FakeCalendarioForenseDataSource : CalendarioForenseDataSource {
+        override suspend fun calcularPrazo(pedido: PedidoCalculoPrazo): RespostaPrazo =
+            RespostaPrazo(estado = "CONFIAVEL", dataVencimento = "2026-05-05")
     }
 
     private object TextosPrazosFake : TextosPrazos {

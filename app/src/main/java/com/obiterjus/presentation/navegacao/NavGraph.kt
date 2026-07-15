@@ -123,7 +123,6 @@ fun ObiterNavGraph(
                 viewModel = viewModels.perfil,
                 aoAbrirAuditoria = { navController.navigate(ObiterRota.Auditoria) },
                 aoForcarSincronizacao = viewModels.perfil::aoForcarSincronizacao,
-                aoLogout = viewModels.perfil::aoLogout,
                 aoEntrar = {
                     viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.ENTRAR)
                     navController.navigate(ObiterRota.Autenticacao) {
@@ -133,11 +132,6 @@ fun ObiterNavGraph(
                 aoCriarConta = {
                     viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
                     navController.navigate(ObiterRota.Autenticacao) {
-                        launchSingleTop = true
-                    }
-                },
-                aoEditarPerfil = {
-                    navController.navigate(ObiterRota.EditarPerfil) {
                         launchSingleTop = true
                     }
                 },
@@ -179,6 +173,16 @@ fun ObiterNavGraph(
                 onVoltar = { navController.popBackStack() },
                 aoEditarProcesso = {
                     navController.navigate(ObiterRota.EditarProcesso(rota.numeroProcesso)) {
+                        launchSingleTop = true
+                    }
+                },
+                aoExcluirProcesso = {
+                    if (!navController.popBackStack(ObiterRota.Processos, inclusive = false)) {
+                        navController.popBackStack()
+                    }
+                },
+                aoAbrirPublicacao = { publicacaoId ->
+                    navController.navigate(ObiterRota.DetalhePublicacao(publicacaoId)) {
                         launchSingleTop = true
                     }
                 },

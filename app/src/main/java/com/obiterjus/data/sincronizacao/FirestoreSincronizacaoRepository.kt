@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.obiterjus.data.datajud.local.MovimentoEntity
 import com.obiterjus.data.datajud.local.ParticipanteEntity
+import com.obiterjus.data.djen.DjenPartesResolver
 import com.obiterjus.data.processo.local.LocalProcessoRepository
 import com.obiterjus.data.processo.local.ProcessoEntity
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
@@ -25,6 +26,7 @@ class FirestoreSincronizacaoRepository(
     private val localPublicacaoRepository: LocalPublicacaoRepository,
     private val repositorioCadastroOab: CadastroOabRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val partesResolver: DjenPartesResolver? = null,
 ) : SincronizacaoRepository {
 
     override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo {
@@ -99,6 +101,9 @@ class FirestoreSincronizacaoRepository(
         val publicacoesRestauradas = mergePublicacoes(publicacoes)
         val movimentosRestaurados = mergeMovimentos(movimentos)
         val participantesRestaurados = mergeParticipantes(participantes)
+        partesResolver?.atualizarPartesDosProcessos(
+            processos.map(ProcessoEntity::numeroProcesso).distinct(),
+        )
 
         return SincronizacaoNuvemResumo(
             processos = processosRestaurados,

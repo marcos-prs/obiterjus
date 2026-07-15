@@ -3,13 +3,13 @@ package com.obiterjus.presentation.componentes.barras
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -45,20 +46,21 @@ fun BarraSuperiorPrincipal(
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
-    val colorScheme = MaterialTheme.colorScheme
-    val isDark = isSystemInDarkTheme()
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val corTextoPrincipal = colors.topAppBarAccent
+    val corTextoSecundario = Color(0xFFE0E7ED)
+    val corBadgeTexto = colors.topAppBarAccent
+    val corBadgeFundo = Color(0x23F7F9FB)
+    val corBadgeBorda = colors.topAppBarAccent.copy(alpha = 0.45f)
 
-    // Cores específicas vindas do tema
-    val corSaudacao = colors.onTopAppBar
-    val corNome = colors.topAppBarAccent
-    val corBadge = colors.topAppBarAccent
-    val corDemaisDados = colors.onTopAppBar
+    val nomeExibido = nomeUsuario.primeiroNome().ifBlank { stringResource(R.string.saudacao_advogado) }
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = dimens.topAppBarHeight)
             .then(
-                if (isDark) {
+                if (isDarkTheme) {
                     Modifier.drawBehind {
                         drawLine(
                             color = colors.divider,
@@ -72,7 +74,7 @@ fun BarraSuperiorPrincipal(
                 }
             ),
         color = colors.topAppBarBackground,
-        shadowElevation = if (isDark) 0.dp else 2.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -91,28 +93,28 @@ fun BarraSuperiorPrincipal(
                     Text(
                         text = stringResource(saudacaoResId(horaAtual.hour)),
                         style = MaterialTheme.typography.bodySmall,
-                        color = corSaudacao.copy(alpha = 0.75f),
+                        color = corTextoSecundario,
                     )
                     Text(
-                        text = nomeUsuario,
+                        text = nomeExibido,
                         style = MaterialTheme.typography.titleLarge,
-                        color = corNome,
+                        color = corTextoPrincipal,
                     )
                 }
 
                 Surface(
                     shape = RoundedCornerShape(5.dp),
-                    color = corBadge.copy(alpha = 0.12f),
+                    color = corBadgeFundo,
                     modifier = Modifier.border(
                         width = 0.5.dp,
-                        color = corBadge.copy(alpha = 0.25f),
+                        color = corBadgeBorda,
                         shape = RoundedCornerShape(5.dp),
                     ),
                 ) {
                     Text(
                         text = stringResource(R.string.oab_chip_formato, ufOab, numeroOab),
                         style = MaterialTheme.typography.labelSmall,
-                        color = corBadge,
+                        color = corBadgeTexto,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -139,7 +141,7 @@ fun BarraSuperiorPrincipal(
                         stringResource(R.string.sincronizado_formato, it)
                     } ?: stringResource(R.string.sincronizacao_pendente),
                     style = MaterialTheme.typography.bodySmall,
-                    color = corDemaisDados.copy(alpha = 0.60f),
+                    color = corTextoSecundario,
                 )
             }
         }
@@ -152,3 +154,6 @@ fun saudacaoResId(hora: Int): Int = when (hora) {
     in 12..17 -> R.string.saudacao_boa_tarde
     else -> R.string.saudacao_boa_noite
 }
+
+private fun String.primeiroNome(): String =
+    trim().substringBefore(' ').trim()
