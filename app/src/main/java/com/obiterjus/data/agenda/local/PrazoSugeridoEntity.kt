@@ -32,5 +32,6 @@ data class PrazoSugeridoEntity(
     val dataLimite: LocalDate?,
     val isConfirmado: Boolean = false,
     val idExternoCalendario: String? = null,
-    val provedorCalendario: String? = null
+    val provedorCalendario: String? = null,
+    val isCumprido: Boolean = false
 )

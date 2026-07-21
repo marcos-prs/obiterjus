@@ -2,6 +2,7 @@ package com.obiterjus.presentation.prazos
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ fun CalendarioPrazos(
     datasComPrazo: Set<LocalDate>,
     hoje: LocalDate,
     modifier: Modifier = Modifier,
+    aoSelecionarData: (LocalDate) -> Unit = {},
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
@@ -133,10 +135,16 @@ fun CalendarioPrazos(
                         ) {
                             if (dia in 1..totalDias) {
                                 val data = mesExibido.atDay(dia)
+                                val temPrazo = data in datasComPrazo
                                 DiaCalendario(
                                     dia = dia,
                                     isHoje = data == hoje,
-                                    temPrazo = data in datasComPrazo,
+                                    temPrazo = temPrazo,
+                                    aoClicar = if (temPrazo) {
+                                        { aoSelecionarData(data) }
+                                    } else {
+                                        null
+                                    },
                                 )
                             }
                         }
@@ -152,11 +160,19 @@ private fun DiaCalendario(
     dia: Int,
     isHoje: Boolean,
     temPrazo: Boolean,
+    aoClicar: (() -> Unit)? = null,
 ) {
     val colors = ObiterTheme.colors
     val colorScheme = MaterialTheme.colorScheme
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = if (aoClicar != null) {
+            Modifier.clickable(onClick = aoClicar)
+        } else {
+            Modifier
+        },
+    ) {
         Box(
             modifier = Modifier
                 .size(28.dp)

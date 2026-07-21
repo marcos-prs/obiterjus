@@ -22,15 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.R
-import com.obiterjus.core.texto.formatarCnj
-import com.obiterjus.core.time.FormatadorData
-import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.presentation.componentes.EstadoVazioObiter
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.barras.BarraSuperiorPrincipal
 import com.obiterjus.presentation.componentes.cards.CardEstatistica
-import com.obiterjus.presentation.componentes.cards.CardPublicacao
-import com.obiterjus.presentation.componentes.cards.PrioridadeStripe
+import com.obiterjus.presentation.componentes.cards.CardPublicacaoResumo
 import com.obiterjus.presentation.componentes.strips.AlertaStrip
 import com.obiterjus.ui.theme.ObiterTheme
 
@@ -41,6 +37,7 @@ fun InicioScreen(
     aoVerTodasPublicacoes: () -> Unit,
     aoAbrirPublicacao: (Long) -> Unit,
     aoNavegarParaProcessos: () -> Unit,
+    aoAbrirCliente: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val estado by viewModel.estado.collectAsStateWithLifecycle()
@@ -113,10 +110,18 @@ fun InicioScreen(
                 )
             } else {
                 estado.publicacoesRecentes.forEach { publicacao ->
-                    CardPublicacaoInicio(
+                    val cliente = publicacao.numeroProcesso
+                        ?.let { numero -> estado.clientesPorProcesso[numero] }
+                    CardPublicacaoResumo(
                         publicacao = publicacao,
-                        ordemNoDia = estado.metadadosOrdemPublicacoes[publicacao.id]?.first,
-                        aoClicar = { aoAbrirPublicacao(publicacao.id) },
+                        nomeCliente = cliente?.nome,
+                        aoClicarCliente = cliente?.clienteId?.let { id ->
+                            { aoAbrirCliente(id) }
+                        },
+                        onClick = { aoAbrirPublicacao(publicacao.id) },
+                        badgeOrdem = estado.metadadosOrdemPublicacoes[publicacao.id]
+                            ?.first
+                            ?.let { ordem -> stringResource(R.string.publicacoes_badge_ordem, ordem) },
                     )
                 }
                 TextButton(
@@ -140,33 +145,6 @@ fun InicioScreen(
             }
         }
     }
-}
-
-@Composable
-private fun CardPublicacaoInicio(
-    publicacao: Publicacao,
-    ordemNoDia: Int?,
-    aoClicar: () -> Unit,
-) {
-    CardPublicacao(
-        tituloAto = publicacao.tipoComunicacao ?: stringResource(R.string.publicacoes_sem_tipo),
-        tipoAto = publicacao.tipoComunicacao ?: stringResource(R.string.publicacoes_sem_tipo),
-        data = publicacao.dataDisponibilizacao?.let(FormatadorData::formatarData)
-            ?: stringResource(R.string.publicacoes_sem_data),
-        tribunal = publicacao.tribunal ?: stringResource(R.string.publicacoes_sem_tribunal),
-        juizo = publicacao.nomeOrgao,
-        numeroProcesso = publicacao.numeroProcesso?.formatarCnj()
-            ?: stringResource(R.string.publicacoes_sem_numero_processo),
-        prazoDias = publicacao.prazo?.quantidade?.let { dias ->
-            stringResource(R.string.prazos_badge_dias, dias)
-        },
-        trechoTexto = publicacao.textoLimpo,
-        prioridade = PrioridadeStripe.ROTINEIRO,
-        aoClicar = aoClicar,
-        badgeOrdem = ordemNoDia?.toString(),
-        onVerDetalhes = aoClicar,
-        mostrarBotaoDetalhes = true,
-    )
 }
 
 private const val PESO_CARD_ESTATISTICA = 1f

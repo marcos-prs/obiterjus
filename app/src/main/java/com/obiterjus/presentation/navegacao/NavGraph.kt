@@ -6,16 +6,22 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.obiterjus.R
 import com.obiterjus.presentation.autenticacao.AutenticacaoScreen
 import com.obiterjus.presentation.autenticacao.ModoAutenticacao
+import com.obiterjus.presentation.acervo.AbaAcervo
+import com.obiterjus.presentation.acervo.ConteudoAcervo
 import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoScreen
 import com.obiterjus.presentation.auditoria.AuditoriaScreen
+import com.obiterjus.presentation.detalhecliente.DetalheClienteScreen
 import com.obiterjus.presentation.detalheprocesso.DetalheProcessoScreen
+import com.obiterjus.presentation.editarcliente.EditarClienteScreen
 import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoScreen
 import com.obiterjus.presentation.editarprocesso.EditarProcessoScreen
 import com.obiterjus.presentation.inicio.InicioScreen
@@ -23,13 +29,14 @@ import com.obiterjus.presentation.perfil.PerfilScreen
 import com.obiterjus.presentation.perfil.EditarPerfilScreen
 import com.obiterjus.presentation.prazos.PrazosScreen
 import com.obiterjus.presentation.principal.ObiterViewModels
-import com.obiterjus.presentation.processos.ConteudoProcessos
 import com.obiterjus.presentation.publicacoes.ConteudoPublicacoes
 
 @Composable
 fun ObiterNavGraph(
     navController: NavHostController,
     viewModels: ObiterViewModels,
+    abaAcervo: AbaAcervo,
+    aoSelecionarAbaAcervo: (AbaAcervo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -82,6 +89,11 @@ fun ObiterNavGraph(
                 aoNavegarParaProcessos = {
                     navegarParaAbaPrincipal(navController, ObiterRota.Processos)
                 },
+                aoAbrirCliente = { clienteId ->
+                    navController.navigate(ObiterRota.DetalheCliente(clienteId)) {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 
@@ -104,17 +116,30 @@ fun ObiterNavGraph(
                         launchSingleTop = true
                     }
                 },
+                aoAbrirProcesso = { numeroProcesso ->
+                    navController.navigate(ObiterRota.DetalheProcesso(numeroProcesso)) {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 
         composable<ObiterRota.Processos> {
-            ConteudoProcessos(
-                viewModel = viewModels.processos,
-                aoAbrirDetalhe = { numero ->
+            ConteudoAcervo(
+                viewModelProcessos = viewModels.processos,
+                viewModelClientes = viewModels.clientes,
+                aoAbrirProcesso = { numero ->
                     navController.navigate(ObiterRota.DetalheProcesso(numero)) {
                         launchSingleTop = true
                     }
                 },
+                aoAbrirCliente = { clienteId ->
+                    navController.navigate(ObiterRota.DetalheCliente(clienteId)) {
+                        launchSingleTop = true
+                    }
+                },
+                abaSelecionada = abaAcervo,
+                aoSelecionarAba = aoSelecionarAbaAcervo,
             )
         }
 
@@ -189,12 +214,54 @@ fun ObiterNavGraph(
             )
         }
 
+        composable<ObiterRota.DetalheCliente> { backStackEntry ->
+            val rota = backStackEntry.toRoute<ObiterRota.DetalheCliente>()
+            DetalheClienteScreen(
+                viewModel = viewModels.detalheCliente,
+                clienteId = rota.clienteId,
+                onVoltar = { navController.popBackStack() },
+                aoAbrirProcesso = { numero ->
+                    navController.navigate(ObiterRota.DetalheProcesso(numero)) {
+                        launchSingleTop = true
+                    }
+                },
+                aoEditarCliente = { id ->
+                    navController.navigate(ObiterRota.EditarCliente(id)) {
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
+        composable<ObiterRota.AdicionarCliente> {
+            EditarClienteScreen(
+                viewModel = viewModels.editarCliente,
+                clienteId = "",
+                onVoltar = { navController.popBackStack() },
+                titulo = stringResource(R.string.adicionar_cliente_titulo),
+            )
+        }
+
+        composable<ObiterRota.EditarCliente> { backStackEntry ->
+            val rota = backStackEntry.toRoute<ObiterRota.EditarCliente>()
+            EditarClienteScreen(
+                viewModel = viewModels.editarCliente,
+                clienteId = rota.clienteId,
+                onVoltar = { navController.popBackStack() },
+            )
+        }
+
         composable<ObiterRota.DetalhePublicacao> { backStackEntry ->
             val rota = backStackEntry.toRoute<ObiterRota.DetalhePublicacao>()
             DetalhePublicacaoScreen(
                 viewModel = viewModels.detalhePublicacao,
                 publicacaoId = rota.publicacaoId,
-                onVoltar = { navController.popBackStack() }
+                onVoltar = { navController.popBackStack() },
+                aoAbrirProcesso = { numero ->
+                    navController.navigate(ObiterRota.DetalheProcesso(numero)) {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 

@@ -17,10 +17,12 @@ fun CardPublicacaoResumo(
     publicacao: Publicacao,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    nomeCliente: String? = null,
     badgeOrdem: String? = null,
     badgeDuplicatas: String? = null,
     onBadgeDuplicatasClick: (() -> Unit)? = null,
     onVerDetalhes: (() -> Unit)? = null,
+    aoClicarCliente: (() -> Unit)? = null,
 ){
     val tituloAto = publicacao.tipoComunicacao ?: stringResource(R.string.publicacoes_sem_tipo)
     val tipoAto = stringResource(publicacao.tipoAto.rotuloRes)
@@ -43,6 +45,7 @@ fun CardPublicacaoResumo(
         data = data,
         tribunal = tribunal,
         juizo = juizo,
+        nomeCliente = nomeCliente,
         numeroProcesso = numeroProcesso,
         prazoDias = prazoDias,
         trechoTexto = trechoTexto,
@@ -55,5 +58,6 @@ fun CardPublicacaoResumo(
         badgeDuplicatas = badgeDuplicatas,
         onBadgeDuplicatasClick = onBadgeDuplicatasClick,
         confianca = publicacao.confiancaMatch,
+        aoClicarCliente = aoClicarCliente,
     )
 }

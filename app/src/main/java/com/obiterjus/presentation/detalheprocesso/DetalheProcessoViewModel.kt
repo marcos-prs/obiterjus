@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import com.obiterjus.presentation.participantes.resolverPartesProcesso
 import com.obiterjus.presentation.participantes.formatarConfronto
+import com.obiterjus.presentation.participantes.TiposParticipacao
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetalheProcessoViewModel(
@@ -101,6 +102,10 @@ class DetalheProcessoViewModel(
             partes = partesResolvidas.formatarConfronto(),
             poloAtivo = partesResolvidas.ativa?.nomes ?: emptyList(),
             poloPassivo = partesResolvidas.passiva?.nomes ?: emptyList(),
+            advogados = partesResolvidas.advogados,
+            clientes = partesResolvidas.clientes,
+            especieAtiva = TiposParticipacao.rotuloEspecie(partesResolvidas.ativa?.tipo),
+            especiePassiva = TiposParticipacao.rotuloEspecie(partesResolvidas.passiva?.tipo),
             abas = listOf(
                 AbaDetalhe.TIMELINE,
                 AbaDetalhe.PUBLICACOES,
@@ -194,6 +199,10 @@ data class EstadoDetalheProcesso(
     val partes: String? = null,
     val poloAtivo: List<String> = emptyList(),
     val poloPassivo: List<String> = emptyList(),
+    val advogados: List<String> = emptyList(),
+    val clientes: List<String> = emptyList(),
+    val especieAtiva: String? = null,
+    val especiePassiva: String? = null,
     val abas: List<AbaDetalhe> = emptyList(),
     val abaSelecionada: Int = 0,
     val timeline: List<TimelineProcessoItem> = emptyList(),

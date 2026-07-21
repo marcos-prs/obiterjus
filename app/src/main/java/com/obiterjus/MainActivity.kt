@@ -18,8 +18,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoViewModel
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
 import com.obiterjus.presentation.autenticacao.AutenticacaoViewModel
+import com.obiterjus.presentation.clientes.ClientesViewModel
+import com.obiterjus.presentation.detalhecliente.DetalheClienteViewModel
 import com.obiterjus.presentation.detalheprocesso.DetalheProcessoViewModel
 import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoViewModel
+import com.obiterjus.presentation.editarcliente.EditarClienteViewModel
 import com.obiterjus.presentation.editarprocesso.EditarProcessoViewModel
 import com.obiterjus.presentation.inicio.InicioViewModel
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
@@ -55,6 +58,9 @@ class MainActivity : ComponentActivity() {
                     val auditoriaViewModel: AuditoriaViewModel = koinViewModel()
                     val adicionarProcessoViewModel: AdicionarProcessoViewModel = koinViewModel()
                     val editarProcessoViewModel: EditarProcessoViewModel = koinViewModel()
+                    val clientesViewModel: ClientesViewModel = koinViewModel()
+                    val detalheClienteViewModel: DetalheClienteViewModel = koinViewModel()
+                    val editarClienteViewModel: EditarClienteViewModel = koinViewModel()
 
                     val estadoPublicacoes by publicacoesViewModel.estado.collectAsStateWithLifecycle()
                     val exportTextoPendente by monitoramentoViewModel.exportTextoPendente.collectAsStateWithLifecycle()
@@ -73,6 +79,9 @@ class MainActivity : ComponentActivity() {
                         auditoria = auditoriaViewModel,
                         adicionarProcesso = adicionarProcessoViewModel,
                         editarProcesso = editarProcessoViewModel,
+                        clientes = clientesViewModel,
+                        detalheCliente = detalheClienteViewModel,
+                        editarCliente = editarClienteViewModel,
                     )
 
                     val notificationPermissionLauncher = rememberLauncherForActivityResult(

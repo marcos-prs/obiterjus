@@ -1,9 +1,11 @@
 package com.obiterjus.data.agenda.remote
 
+import android.util.Log
 import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CalendarSyncRepository
 import java.time.format.DateTimeFormatter
+import retrofit2.Response
 
 class CalendarSyncRepositoryImpl(
     private val googleDataSource: GoogleCalendarDataSource,
@@ -31,10 +33,11 @@ class CalendarSyncRepositoryImpl(
                 val response = googleDataSource.createEvent(event)
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!.id)
-                } else if (response.code() == 401 || response.code() == 403) {
-                    googleCalendarTokenRepository.clearAccessToken()
-                    Result.failure(Exception("Erro Google: ${response.code()}"))
                 } else {
+                    logErro("createEvent Google", response)
+                    if (response.code() == 401 || response.code() == 403) {
+                        googleCalendarTokenRepository.clearAccessToken()
+                    }
                     Result.failure(Exception("Erro Google: ${response.code()}"))
                 }
             }
@@ -49,12 +52,14 @@ class CalendarSyncRepositoryImpl(
                 if (response.isSuccessful && response.body() != null) {
                     Result.success(response.body()!!.id)
                 } else {
+                    logErro("createEvent Outlook", response)
                     Result.failure(Exception("Erro Outlook: ${response.code()}"))
                 }
             }
             ProvedorCalendario.LOCAL -> Result.failure(Exception("Provedor local não envia para calendário"))
         }
     } catch (e: Exception) {
+        Log.w(TAG, "syncPrazo falhou (provedor=$provedor)", e)
         Result.failure(e)
     }
 
@@ -77,6 +82,17 @@ class CalendarSyncRepositoryImpl(
             ProvedorCalendario.LOCAL -> Result.failure(Exception("Provedor local não envia para calendário"))
         }
     } catch (e: Exception) {
+        Log.w(TAG, "cancelPrazo falhou (provedor=$provedor)", e)
         Result.failure(e)
+    }
+
+    private fun logErro(operacao: String, response: Response<*>) {
+        val corpo = response.errorBody()
+            ?.let { body -> runCatching { body.string().take(500) }.getOrNull() }
+        Log.w(TAG, "$operacao HTTP ${response.code()}" + (corpo?.let { " corpo=$it" } ?: ""))
+    }
+
+    private companion object {
+        const val TAG = "CalendarSync"
     }
 }

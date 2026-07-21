@@ -14,6 +14,7 @@ import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
+import com.obiterjus.domain.usecase.MarcarPrazoCumpridoUC
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
 import java.time.Clock
 import java.time.LocalDate
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 class PrazosViewModel internal constructor(
     observarAgendaPrazos: ObservarAgendaPrazos,
     private val confirmarPrazoUC: ConfirmarPrazoUC,
+    private val marcarPrazoCumpridoUC: MarcarPrazoCumpridoUC,
     private val clock: Clock,
     private val textos: TextosPrazos,
 ) : ViewModel() {
@@ -36,10 +38,12 @@ class PrazosViewModel internal constructor(
         context: Context,
         observarAgendaPrazos: ObservarAgendaPrazos,
         confirmarPrazoUC: ConfirmarPrazoUC,
+        marcarPrazoCumpridoUC: MarcarPrazoCumpridoUC,
         clock: Clock,
     ) : this(
         observarAgendaPrazos = observarAgendaPrazos,
         confirmarPrazoUC = confirmarPrazoUC,
+        marcarPrazoCumpridoUC = marcarPrazoCumpridoUC,
         clock = clock,
         textos = ContextTextosPrazos(context),
     )
@@ -68,7 +72,9 @@ class PrazosViewModel internal constructor(
                     diasRestantes = prazo.diasRestantes(hoje),
                 )
             }
-        val pendentes = filtrados
+        // Um prazo cumprido sai de todas as abas de trabalho e vive só na aba Cumpridos.
+        val ativos = filtrados.filter { !it.item.prazo.isCumprido }
+        val pendentes = ativos
             .filter { it.grupo != GrupoPrazo.EXPIRADOS && it.grupo != GrupoPrazo.SEM_DATA }
             .sortedBy { it.item.prazo.dataLimiteEstimada }
 
@@ -86,10 +92,13 @@ class PrazosViewModel internal constructor(
             urgente = pendentes.filter { it.grupo == GrupoPrazo.URGENTE },
             estaSemana = pendentes.filter { it.grupo == GrupoPrazo.ESTA_SEMANA },
             proximos = pendentes.filter { it.grupo == GrupoPrazo.PROXIMOS },
-            expirados = filtrados
+            expirados = ativos
                 .filter { it.grupo == GrupoPrazo.EXPIRADOS }
                 .sortedByDescending { it.item.prazo.dataLimiteEstimada },
-            semData = filtrados.filter { it.grupo == GrupoPrazo.SEM_DATA },
+            semData = ativos.filter { it.grupo == GrupoPrazo.SEM_DATA },
+            cumpridos = filtrados
+                .filter { it.item.prazo.isCumprido }
+                .sortedByDescending { it.item.prazo.dataLimiteEstimada },
         )
     }.stateIn(
         scope = viewModelScope,
@@ -151,6 +160,18 @@ class PrazosViewModel internal constructor(
         }
     }
 
+    fun aoDefinirCumprido(publicacaoId: Long, cumprido: Boolean) {
+        viewModelScope.launch {
+            val item = estado.value.itens.firstOrNull { it.item.publicacao.id == publicacaoId }
+                ?: return@launch
+            marcarPrazoCumpridoUC.invoke(
+                publicacaoId = publicacaoId,
+                prazo = item.item.prazo,
+                cumprido = cumprido,
+            )
+        }
+    }
+
     fun aoRepetirUltimaConfirmacao() {
         ultimaSolicitacaoConfirmacao.value?.let { solicitacao ->
             aoConfirmarPrazo(
@@ -200,15 +221,19 @@ class PrazosViewModel internal constructor(
     private fun PrazoAgendaItem.diasRestantes(hoje: LocalDate): Int? =
         prazo.dataLimiteEstimada?.let { ChronoUnit.DAYS.between(hoje, it).toInt() }
 
-    private fun List<PrazoUiItem>.itensDaAba(aba: AbaPrazos): List<PrazoUiItem> =
-        when (aba) {
-            AbaPrazos.TODOS -> filter { it.grupo != GrupoPrazo.EXPIRADOS }
-            AbaPrazos.VENCIDOS -> filter { it.grupo == GrupoPrazo.EXPIRADOS }
-            AbaPrazos.PROXIMOS -> filter {
+    private fun List<PrazoUiItem>.itensDaAba(aba: AbaPrazos): List<PrazoUiItem> {
+        if (aba == AbaPrazos.CUMPRIDOS) return filter { it.item.prazo.isCumprido }
+        val ativos = filter { !it.item.prazo.isCumprido }
+        return when (aba) {
+            AbaPrazos.TODOS -> ativos.filter { it.grupo != GrupoPrazo.EXPIRADOS }
+            AbaPrazos.VENCIDOS -> ativos.filter { it.grupo == GrupoPrazo.EXPIRADOS }
+            AbaPrazos.PROXIMOS -> ativos.filter {
                 it.grupo == GrupoPrazo.URGENTE || it.grupo == GrupoPrazo.ESTA_SEMANA || it.grupo == GrupoPrazo.PROXIMOS
             }
-            AbaPrazos.SEM_DATA -> filter { it.grupo == GrupoPrazo.SEM_DATA }
+            AbaPrazos.SEM_DATA -> ativos.filter { it.grupo == GrupoPrazo.SEM_DATA }
+            AbaPrazos.CUMPRIDOS -> emptyList()
         }
+    }
 
     private companion object {
         const val LIMITE_URGENTE_DIAS = 2L
@@ -232,6 +257,7 @@ data class EstadoPrazos(
     val proximos: List<PrazoUiItem> = emptyList(),
     val expirados: List<PrazoUiItem> = emptyList(),
     val semData: List<PrazoUiItem> = emptyList(),
+    val cumpridos: List<PrazoUiItem> = emptyList(),
 )
 
 data class FiltrosPrazos(
@@ -260,9 +286,10 @@ enum class GrupoPrazo {
 
 enum class AbaPrazos {
     TODOS,
-    VENCIDOS,
     PROXIMOS,
     SEM_DATA,
+    VENCIDOS,
+    CUMPRIDOS,
 }
 
 internal interface TextosPrazos {

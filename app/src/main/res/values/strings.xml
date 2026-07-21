@@ -97,6 +97,62 @@
     <string name="processos_empty_title">Nenhum processo encontrado</string>
     <string name="processos_empty_body">Busque publicações no monitoramento para enriquecer processos pelo DataJud.</string>
     <string name="processos_nao_informado">Não informado</string>
+
+    <string name="clientes_empty_title">Nenhum cliente cadastrado</string>
+    <string name="clientes_empty_body">Marque uma parte como cliente ao editar um processo para começar a montar sua carteira.</string>
+    <string name="clientes_busca_placeholder">Nome, CPF/CNPJ ou e-mail</string>
+    <string name="clientes_busca_vazia_title">Nenhum cliente para esta busca</string>
+    <string name="clientes_busca_vazia_body">Tente outro nome ou limpe o campo de busca.</string>
+    <string name="clientes_sem_documento">CPF/CNPJ não informado</string>
+    <string name="clientes_representado_por">Representado por %1$s</string>
+    <string name="clientes_tipo_fisica">Pessoa física</string>
+    <string name="clientes_tipo_juridica">Pessoa jurídica</string>
+    <plurals name="clientes_quantidade_processos">
+        <item quantity="one">%1$d processo</item>
+        <item quantity="other">%1$d processos</item>
+    </plurals>
+
+    <string name="cliente_nao_encontrado_title">Cliente não encontrado</string>
+    <string name="cliente_nao_encontrado_body">Este cliente pode ter sido excluído.</string>
+    <string name="cliente_secao_identificacao">Identificação</string>
+    <string name="cliente_secao_representante">Representante legal</string>
+    <string name="cliente_secao_contato">Contato</string>
+    <string name="cliente_secao_processos">Processos</string>
+    <string name="cliente_sem_processos">Nenhum processo vinculado a este cliente.</string>
+    <string name="cliente_campo_tipo">Tipo</string>
+    <string name="cliente_campo_nome">Nome</string>
+    <string name="cliente_campo_documento">CPF/CNPJ</string>
+    <string name="cliente_campo_nacionalidade">Nacionalidade</string>
+    <string name="cliente_campo_estado_civil">Estado civil</string>
+    <string name="cliente_campo_profissao">Profissão</string>
+    <string name="cliente_campo_cargo">Cargo</string>
+    <string name="cliente_campo_telefone">Telefone</string>
+    <string name="cliente_campo_email">E-mail</string>
+    <string name="cliente_campo_endereco">Endereço</string>
+
+    <string name="vincular_cliente_titulo">Marcar como cliente</string>
+    <string name="vincular_cliente_com_candidatos">Encontramos alguém parecido com %1$s na sua carteira. É a mesma pessoa?</string>
+    <string name="vincular_cliente_sem_candidatos">%1$s ainda não está na sua carteira de clientes.</string>
+    <string name="vincular_cliente_vincular">Vincular</string>
+    <string name="vincular_cliente_criar_novo">Criar novo cliente com estes dados</string>
+
+    <string name="cliente_secao_qualificacao">Qualificação para peças</string>
+    <string name="cliente_copiar_qualificacao">Copiar qualificação</string>
+    <string name="editar_cliente_titulo">Editar cliente</string>
+    <string name="adicionar_cliente_titulo">Novo cliente</string>
+    <string name="cd_adicionar_cliente">Adicionar cliente</string>
+    <string name="editar_cliente_salvar">Salvar cliente</string>
+    <string name="editar_cliente_salvo">Cliente salvo</string>
+    <string name="editar_cliente_erro_nome">Informe o nome do cliente.</string>
+    <string name="editar_cliente_label_razao_social">Razão social</string>
+    <string name="editar_cliente_representante_ajuda">A qualificação do representante entra por extenso na peça, então preencha-a como apareceria no preâmbulo.</string>
+    <string name="editar_cliente_secao_endereco">Endereço</string>
+    <string name="editar_cliente_label_complemento">Complemento</string>
+    <string name="editar_cliente_label_bairro">Bairro</string>
+    <string name="editar_cliente_label_municipio">Município</string>
+    <string name="editar_cliente_label_uf">UF</string>
+    <string name="editar_cliente_label_cep">CEP</string>
+    <string name="editar_cliente_label_observacoes">Observações</string>
     <string name="processos_atualizado_em">Atualizado em %1$s</string>
     <string name="processos_detalhe_title">Detalhe do processo</string>
     <string name="processos_detalhe_fechar">Fechar detalhe do processo</string>
@@ -316,6 +372,7 @@
     <string name="nav_processos">Processos</string>
     <string name="nav_perfil">Perfil</string>
     <string name="nav_auditoria">Auditoria</string>
+    <string name="nav_clientes">Clientes</string>
 
     <!-- Dashboard -->
     <string name="inicio_estatistica_processos">Processos</string>
@@ -366,6 +423,7 @@
     <string name="prazos_aba_proximos">Próximos</string>
     <string name="prazos_aba_futuros">Futuros</string>
     <string name="prazos_aba_sem_data">Sem data</string>
+    <string name="prazos_aba_cumpridos">Cumpridos</string>
     <string name="prazos_badge_hoje">vence hoje</string>
     <string name="prazos_badge_amanha">vence amanhã</string>
     <string name="prazos_badge_dias">%1$d dias</string>
@@ -390,6 +448,42 @@
     <string name="prazos_feedback_pendente">Não foi possível criar o evento no %1$s agora. O prazo ficou confirmado e a sincronização será tentada novamente.</string>
     <string name="prazos_confirmacao_erro">Não foi possível confirmar o prazo agora.</string>
     <string name="calendar_sync_event_title">Prazo confirmado - publicação %1$d</string>
+    <string name="prazos_secao_cumpridos">Cumpridos</string>
+    <string name="prazos_cumprir_checkbox">Prazo cumprido</string>
+    <string name="prazos_cumprido_label">Prazo cumprido</string>
+    <string name="prazos_cumprir_dialog_title">Marcar prazo como cumprido</string>
+    <string name="prazos_cumprir_dialog_mensagem">Confirma que este prazo foi cumprido? Ele sairá das abas de prazos e será movido para a aba Cumpridos.</string>
+    <string name="prazos_cumprir_acao">Confirmar cumprimento</string>
+    <string name="prazos_desmarcar_dialog_title">Desmarcar prazo cumprido</string>
+    <string name="prazos_desmarcar_dialog_mensagem">Confirma que este prazo ainda não foi cumprido? Ele voltará para as abas de prazos.</string>
+    <string name="prazos_desmarcar_acao">Desmarcar</string>
+
+    <!-- Cadastro manual de prazo -->
+    <string name="prazo_manual_cadastrar">Cadastrar prazo</string>
+    <string name="prazo_manual_editar">Editar prazo</string>
+    <string name="prazo_manual_vencimento_atual">Vencimento atual: %1$s</string>
+    <string name="prazo_manual_sheet_titulo">Cadastrar prazo manual</string>
+    <string name="prazo_manual_sheet_titulo_editar">Editar prazo</string>
+    <string name="prazo_manual_rotulo_dias">Prazo em dias</string>
+    <string name="prazo_manual_dias_uteis">Dias úteis</string>
+    <string name="prazo_manual_dias_corridos">Dias corridos</string>
+    <string name="prazo_manual_calcular">Calcular vencimento</string>
+    <string name="prazo_manual_calculando">Calculando…</string>
+    <string name="prazo_manual_resultado_pergunta">O vencimento é %1$s, confirma?</string>
+    <string name="prazo_manual_resultado_detalhe">%1$d %2$s, contados do 1º dia útil após a publicação (disponibilização: %3$s)</string>
+    <string name="prazo_manual_aviso_incerto">A data pode variar por feriados ou suspensões locais. Confira antes de confiar no vencimento.</string>
+    <string name="prazo_manual_erro_rede">Não foi possível calcular o prazo. Verifique sua conexão e tente novamente.</string>
+    <string name="prazo_manual_erro_tribunal">Tribunal da publicação não identificado — não é possível calcular o vencimento pela API.</string>
+    <string name="prazo_manual_erro_bloqueado">O cálculo foi bloqueado para esta combinação. Em processos penais, o prazo conta-se em dias corridos (CPP art. 798) — ajuste a seleção e tente novamente.</string>
+    <string name="prazo_manual_aviso_substituicao">Esta publicação já possui um prazo com vencimento em %1$s. Ao confirmar, ele será substituído.</string>
+    <string name="prazo_manual_aviso_substituicao_sem_data">Esta publicação já possui um prazo sugerido. Ao confirmar, ele será substituído.</string>
+    <string name="prazo_manual_aviso_evento_removido">O evento anterior será removido do calendário.</string>
+    <string name="prazo_manual_escolher_agenda">Onde salvar o prazo?</string>
+    <string name="prazo_manual_salvar">Salvar prazo</string>
+    <string name="prazo_manual_salvando">Salvando…</string>
+    <string name="prazo_manual_voltar">Voltar</string>
+    <string name="prazo_manual_confirmar">Confirmar</string>
+    <string name="prazo_manual_confirmado_badge">Confirmado</string>
 
     <!-- Detalhe do processo -->
     <string name="detalhe_aba_timeline">Timeline</string>
@@ -596,6 +690,14 @@
     <string name="opcao_polo_passivo">Passivo</string>
     <string name="opcao_polo_outro">Outro</string>
     <string name="participante_label_polo_personalizado">Polo personalizado</string>
+    <string name="participante_label_papel">Papel</string>
+    <string name="participante_label_papel_personalizado">Papel (especificar)</string>
+    <string name="participante_papel_outro">Outro (especificar)</string>
+    <string name="participante_grupo_advogado">Advogado</string>
+    <string name="participante_grupo_ativo">Polo ativo</string>
+    <string name="participante_grupo_passivo">Polo passivo</string>
+    <string name="participante_grupo_outros">Outros</string>
+    <string name="participante_eh_cliente">É meu cliente</string>
     <string name="cd_mover_participante_cima">Mover para cima</string>
     <string name="cd_mover_participante_baixo">Mover para baixo</string>
 
@@ -672,6 +774,8 @@
     <string name="editar_processo_label_nome_parte">Nome da parte</string>
     <string name="detalhe_info_polo_ativo">Polo Ativo</string>
     <string name="detalhe_info_polo_passivo">Polo Passivo</string>
+    <string name="detalhe_info_advogados">Advogados</string>
+    <string name="detalhe_chip_cliente">Cliente</string>
     <string name="cd_adicionar_participante">Adicionar participante</string>
     <string name="cd_remover_participante">Remover participante</string>
     <string name="confianca_alta">Confirmado</string>

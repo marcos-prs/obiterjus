@@ -9,6 +9,8 @@ import com.obiterjus.domain.model.PrazoAgendaItem
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
+import com.obiterjus.domain.model.ClienteDoProcesso
+import com.obiterjus.domain.usecase.ObservarClientesPorProcesso
 import com.obiterjus.domain.usecase.ObservarProcessos
 import com.obiterjus.domain.usecase.ObservarPublicacoes
 import java.time.Clock
@@ -36,6 +38,7 @@ data class EstadoInicio(
     val ultimaSincronizacaoTexto: String? = null,
     val publicacoesRecentes: List<Publicacao> = emptyList(),
     val metadadosOrdemPublicacoes: Map<Long, Pair<Int, Int>> = emptyMap(),
+    val clientesPorProcesso: Map<String, ClienteDoProcesso> = emptyMap(),
     val temPrazoUrgente: Boolean = false,
     val prazoUrgenteMensagem: String? = null,
 )
@@ -45,6 +48,7 @@ class InicioViewModel(
     observarProcessos: ObservarProcessos,
     observarPublicacoes: ObservarPublicacoes,
     observarAgendaPrazos: ObservarAgendaPrazos,
+    observarClientesPorProcesso: ObservarClientesPorProcesso,
     repositorioCadastroOab: CadastroOabRepository,
     private val clock: Clock,
 ) : ViewModel() {
@@ -56,12 +60,17 @@ class InicioViewModel(
             observarProcessos(),
             observarPublicacoes(),
             observarAgendaPrazos(),
-        ) { processos, publicacoes, prazos ->
-            DadosInicio(processos.size, publicacoes, prazos)
+            observarClientesPorProcesso(),
+        ) { processos, publicacoes, prazos, clientesPorProcesso ->
+            DadosInicio(processos.size, publicacoes, prazos, clientesPorProcesso)
         },
         tickerMinuto(),
     ) { cadastro, status, dados, agora ->
-        val prazosComVencimento = dados.prazos.filter { it.prazo.dataLimiteEstimada != null }
+        // Prazo cumprido sai das contagens: senão o badge da navbar fica preso
+        // num vencido que o usuário já baixou.
+        val prazosComVencimento = dados.prazos.filter {
+            it.prazo.dataLimiteEstimada != null && !it.prazo.isCumprido
+        }
         val prazosVencidos = prazosComVencimento.count { prazo ->
             ChronoUnit.DAYS.between(java.time.LocalDate.now(clock), prazo.prazo.dataLimiteEstimada) < 0
         }
@@ -95,6 +104,7 @@ class InicioViewModel(
                 )
                 .take(QUANTIDADE_PUBLICACOES_RECENTES),
             metadadosOrdemPublicacoes = NormalizadorPublicacoes.calcularMetadadosOrdem(publicacoesDeduplicadas),
+            clientesPorProcesso = dados.clientesPorProcesso,
             temPrazoUrgente = prazosUrgentes.isNotEmpty(),
             prazoUrgenteMensagem = primeiroPrazoUrgente?.mensagemUrgencia(java.time.LocalDate.now(clock)),
         )
@@ -147,4 +157,5 @@ private data class DadosInicio(
     val totalProcessos: Int,
     val publicacoes: List<Publicacao>,
     val prazos: List<PrazoAgendaItem>,
+    val clientesPorProcesso: Map<String, ClienteDoProcesso>,
 )

@@ -1,11 +1,15 @@
 package com.obiterjus.presentation.publicacoes
 
 import android.net.Uri
+import com.obiterjus.data.datajud.local.ParticipanteDao
+import com.obiterjus.data.datajud.local.ParticipanteEntity
 import com.obiterjus.domain.model.Publicacao
 import com.obiterjus.domain.model.PublicacaoParticipante
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CertidaoDjenRepository
 import com.obiterjus.domain.repository.PublicacoesRepository
+import com.obiterjus.domain.repository.FakeClientesRepository
+import com.obiterjus.domain.usecase.ObservarClientesPorProcesso
 import com.obiterjus.domain.usecase.ObservarPublicacoes
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
 import java.time.Instant
@@ -49,6 +53,7 @@ class PublicacoesViewModelTest {
         )
         val viewModel = PublicacoesViewModel(
             observarPublicacoes = ObservarPublicacoes(repositorio),
+            observarClientesPorProcesso = ObservarClientesPorProcesso(FakeParticipanteDao(), FakeClientesRepository()),
             obterCertidaoDjen = ObterCertidaoDjen(FakeCertidaoDjenRepository()),
         )
         advanceUntilIdle()
@@ -98,6 +103,7 @@ class PublicacoesViewModelTest {
         )
         val viewModel = PublicacoesViewModel(
             observarPublicacoes = ObservarPublicacoes(repositorio),
+            observarClientesPorProcesso = ObservarClientesPorProcesso(FakeParticipanteDao(), FakeClientesRepository()),
             obterCertidaoDjen = ObterCertidaoDjen(FakeCertidaoDjenRepository()),
         )
         advanceUntilIdle()
@@ -137,6 +143,7 @@ class PublicacoesViewModelTest {
         )
         val viewModel = PublicacoesViewModel(
             observarPublicacoes = ObservarPublicacoes(repositorio),
+            observarClientesPorProcesso = ObservarClientesPorProcesso(FakeParticipanteDao(), FakeClientesRepository()),
             obterCertidaoDjen = ObterCertidaoDjen(FakeCertidaoDjenRepository()),
         )
         advanceUntilIdle()
@@ -159,6 +166,7 @@ class PublicacoesViewModelTest {
         )
         val viewModel = PublicacoesViewModel(
             observarPublicacoes = ObservarPublicacoes(repositorio),
+            observarClientesPorProcesso = ObservarClientesPorProcesso(FakeParticipanteDao(), FakeClientesRepository()),
             obterCertidaoDjen = ObterCertidaoDjen(FakeCertidaoDjenRepository()),
         )
         advanceUntilIdle()
@@ -183,6 +191,7 @@ class PublicacoesViewModelTest {
         )
         val viewModel = PublicacoesViewModel(
             observarPublicacoes = ObservarPublicacoes(repositorio),
+            observarClientesPorProcesso = ObservarClientesPorProcesso(FakeParticipanteDao(), FakeClientesRepository()),
             obterCertidaoDjen = ObterCertidaoDjen(FakeCertidaoDjenRepository()),
         )
         advanceUntilIdle()
@@ -230,6 +239,23 @@ class PublicacoesViewModelTest {
             nome = nome,
             documento = documento,
         )
+
+    private class FakeParticipanteDao : ParticipanteDao {
+        private val participantes = MutableStateFlow(emptyList<ParticipanteEntity>())
+
+        override suspend fun upsertAll(participantes: List<ParticipanteEntity>) {
+            this.participantes.value = participantes
+        }
+        override fun observeByNumeroProcesso(numeroProcesso: String): Flow<List<ParticipanteEntity>> =
+            participantes.map { itens -> itens.filter { it.numeroProcesso == numeroProcesso } }
+        override suspend fun getByNumeroProcesso(numeroProcesso: String): List<ParticipanteEntity> =
+            participantes.value.filter { it.numeroProcesso == numeroProcesso }
+        override fun observeAll(): Flow<List<ParticipanteEntity>> = participantes
+        override suspend fun getAll(): List<ParticipanteEntity> = participantes.value
+        override suspend fun deleteByNumeroProcesso(numeroProcesso: String) {
+            participantes.value = participantes.value.filterNot { it.numeroProcesso == numeroProcesso }
+        }
+    }
 
     private class FakeCertidaoDjenRepository : CertidaoDjenRepository {
         override suspend fun obterCertidao(hash: String): Uri =

@@ -126,9 +126,11 @@ fun ProcessosScreen(
                                 modifier = Modifier.padding(horizontal = dimens.screenMargin),
                             )
                             comarca.processos.forEach { processo ->
+                                val partesResolvidas = processo.participantes.resolverPartesProcesso()
                                 CardProcesso(
                                     numeroProcesso = processo.numeroProcesso,
-                                    partes = processo.participantes.resolverPartesProcesso().formatarConfronto(),
+                                    partes = partesResolvidas.formatarConfronto(),
+                                    cliente = partesResolvidas.clientes.joinToString(" · ").ifBlank { null },
                                     badges = processo.badges(),
                                     temPrazoAtivo = processo.syncStatus == ProcessoSyncStatus.PENDING,
                                     ultimaMovimentacao = processo.atualizadoEm.let(FormatadorData::formatarDataHora),

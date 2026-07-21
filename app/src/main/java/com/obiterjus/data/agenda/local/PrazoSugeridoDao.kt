@@ -18,6 +18,9 @@ interface PrazoSugeridoDao {
     @Query("SELECT * FROM prazos_sugeridos WHERE publicacaoId = :publicacaoId")
     suspend fun getByPublicacaoId(publicacaoId: Long): PrazoSugeridoEntity?
 
+    @Query("SELECT * FROM prazos_sugeridos WHERE publicacaoId = :publicacaoId")
+    fun observeByPublicacaoId(publicacaoId: Long): Flow<PrazoSugeridoEntity?>
+
     @Query(
         """
         SELECT * FROM prazos_sugeridos

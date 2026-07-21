@@ -282,16 +282,26 @@ private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
+        val clientes = estado.clientes.toSet()
         if (estado.poloAtivo.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.detalhe_info_polo_ativo) + ": " + estado.poloAtivo.joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.textMuted,
+            LinhaPolo(
+                label = stringResource(R.string.detalhe_info_polo_ativo),
+                especie = estado.especieAtiva,
+                nomes = estado.poloAtivo,
+                clientes = clientes,
             )
         }
         if (estado.poloPassivo.isNotEmpty()) {
+            LinhaPolo(
+                label = stringResource(R.string.detalhe_info_polo_passivo),
+                especie = estado.especiePassiva,
+                nomes = estado.poloPassivo,
+                clientes = clientes,
+            )
+        }
+        if (estado.advogados.isNotEmpty()) {
             Text(
-                text = stringResource(R.string.detalhe_info_polo_passivo) + ": " + estado.poloPassivo.joinToString(" · "),
+                text = stringResource(R.string.detalhe_info_advogados) + ": " + estado.advogados.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textMuted,
             )
@@ -381,6 +391,52 @@ private fun HeaderDetalhe(estado: EstadoDetalheProcesso) {
                 LinhaDetalhe(stringResource(R.string.editar_processo_label_tutela), info?.tutelaAntecipadaLiminar)
 
                 Spacer(Modifier.height(dimens.space1))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinhaPolo(
+    label: String,
+    especie: String?,
+    nomes: List<String>,
+    clientes: Set<String>,
+) {
+    val colors = ObiterTheme.colors
+    val dimens = ObiterTheme.dimens
+    val cabecalho = if (especie != null) "$label ($especie):" else "$label:"
+    Column {
+        Text(
+            text = cabecalho,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.textMuted,
+        )
+        val temCliente = nomes.any { it in clientes }
+        nomes.forEach { nome ->
+            val ehCliente = nome in clientes
+            Row(
+                modifier = Modifier.padding(start = dimens.space1),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(dimens.space1),
+            ) {
+                if (temCliente) {
+                    if (ehCliente) {
+                        Icon(
+                            imageVector = ObiterIcones.Cliente,
+                            contentDescription = stringResource(R.string.detalhe_chip_cliente),
+                            tint = colors.accent,
+                            modifier = Modifier.size(dimens.iconStarSize),
+                        )
+                    } else {
+                        Spacer(Modifier.size(dimens.iconStarSize))
+                    }
+                }
+                Text(
+                    text = nome,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textMuted,
+                )
             }
         }
     }

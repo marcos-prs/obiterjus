@@ -1,10 +1,14 @@
 package com.obiterjus.core.time
 
+import android.util.Log
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.PedidoCalculoPrazo
+import com.obiterjus.data.time.RespostaPrazo
 import com.obiterjus.domain.model.NaturezaProcesso
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
+import retrofit2.HttpException
 
 /**
  * Adapter da API CalendárioForense — única fonte de cálculo de prazos.
@@ -41,22 +45,21 @@ class CalculadoraPrazos(
         }
         val apiQuantidade = if (emMeses) quantidade * 30 else quantidade
 
-        val resposta = try {
-            calendarioForense.calcularPrazo(
-                PedidoCalculoPrazo(
-                    tribunal = tribunalNorm,
-                    dataDisponibilizacao = dataBase.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                    prazo = apiQuantidade,
-                    unidade = apiUnidade,
-                    natureza = when (natureza) {
-                        NaturezaProcesso.PENAL -> "penal"
-                        NaturezaProcesso.CIVEL, null -> "civel"
-                    },
-                ),
-            )
-        } catch (e: Exception) {
-            // timeout, HTTP 4xx/5xx, rede → Pendente (recalcula no próximo sync)
-            return ResultadoCalculoPrazo.Pendente
+        val resposta = chamarComRetry(
+            PedidoCalculoPrazo(
+                tribunal = tribunalNorm,
+                dataDisponibilizacao = dataBase.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                prazo = apiQuantidade,
+                unidade = apiUnidade,
+                natureza = when (natureza) {
+                    NaturezaProcesso.PENAL -> "penal"
+                    NaturezaProcesso.CIVEL, null -> "civel"
+                },
+            ),
+        ) ?: return ResultadoCalculoPrazo.Pendente
+
+        if (resposta.estado != "CONFIAVEL" && !resposta.estado.startsWith("BLOQUEADO_")) {
+            Log.w(TAG, "calcular-prazo estado inesperado: ${resposta.estado} (tribunal=$tribunalNorm)")
         }
 
         return when {
@@ -113,6 +116,46 @@ class CalculadoraPrazos(
             diasUteis = resposta.unidade != "dias_corridos",
             dataVencimento = data,
         )
+    }
+
+    /**
+     * A API roda em instância free do Render e responde 500 esporádicos;
+     * uma repetição curta resolve a maioria. Timeout/rede também repete.
+     * Null quando ambas as tentativas falham.
+     */
+    private suspend fun chamarComRetry(pedido: PedidoCalculoPrazo): RespostaPrazo? {
+        repeat(TENTATIVAS - 1) { tentativa ->
+            try {
+                return calendarioForense.calcularPrazo(pedido)
+            } catch (e: Exception) {
+                logFalha(pedido.tribunal, tentativa + 1, e)
+                delay(RETRY_DELAY_MS)
+            }
+        }
+        return try {
+            calendarioForense.calcularPrazo(pedido)
+        } catch (e: Exception) {
+            logFalha(pedido.tribunal, TENTATIVAS, e)
+            null
+        }
+    }
+
+    private fun logFalha(tribunal: String, tentativa: Int, e: Exception) {
+        val corpoErro = (e as? HttpException)
+            ?.response()?.errorBody()
+            ?.let { runCatching { it.string().take(500) }.getOrNull() }
+        Log.w(
+            TAG,
+            "calcular-prazo falhou (tribunal=$tribunal, tentativa=$tentativa/$TENTATIVAS)" +
+                (corpoErro?.let { " corpo=$it" } ?: ""),
+            e,
+        )
+    }
+
+    private companion object {
+        const val TAG = "CalculadoraPrazos"
+        const val TENTATIVAS = 2
+        const val RETRY_DELAY_MS = 750L
     }
 }
 

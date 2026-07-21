@@ -1,0 +1,1035 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 15,
+    "identityHash": "e77ccec92bd3eb1b611902aa301255d4",
+    "entities": [
+      {
+        "tableName": "publicacoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `hash` TEXT, `numeroProcesso` TEXT, `participantesJson` TEXT, `prazoQuantidade` INTEGER, `prazoUnidade` TEXT, `prazoDiasUteis` INTEGER NOT NULL, `prazoTexto` TEXT, `prazoDataLimite` TEXT, `prazoConfianca` TEXT, `dataDisponibilizacao` TEXT, `tribunal` TEXT, `tipoComunicacao` TEXT, `nomeOrgao` TEXT, `idOrgao` INTEGER, `textoRaw` TEXT, `textoLimpo` TEXT, `textoPossuiHtml` INTEGER NOT NULL, `textoPossuiErroTemplate` INTEGER NOT NULL, `isSigiloso` INTEGER NOT NULL, `ativo` INTEGER NOT NULL, `fonte` TEXT NOT NULL, `capturadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, `confiancaMatch` TEXT NOT NULL, `duplicataDe` INTEGER, `totalDuplicatas` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hash",
+            "columnName": "hash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "numeroProcesso",
+            "columnName": "numeroProcesso",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "participantesJson",
+            "columnName": "participantesJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prazoQuantidade",
+            "columnName": "prazoQuantidade",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "prazoUnidade",
+            "columnName": "prazoUnidade",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prazoDiasUteis",
+            "columnName": "prazoDiasUteis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prazoTexto",
+            "columnName": "prazoTexto",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prazoDataLimite",
+            "columnName": "prazoDataLimite",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prazoConfianca",
+            "columnName": "prazoConfianca",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dataDisponibilizacao",
+            "columnName": "dataDisponibilizacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tribunal",
+            "columnName": "tribunal",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tipoComunicacao",
+            "columnName": "tipoComunicacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nomeOrgao",
+            "columnName": "nomeOrgao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "idOrgao",
+            "columnName": "idOrgao",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "textoRaw",
+            "columnName": "textoRaw",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "textoLimpo",
+            "columnName": "textoLimpo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "textoPossuiHtml",
+            "columnName": "textoPossuiHtml",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "textoPossuiErroTemplate",
+            "columnName": "textoPossuiErroTemplate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSigiloso",
+            "columnName": "isSigiloso",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ativo",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fonte",
+            "columnName": "fonte",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturadoEm",
+            "columnName": "capturadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confiancaMatch",
+            "columnName": "confiancaMatch",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "duplicataDe",
+            "columnName": "duplicataDe",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "totalDuplicatas",
+            "columnName": "totalDuplicatas",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_publicacoes_hash",
+            "unique": true,
+            "columnNames": [
+              "hash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_publicacoes_hash` ON `${TABLE_NAME}` (`hash`)"
+          },
+          {
+            "name": "index_publicacoes_numeroProcesso",
+            "unique": false,
+            "columnNames": [
+              "numeroProcesso"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_numeroProcesso` ON `${TABLE_NAME}` (`numeroProcesso`)"
+          },
+          {
+            "name": "index_publicacoes_dataDisponibilizacao",
+            "unique": false,
+            "columnNames": [
+              "dataDisponibilizacao"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_dataDisponibilizacao` ON `${TABLE_NAME}` (`dataDisponibilizacao`)"
+          },
+          {
+            "name": "index_publicacoes_tribunal",
+            "unique": false,
+            "columnNames": [
+              "tribunal"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_tribunal` ON `${TABLE_NAME}` (`tribunal`)"
+          },
+          {
+            "name": "index_publicacoes_tipoComunicacao",
+            "unique": false,
+            "columnNames": [
+              "tipoComunicacao"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_tipoComunicacao` ON `${TABLE_NAME}` (`tipoComunicacao`)"
+          },
+          {
+            "name": "index_publicacoes_isSigiloso",
+            "unique": false,
+            "columnNames": [
+              "isSigiloso"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_isSigiloso` ON `${TABLE_NAME}` (`isSigiloso`)"
+          },
+          {
+            "name": "index_publicacoes_confiancaMatch",
+            "unique": false,
+            "columnNames": [
+              "confiancaMatch"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_confiancaMatch` ON `${TABLE_NAME}` (`confiancaMatch`)"
+          },
+          {
+            "name": "index_publicacoes_duplicataDe",
+            "unique": false,
+            "columnNames": [
+              "duplicataDe"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_publicacoes_duplicataDe` ON `${TABLE_NAME}` (`duplicataDe`)"
+          }
+        ]
+      },
+      {
+        "tableName": "processos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`numeroProcesso` TEXT NOT NULL, `tribunal` TEXT, `grau` TEXT, `classeCodigo` INTEGER, `classeNome` TEXT, `assuntosJson` TEXT, `orgaoJulgadorCodigo` INTEGER, `orgaoJulgadorNome` TEXT, `nivelSigilo` INTEGER, `dataAjuizamento` INTEGER, `syncStatus` TEXT NOT NULL, `capturadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, `dataJudTentativasRestantes` INTEGER NOT NULL, `dataDistribuicao` INTEGER, `comarcaSecao` TEXT, `juizo` TEXT, `prioridadeTramitacao` TEXT, `gratuidadeJustica` TEXT, `valorCausa` REAL, `faseProcessual` TEXT, `situacaoAtual` TEXT, `tutelaAntecipadaLiminar` TEXT, `advogadosAtivo` TEXT, `advogadosPassivo` TEXT, `defensoriaPublica` TEXT, `ministerioPublico` TEXT, `terceirosAuxiliares` TEXT, `natureza` TEXT, PRIMARY KEY(`numeroProcesso`))",
+        "fields": [
+          {
+            "fieldPath": "numeroProcesso",
+            "columnName": "numeroProcesso",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tribunal",
+            "columnName": "tribunal",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "grau",
+            "columnName": "grau",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "classeCodigo",
+            "columnName": "classeCodigo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "classeNome",
+            "columnName": "classeNome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assuntosJson",
+            "columnName": "assuntosJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "orgaoJulgadorCodigo",
+            "columnName": "orgaoJulgadorCodigo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "orgaoJulgadorNome",
+            "columnName": "orgaoJulgadorNome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nivelSigilo",
+            "columnName": "nivelSigilo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dataAjuizamento",
+            "columnName": "dataAjuizamento",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "syncStatus",
+            "columnName": "syncStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturadoEm",
+            "columnName": "capturadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataJudTentativasRestantes",
+            "columnName": "dataJudTentativasRestantes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataDistribuicao",
+            "columnName": "dataDistribuicao",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "comarcaSecao",
+            "columnName": "comarcaSecao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "juizo",
+            "columnName": "juizo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prioridadeTramitacao",
+            "columnName": "prioridadeTramitacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "gratuidadeJustica",
+            "columnName": "gratuidadeJustica",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "valorCausa",
+            "columnName": "valorCausa",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "faseProcessual",
+            "columnName": "faseProcessual",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "situacaoAtual",
+            "columnName": "situacaoAtual",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tutelaAntecipadaLiminar",
+            "columnName": "tutelaAntecipadaLiminar",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "advogadosAtivo",
+            "columnName": "advogadosAtivo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "advogadosPassivo",
+            "columnName": "advogadosPassivo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "defensoriaPublica",
+            "columnName": "defensoriaPublica",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "ministerioPublico",
+            "columnName": "ministerioPublico",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "terceirosAuxiliares",
+            "columnName": "terceirosAuxiliares",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "natureza",
+            "columnName": "natureza",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "numeroProcesso"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_processos_tribunal",
+            "unique": false,
+            "columnNames": [
+              "tribunal"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_processos_tribunal` ON `${TABLE_NAME}` (`tribunal`)"
+          },
+          {
+            "name": "index_processos_syncStatus",
+            "unique": false,
+            "columnNames": [
+              "syncStatus"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_processos_syncStatus` ON `${TABLE_NAME}` (`syncStatus`)"
+          },
+          {
+            "name": "index_processos_atualizadoEm",
+            "unique": false,
+            "columnNames": [
+              "atualizadoEm"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_processos_atualizadoEm` ON `${TABLE_NAME}` (`atualizadoEm`)"
+          }
+        ]
+      },
+      {
+        "tableName": "movimentos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idLocal` TEXT NOT NULL, `numeroProcesso` TEXT NOT NULL, `codigo` INTEGER, `nome` TEXT, `dataHora` INTEGER, `complementosJson` TEXT, PRIMARY KEY(`idLocal`), FOREIGN KEY(`numeroProcesso`) REFERENCES `processos`(`numeroProcesso`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "idLocal",
+            "columnName": "idLocal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numeroProcesso",
+            "columnName": "numeroProcesso",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codigo",
+            "columnName": "codigo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dataHora",
+            "columnName": "dataHora",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "complementosJson",
+            "columnName": "complementosJson",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "idLocal"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_movimentos_numeroProcesso",
+            "unique": false,
+            "columnNames": [
+              "numeroProcesso"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_movimentos_numeroProcesso` ON `${TABLE_NAME}` (`numeroProcesso`)"
+          },
+          {
+            "name": "index_movimentos_dataHora",
+            "unique": false,
+            "columnNames": [
+              "dataHora"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_movimentos_dataHora` ON `${TABLE_NAME}` (`dataHora`)"
+          },
+          {
+            "name": "index_movimentos_numeroProcesso_dataHora",
+            "unique": false,
+            "columnNames": [
+              "numeroProcesso",
+              "dataHora"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_movimentos_numeroProcesso_dataHora` ON `${TABLE_NAME}` (`numeroProcesso`, `dataHora`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "processos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "numeroProcesso"
+            ],
+            "referencedColumns": [
+              "numeroProcesso"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "participantes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idLocal` TEXT NOT NULL, `numeroProcesso` TEXT NOT NULL, `polo` TEXT, `nome` TEXT, `tipoPessoa` TEXT, `tipoParticipacao` TEXT, `ehCliente` INTEGER NOT NULL, `cpfCnpj` TEXT, `estadoCivil` TEXT, `profissao` TEXT, `endereco` TEXT, `contatos` TEXT, `cep` TEXT, `logradouro` TEXT, `numeroEndereco` TEXT, `telefone` TEXT, `email` TEXT, PRIMARY KEY(`idLocal`))",
+        "fields": [
+          {
+            "fieldPath": "idLocal",
+            "columnName": "idLocal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numeroProcesso",
+            "columnName": "numeroProcesso",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "polo",
+            "columnName": "polo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tipoPessoa",
+            "columnName": "tipoPessoa",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tipoParticipacao",
+            "columnName": "tipoParticipacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "ehCliente",
+            "columnName": "ehCliente",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cpfCnpj",
+            "columnName": "cpfCnpj",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "estadoCivil",
+            "columnName": "estadoCivil",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "profissao",
+            "columnName": "profissao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "endereco",
+            "columnName": "endereco",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contatos",
+            "columnName": "contatos",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cep",
+            "columnName": "cep",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "logradouro",
+            "columnName": "logradouro",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "numeroEndereco",
+            "columnName": "numeroEndereco",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "telefone",
+            "columnName": "telefone",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "idLocal"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_participantes_numeroProcesso",
+            "unique": false,
+            "columnNames": [
+              "numeroProcesso"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_participantes_numeroProcesso` ON `${TABLE_NAME}` (`numeroProcesso`)"
+          }
+        ]
+      },
+      {
+        "tableName": "sync_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `executadoEm` INTEGER NOT NULL, `duracaoMs` INTEGER, `fonte` TEXT NOT NULL, `novasPublicacoes` INTEGER NOT NULL, `processosSincronizados` INTEGER NOT NULL, `sucesso` INTEGER NOT NULL, `mensagemErro` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "executadoEm",
+            "columnName": "executadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "duracaoMs",
+            "columnName": "duracaoMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "fonte",
+            "columnName": "fonte",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "novasPublicacoes",
+            "columnName": "novasPublicacoes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "processosSincronizados",
+            "columnName": "processosSincronizados",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sucesso",
+            "columnName": "sucesso",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mensagemErro",
+            "columnName": "mensagemErro",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "prazos_sugeridos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `publicacaoId` INTEGER NOT NULL, `quantidade` INTEGER NOT NULL, `unidade` TEXT NOT NULL, `diasUteis` INTEGER NOT NULL, `textoOriginal` TEXT NOT NULL, `dataLimite` TEXT, `isConfirmado` INTEGER NOT NULL, `idExternoCalendario` TEXT, `provedorCalendario` TEXT, `isCumprido` INTEGER NOT NULL, FOREIGN KEY(`publicacaoId`) REFERENCES `publicacoes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publicacaoId",
+            "columnName": "publicacaoId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantidade",
+            "columnName": "quantidade",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unidade",
+            "columnName": "unidade",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diasUteis",
+            "columnName": "diasUteis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "textoOriginal",
+            "columnName": "textoOriginal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataLimite",
+            "columnName": "dataLimite",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isConfirmado",
+            "columnName": "isConfirmado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idExternoCalendario",
+            "columnName": "idExternoCalendario",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "provedorCalendario",
+            "columnName": "provedorCalendario",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isCumprido",
+            "columnName": "isCumprido",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_prazos_sugeridos_publicacaoId",
+            "unique": true,
+            "columnNames": [
+              "publicacaoId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_prazos_sugeridos_publicacaoId` ON `${TABLE_NAME}` (`publicacaoId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "publicacoes",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "publicacaoId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "clientes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `tipoPessoa` TEXT NOT NULL, `nome` TEXT NOT NULL, `nomeNormalizado` TEXT NOT NULL, `documento` TEXT, `documentoNormalizado` TEXT, `nacionalidade` TEXT, `estadoCivil` TEXT, `profissao` TEXT, `cep` TEXT, `logradouro` TEXT, `numeroEndereco` TEXT, `complemento` TEXT, `bairro` TEXT, `municipio` TEXT, `uf` TEXT, `telefone` TEXT, `email` TEXT, `observacoes` TEXT, `criadoEm` INTEGER NOT NULL, `atualizadoEm` INTEGER NOT NULL, `rep_nome` TEXT, `rep_documento` TEXT, `rep_nacionalidade` TEXT, `rep_estadoCivil` TEXT, `rep_profissao` TEXT, `rep_cargo` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipoPessoa",
+            "columnName": "tipoPessoa",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nomeNormalizado",
+            "columnName": "nomeNormalizado",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "documento",
+            "columnName": "documento",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "documentoNormalizado",
+            "columnName": "documentoNormalizado",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nacionalidade",
+            "columnName": "nacionalidade",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "estadoCivil",
+            "columnName": "estadoCivil",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "profissao",
+            "columnName": "profissao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cep",
+            "columnName": "cep",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "logradouro",
+            "columnName": "logradouro",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "numeroEndereco",
+            "columnName": "numeroEndereco",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "complemento",
+            "columnName": "complemento",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bairro",
+            "columnName": "bairro",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "municipio",
+            "columnName": "municipio",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "uf",
+            "columnName": "uf",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "telefone",
+            "columnName": "telefone",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "observacoes",
+            "columnName": "observacoes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "representante.nome",
+            "columnName": "rep_nome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "representante.documento",
+            "columnName": "rep_documento",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "representante.nacionalidade",
+            "columnName": "rep_nacionalidade",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "representante.estadoCivil",
+            "columnName": "rep_estadoCivil",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "representante.profissao",
+            "columnName": "rep_profissao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "representante.cargo",
+            "columnName": "rep_cargo",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_clientes_documentoNormalizado",
+            "unique": true,
+            "columnNames": [
+              "documentoNormalizado"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_clientes_documentoNormalizado` ON `${TABLE_NAME}` (`documentoNormalizado`)"
+          },
+          {
+            "name": "index_clientes_nomeNormalizado",
+            "unique": false,
+            "columnNames": [
+              "nomeNormalizado"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_clientes_nomeNormalizado` ON `${TABLE_NAME}` (`nomeNormalizado`)"
+          }
+        ]
+      },
+      {
+        "tableName": "clientes_processos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`clienteId` TEXT NOT NULL, `numeroProcesso` TEXT NOT NULL, `participanteIdLocal` TEXT, `vinculadoEm` INTEGER NOT NULL, PRIMARY KEY(`clienteId`, `numeroProcesso`), FOREIGN KEY(`clienteId`) REFERENCES `clientes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`numeroProcesso`) REFERENCES `processos`(`numeroProcesso`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "clienteId",
+            "columnName": "clienteId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numeroProcesso",
+            "columnName": "numeroProcesso",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "participanteIdLocal",
+            "columnName": "participanteIdLocal",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "vinculadoEm",
+            "columnName": "vinculadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "clienteId",
+            "numeroProcesso"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_clientes_processos_numeroProcesso",
+            "unique": false,
+            "columnNames": [
+              "numeroProcesso"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_clientes_processos_numeroProcesso` ON `${TABLE_NAME}` (`numeroProcesso`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "clientes",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "clienteId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "processos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "numeroProcesso"
+            ],
+            "referencedColumns": [
+              "numeroProcesso"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e77ccec92bd3eb1b611902aa301255d4')"
+    ]
+  }
+}

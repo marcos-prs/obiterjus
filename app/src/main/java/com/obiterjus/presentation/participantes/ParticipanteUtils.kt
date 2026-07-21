@@ -2,7 +2,6 @@ package com.obiterjus.presentation.participantes
 
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.domain.model.PublicacaoParticipante
-import java.util.Locale
 
 /**
  * Models for structured party representation.
@@ -16,6 +15,7 @@ data class PartesResolvidas(
     val ativa: ParteAgrupada? = null,
     val passiva: ParteAgrupada? = null,
     val advogados: List<String> = emptyList(),
+    val clientes: List<String> = emptyList(),
 )
 
 /**
@@ -36,63 +36,59 @@ fun PartesResolvidas.formatarConfronto(): String? {
 /**
  * Resolve as partes de um processo monitorado (DataJud).
  */
-fun List<ParticipanteProcesso>.resolverPartesProcesso(): PartesResolvidas {
-    val ativa = extrairParteAtivaProcesso()
-    val passiva = extrairPartePassivaProcesso()
-    
-    return PartesResolvidas(
-        ativa = ativa,
-        passiva = passiva
+fun List<ParticipanteProcesso>.resolverPartesProcesso(): PartesResolvidas =
+    PartesResolvidas(
+        ativa = filter { it.ehParteAtiva() }.toParteAgrupadaProcesso(),
+        passiva = filter { it.ehPartePassiva() }.toParteAgrupadaProcesso(),
+        advogados = filter { it.ehAdvogado() }
+            .mapNotNull { it.nome.exibicaoOuNull() }
+            .distinct(),
+        clientes = filter { it.ehCliente && !it.ehAdvogado() }
+            .mapNotNull { it.nome.exibicaoOuNull() }
+            .distinct(),
     )
-}
 
 /**
  * Resolve as partes de uma publicação.
  */
-fun List<PublicacaoParticipante>.resolverPartesPublicacao(): PartesResolvidas {
-    val ativa = extrairParteAtivaPublicacao()
-    val passiva = extrairPartePassivaPublicacao()
-    val advogados = extrairAdvogados()
-
-    return PartesResolvidas(
-        ativa = ativa,
-        passiva = passiva,
-        advogados = advogados
+fun List<PublicacaoParticipante>.resolverPartesPublicacao(): PartesResolvidas =
+    PartesResolvidas(
+        ativa = filter { it.ehParteAtiva() }.toParteAgrupadaPublicacao(),
+        passiva = filter { it.ehPartePassiva() }.toParteAgrupadaPublicacao(),
+        advogados = filter { it.ehAdvogado() }
+            .mapNotNull { it.nome.exibicaoOuNull() }
+            .distinct(),
     )
+
+// --- Classificação (catálogo em [TiposParticipacao]) ---
+
+/**
+ * Grupo de um participante de processo. O advogado tem prioridade sobre o polo
+ * cru — um advogado capturado com polo "ATIVO" continua sendo advogado, não
+ * parte. Em seguida o papel (tipoParticipacao) vence o polo bruto.
+ */
+private fun ParticipanteProcesso.grupoResolvido(): GrupoPolo? {
+    if (ehAdvogado()) return GrupoPolo.ADVOGADO
+    return TiposParticipacao.grupoDeTipoOuPolo(tipoParticipacao)
+        ?: TiposParticipacao.grupoDeTipoOuPolo(polo)
 }
 
-// --- Lógica Interna (Migrada de DetalhePublicacaoViewModel.kt) ---
+fun ParticipanteProcesso.ehParteAtiva(): Boolean = grupoResolvido() == GrupoPolo.ATIVO
 
-const val VALOR_POLO_ATIVO = "ATIVO"
-const val VALOR_POLO_PASSIVO = "PASSIVO"
+fun ParticipanteProcesso.ehPartePassiva(): Boolean = grupoResolvido() == GrupoPolo.PASSIVO
 
+fun ParticipanteProcesso.ehAdvogado(): Boolean = TiposParticipacao.ehAdvogadoTipo(tipoParticipacao)
 
-private fun List<ParticipanteProcesso>.extrairParteAtivaProcesso(): ParteAgrupada? {
-    val selecionados = filter { it.ehParteAtiva() }
-    return selecionados.toParteAgrupadaProcesso()
-}
+private fun PublicacaoParticipante.ehParteAtiva(): Boolean =
+    !ehAdvogado() && TiposParticipacao.grupoDeTipoOuPolo(tipo) == GrupoPolo.ATIVO
 
-private fun List<ParticipanteProcesso>.extrairPartePassivaProcesso(): ParteAgrupada? {
-    val selecionados = filter { it.ehPartePassiva() }
-    return selecionados.toParteAgrupadaProcesso()
-}
+private fun PublicacaoParticipante.ehPartePassiva(): Boolean =
+    !ehAdvogado() && TiposParticipacao.grupoDeTipoOuPolo(tipo) == GrupoPolo.PASSIVO
 
-private fun List<PublicacaoParticipante>.extrairParteAtivaPublicacao(): ParteAgrupada? {
-    val selecionados = filter { it.ehParteAtiva() }
-    return selecionados.toParteAgrupadaPublicacao()
-}
+private fun PublicacaoParticipante.ehAdvogado(): Boolean =
+    TiposParticipacao.ehAdvogadoTipo(tipo)
 
-private fun List<PublicacaoParticipante>.extrairPartePassivaPublicacao(): ParteAgrupada? {
-    val selecionados = filter { it.ehPartePassiva() }
-    return selecionados.toParteAgrupadaPublicacao()
-}
-
-private fun List<PublicacaoParticipante>.extrairAdvogados(): List<String> =
-    asSequence()
-        .filter { it.ehAdvogado() }
-        .mapNotNull { it.nome.exibicaoOuNull() }
-        .distinct()
-        .toList()
+// --- Agrupamento ---
 
 private fun List<ParticipanteProcesso>.toParteAgrupadaProcesso(): ParteAgrupada? {
     val nomes = mapNotNull { it.nome.exibicaoOuNull() }.distinct()
@@ -120,58 +116,5 @@ private fun List<PublicacaoParticipante>.toParteAgrupadaPublicacao(): ParteAgrup
     )
 }
 
-fun ParticipanteProcesso.ehParteAtiva(): Boolean {
-    val poloNormalizado = polo.normalizado()
-    val participacaoNormalizada = tipoParticipacao.normalizado()
-    return poloNormalizado in tiposPartesAtivas || participacaoNormalizada in tiposPartesAtivas
-}
-
-fun ParticipanteProcesso.ehPartePassiva(): Boolean {
-    val poloNormalizado = polo.normalizado()
-    val participacaoNormalizada = tipoParticipacao.normalizado()
-    return poloNormalizado in tiposPartesPassivas || participacaoNormalizada in tiposPartesPassivas
-}
-
-private fun PublicacaoParticipante.ehParteAtiva(): Boolean {
-    val tipoNormalizado = tipo.normalizado()
-    return tipoNormalizado in tiposPartesAtivas
-}
-
-private fun PublicacaoParticipante.ehPartePassiva(): Boolean {
-    val tipoNormalizado = tipo.normalizado()
-    return tipoNormalizado in tiposPartesPassivas
-}
-
-private fun PublicacaoParticipante.ehAdvogado(): Boolean {
-    val tipoNormalizado = tipo.normalizado()
-    return tipoNormalizado.startsWith("advogado") || tipoNormalizado.startsWith("procurador")
-}
-
-private fun String?.normalizado(): String =
-    orEmpty().trim().lowercase(Locale.ROOT)
-
 private fun String?.exibicaoOuNull(): String? =
     orEmpty().trim().takeIf { it.isNotBlank() }
-
-private val tiposPartesAtivas = setOf(
-    "autor",
-    "requerente",
-    "exequente",
-    "impetrante",
-    "apelante",
-    "agravante",
-    "ativo",
-    "ativa",
-)
-
-private val tiposPartesPassivas = setOf(
-    "reu",
-    "réu",
-    "requerido",
-    "executado",
-    "impetrado",
-    "apelado",
-    "agravado",
-    "passivo",
-    "passiva",
-)

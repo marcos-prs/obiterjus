@@ -26,6 +26,9 @@ object ObiterDatabaseFactory {
                 MIGRATION_9_10,
                 MIGRATION_10_11,
                 MIGRATION_11_12,
+                MIGRATION_12_13,
+                MIGRATION_13_14,
+                MIGRATION_14_15,
             )
             .build()
 
@@ -145,6 +148,73 @@ object ObiterDatabaseFactory {
     private val MIGRATION_11_12 = object : Migration(11, 12) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE processos ADD COLUMN natureza TEXT")
+        }
+    }
+
+    private val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE participantes ADD COLUMN ehCliente INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    private val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE prazos_sugeridos ADD COLUMN isCumprido INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    private val MIGRATION_14_15 = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS clientes (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    tipoPessoa TEXT NOT NULL,
+                    nome TEXT NOT NULL,
+                    nomeNormalizado TEXT NOT NULL,
+                    documento TEXT,
+                    documentoNormalizado TEXT,
+                    nacionalidade TEXT,
+                    estadoCivil TEXT,
+                    profissao TEXT,
+                    cep TEXT,
+                    logradouro TEXT,
+                    numeroEndereco TEXT,
+                    complemento TEXT,
+                    bairro TEXT,
+                    municipio TEXT,
+                    uf TEXT,
+                    telefone TEXT,
+                    email TEXT,
+                    observacoes TEXT,
+                    rep_nome TEXT,
+                    rep_documento TEXT,
+                    rep_nacionalidade TEXT,
+                    rep_estadoCivil TEXT,
+                    rep_profissao TEXT,
+                    rep_cargo TEXT,
+                    criadoEm INTEGER NOT NULL,
+                    atualizadoEm INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_clientes_documentoNormalizado ON clientes(documentoNormalizado)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_clientes_nomeNormalizado ON clientes(nomeNormalizado)")
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS clientes_processos (
+                    clienteId TEXT NOT NULL,
+                    numeroProcesso TEXT NOT NULL,
+                    participanteIdLocal TEXT,
+                    vinculadoEm INTEGER NOT NULL,
+                    PRIMARY KEY(clienteId, numeroProcesso),
+                    FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE,
+                    FOREIGN KEY(numeroProcesso) REFERENCES processos(numeroProcesso) ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_clientes_processos_numeroProcesso ON clientes_processos(numeroProcesso)")
         }
     }
 }

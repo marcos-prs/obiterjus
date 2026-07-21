@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.obiterjus.core.notification.PublicacaoNotificationHelper
+import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.MonitorarDjenModo
+import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
@@ -16,15 +18,17 @@ class DjenSyncWorker(
     private val djenSyncExecutor: DjenSyncExecutor,
     private val notificationHelper: PublicacaoNotificationHelper,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val syncLogDao: SyncLogDao,
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
-        val preferencias = perfilPreferencesRepository.preferencias.first()
-        if (!preferencias.sincronizacaoAutomatica) {
-            reancorarProximaExecucao()
-            return Result.success()
-        }
-
+        val iniciadoEm = Instant.now()
         return try {
+            val preferencias = perfilPreferencesRepository.preferencias.first()
+            if (!preferencias.sincronizacaoAutomatica) {
+                reancorarProximaExecucao()
+                return Result.success()
+            }
+
             val resumo = djenSyncExecutor.executar(MonitorarDjenModo.BACKGROUND)
 
             notificationHelper.notificarNovasPublicacoes(resumo.djen.novas)
@@ -38,7 +42,10 @@ class DjenSyncWorker(
             reancorarProximaExecucao()
             Result.success()
         } catch (error: Exception) {
-            if (error is CancellationException) throw error
+            if (error is CancellationException) {
+                registrarInterrupcao(syncLogDao, FONTE_AUDITORIA, iniciadoEm)
+                throw error
+            }
             if (runAttemptCount < MAX_TENTATIVAS) {
                 Result.retry()
             } else {
@@ -59,5 +66,8 @@ class DjenSyncWorker(
 
     private companion object {
         const val MAX_TENTATIVAS = 3
+
+        /** Mesmo rótulo usado pelo executor em modo BACKGROUND, para a tela de Auditoria. */
+        const val FONTE_AUDITORIA = "DJEN + DataJud · Diária"
     }
 }

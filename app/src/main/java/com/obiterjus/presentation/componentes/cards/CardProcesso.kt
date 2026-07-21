@@ -50,6 +50,7 @@ fun CardProcesso(
     fonte: String,
     aoClicar: () -> Unit,
     modifier: Modifier = Modifier,
+    cliente: String? = null,
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
@@ -124,6 +125,28 @@ fun CardProcesso(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+
+            // Linha 2b: cliente representado
+            if (!cliente.isNullOrBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(dimens.chipRowGap),
+                ) {
+                    Icon(
+                        imageVector = ObiterIcones.Cliente,
+                        contentDescription = stringResource(R.string.detalhe_chip_cliente),
+                        tint = colors.accent,
+                        modifier = Modifier.size(dimens.iconStarSize),
+                    )
+                    Text(
+                        text = cliente,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
 
             // Linha 3: badges
             if (badges.isNotEmpty()) {

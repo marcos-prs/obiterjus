@@ -10,6 +10,7 @@ import com.obiterjus.domain.repository.PublicacoesRepository
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 /**
@@ -55,6 +56,10 @@ class PrazosWorker(
 
             Result.success()
         } catch (error: Exception) {
+            if (error is CancellationException) {
+                registrarInterrupcao(syncLogDao, FONTE_PRAZOS_WORKER, executadoEm)
+                throw error
+            }
             runCatching {
                 syncLogDao.insert(
                     SyncLogEntity(

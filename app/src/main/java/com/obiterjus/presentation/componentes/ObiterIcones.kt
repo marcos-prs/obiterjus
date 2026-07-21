@@ -101,6 +101,7 @@ object ObiterIcones {
     val Historico: ImageVector get() = Icons.Default.History
     val Notificacao: ImageVector get() = Icons.Default.Notifications
     val Conta: ImageVector get() = Icons.Default.AccountCircle
+    val Cliente: ImageVector get() = Icons.Outlined.Person
     val Login: ImageVector get() = Icons.AutoMirrored.Filled.Login
     val Pasta: ImageVector get() = Icons.Default.Folder
     val Email: ImageVector get() = Icons.Default.Email

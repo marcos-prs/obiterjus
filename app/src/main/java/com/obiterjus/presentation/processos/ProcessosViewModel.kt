@@ -120,7 +120,10 @@ class ProcessosViewModel(
                 classeNome,
                 orgaoJulgadorNome,
                 syncStatus.name,
-            ).any { valor -> valor.contains(textoFiltro, ignoreCase = true) }
+            ).any { valor -> valor.contains(textoFiltro, ignoreCase = true) } ||
+            participantes.any { p ->
+                p.nome?.contains(textoFiltro, ignoreCase = true) == true
+            }
 
         val atendeParticipante = filtros.participante.isBlank() ||
             participantes.any { p ->

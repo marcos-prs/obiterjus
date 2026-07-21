@@ -8,9 +8,13 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 object CalendarioForenseRetrofitFactory {
-    private val json = Json {
+    // encodeDefaults é obrigatório: a API (FastAPI/Pydantic) exige campos como
+    // origem, classe e termo_inicial mesmo quando têm o valor padrão do DTO —
+    // sem isso toda chamada é rejeitada com HTTP 422.
+    internal val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
+        encodeDefaults = true
     }
 
     fun createApi(): CalendarioForenseDataSource {
@@ -29,5 +33,8 @@ object CalendarioForenseRetrofitFactory {
     }
 
     private const val BASE_URL = "https://calendario-forense-br.onrender.com/"
-    private const val TIMEOUT_SECONDS = 15L
+
+    // O plano free do Render hiberna o serviço; o cold start pode passar de
+    // 30s. Timeout curto derrubava a primeira chamada do dia.
+    private const val TIMEOUT_SECONDS = 45L
 }

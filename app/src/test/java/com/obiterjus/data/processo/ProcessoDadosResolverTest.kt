@@ -6,6 +6,7 @@ import com.obiterjus.domain.model.ProcessoSyncStatus
 import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProcessoDadosResolverTest {
@@ -164,6 +165,20 @@ class ProcessoDadosResolverTest {
     }
 
     @Test
+    fun mesclarParticipantesPreservaMarcacaoDeCliente() {
+        val existente = participante(idLocal = "p1", nome = "Maria Souza", polo = "ATIVO", ehCliente = true)
+        val novo = participante(idLocal = "p1b", nome = "MARIA SOUZA", polo = "AT", ehCliente = false)
+
+        val merged = ProcessoDadosResolver.mesclarParticipantes(
+            existentes = listOf(existente),
+            novos = listOf(novo),
+        )
+
+        assertEquals(1, merged.size)
+        assertTrue(merged.first().ehCliente)
+    }
+
+    @Test
     fun participanteSemNomeNaoEReconciliado() {
         val semNomeA = participante(idLocal = "x", nome = null)
         val semNomeB = participante(idLocal = "y", nome = " ")
@@ -225,6 +240,7 @@ class ProcessoDadosResolverTest {
         tipoParticipacao: String? = null,
         tipoPessoa: String? = null,
         telefone: String? = null,
+        ehCliente: Boolean = false,
     ): ParticipanteEntity =
         ParticipanteEntity(
             idLocal = idLocal,
@@ -233,6 +249,7 @@ class ProcessoDadosResolverTest {
             nome = nome,
             tipoPessoa = tipoPessoa,
             tipoParticipacao = tipoParticipacao,
+            ehCliente = ehCliente,
             telefone = telefone,
         )
 }

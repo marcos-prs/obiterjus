@@ -9,8 +9,9 @@ import com.obiterjus.domain.logic.NormalizadorPublicacoes
 import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.GeneroTribunal
 import com.obiterjus.domain.model.Publicacao
-import com.obiterjus.domain.model.TipoAto
 import com.obiterjus.domain.model.tipoAto
+import com.obiterjus.domain.model.ClienteDoProcesso
+import com.obiterjus.domain.usecase.ObservarClientesPorProcesso
 import com.obiterjus.domain.usecase.ObservarPublicacoes
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
 import java.time.LocalDate
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.update
 
 class PublicacoesViewModel(
     observarPublicacoes: ObservarPublicacoes,
+    observarClientesPorProcesso: ObservarClientesPorProcesso,
     private val obterCertidaoDjen: ObterCertidaoDjen,
 ) : ViewModel() {
     private val filtros = MutableStateFlow(FiltrosPublicacoes())
@@ -34,12 +36,12 @@ class PublicacoesViewModel(
 
     val estado: StateFlow<EstadoPublicacoes> =
         combine(
-            observarPublicacoes(),
+            combine(observarPublicacoes(), observarClientesPorProcesso(), ::Pair),
             filtros,
             publicacaoSelecionadaId,
             certidaoState,
             duplicatasCanonicaId,
-        ) { publicacoes, filtrosAtuais, selecionadaId, certidao, canonicaId ->
+        ) { (publicacoes, clientesPorProcesso), filtrosAtuais, selecionadaId, certidao, canonicaId ->
             val tribunaisPorGenero = publicacoes.tribunaisPorGenero()
             val filtradas = publicacoes
                 .filter { publicacao -> publicacao.atende(filtrosAtuais) }
@@ -60,6 +62,7 @@ class PublicacoesViewModel(
                 publicacoes = deduplicadas,
                 publicacoesAgrupadas = agrupadas,
                 metadadosOrdem = metadados,
+                clientesPorProcesso = clientesPorProcesso,
                 tribunaisPorGenero = tribunaisPorGenero,
                 totalPersistidas = publicacoes.size,
                 filtros = filtrosAtuais,
@@ -84,10 +87,6 @@ class PublicacoesViewModel(
 
     fun aoAlterarFiltroTipo(valor: String) {
         filtros.update { it.copy(tipoComunicacao = valor) }
-    }
-
-    fun aoAlterarFiltroTipoAto(tipo: TipoAto?) {
-        filtros.update { it.copy(tipoAto = tipo) }
     }
 
     fun aoAlterarFiltroDataInicio(valor: String) {
@@ -184,7 +183,6 @@ class PublicacoesViewModel(
         val atendeSigilo = !filtros.somenteSigilosas || isSigiloso
         val atendeTribunal = atendeTribunal(filtros.tribunal)
         val atendeTipo = atendeTipo(filtros.tipoComunicacao)
-        val atendeTipoAto = filtros.tipoAto == null || tipoAto == filtros.tipoAto
         val atendePeriodo = atendePeriodo(filtros)
         val atendeConfianca = filtros.confiancaSelecionada == null ||
             confiancaMatch == filtros.confiancaSelecionada
@@ -193,7 +191,7 @@ class PublicacoesViewModel(
         } else {
             !isDuplicata
         }
-        return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo && atendeTipoAto &&
+        return atendeTexto && atendeSigilo && atendeTribunal && atendeTipo &&
             atendePeriodo && atendeConfianca && atendeDuplicatas
     }
 
@@ -224,6 +222,7 @@ data class EstadoPublicacoes(
     val publicacoes: List<Publicacao> = emptyList(),
     val publicacoesAgrupadas: Map<LocalDate, List<Publicacao>> = emptyMap(),
     val metadadosOrdem: Map<Long, Pair<Int, Int>> = emptyMap(),
+    val clientesPorProcesso: Map<String, ClienteDoProcesso> = emptyMap(),
     val tribunaisPorGenero: Map<GeneroTribunal, List<String>> = emptyMap(),
     val totalPersistidas: Int = 0,
     val filtros: FiltrosPublicacoes = FiltrosPublicacoes(),
@@ -243,7 +242,6 @@ data class FiltrosPublicacoes(
     val texto: String = "",
     val tribunal: String = "",
     val tipoComunicacao: String = "",
-    val tipoAto: TipoAto? = null,
     val dataInicio: String = "",
     val dataFim: String = "",
     val somenteSigilosas: Boolean = false,
@@ -254,7 +252,6 @@ data class FiltrosPublicacoes(
         get() = texto.isNotBlank() ||
             tribunal.isNotBlank() ||
             tipoComunicacao.isNotBlank() ||
-            tipoAto != null ||
             dataInicio.isNotBlank() ||
             dataFim.isNotBlank() ||
             somenteSigilosas ||

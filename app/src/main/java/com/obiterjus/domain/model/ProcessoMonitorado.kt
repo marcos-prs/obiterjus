@@ -45,6 +45,8 @@ data class ParticipanteProcesso(
     val nome: String?,
     val tipoPessoa: String?,
     val tipoParticipacao: String?,
+    // Marcado pelo usuário como cliente que ele representa
+    val ehCliente: Boolean = false,
     // Qualificação completa
     val cpfCnpj: String? = null,
     val estadoCivil: String? = null,

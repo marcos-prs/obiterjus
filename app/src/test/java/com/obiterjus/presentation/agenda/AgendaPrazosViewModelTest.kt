@@ -3,6 +3,8 @@ package com.obiterjus.presentation.prazos
 import com.obiterjus.core.time.CalculadoraPrazos
 import com.obiterjus.data.agenda.local.PrazoSugeridoDao
 import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
+import com.obiterjus.data.datajud.local.ParticipanteDao
+import com.obiterjus.data.datajud.local.ParticipanteEntity
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.PedidoCalculoPrazo
 import com.obiterjus.data.time.RespostaPrazo
@@ -13,7 +15,10 @@ import com.obiterjus.domain.repository.CalendarSyncRepository
 import com.obiterjus.domain.repository.PublicacoesRepository
 import com.obiterjus.domain.usecase.ClassificarPublicacaoUC
 import com.obiterjus.domain.usecase.ConfirmarPrazoUC
+import com.obiterjus.domain.usecase.MarcarPrazoCumpridoUC
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
+import com.obiterjus.domain.repository.FakeClientesRepository
+import com.obiterjus.domain.usecase.ObservarClientesPorProcesso
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -62,11 +67,15 @@ class AgendaPrazosViewModelTest {
             observarAgendaPrazos = ObservarAgendaPrazos(
                 repository = repositorio,
                 prazoSugeridoDao = prazoSugeridoDao,
+                observarClientesPorProcesso = ObservarClientesPorProcesso(FakeParticipanteDao(), FakeClientesRepository()),
                 classificarPublicacaoUC = classificarPublicacaoUC(),
             ),
             confirmarPrazoUC = ConfirmarPrazoUC(
                 prazoSugeridoDao = prazoSugeridoDao,
                 calendarSyncRepository = FakeCalendarSyncRepository(),
+            ),
+            marcarPrazoCumpridoUC = MarcarPrazoCumpridoUC(
+                prazoSugeridoDao = prazoSugeridoDao,
             ),
             clock = Clock.fixed(
                 Instant.parse("2026-04-30T12:00:00Z"),
@@ -141,8 +150,27 @@ class AgendaPrazosViewModelTest {
         override suspend fun insert(prazoSugerido: PrazoSugeridoEntity): Long = prazoSugerido.id
         override suspend fun update(prazoSugerido: PrazoSugeridoEntity) = Unit
         override suspend fun getByPublicacaoId(publicacaoId: Long): PrazoSugeridoEntity? = null
+        override fun observeByPublicacaoId(publicacaoId: Long): Flow<PrazoSugeridoEntity?> =
+            prazos.map { itens -> itens.firstOrNull { it.publicacaoId == publicacaoId } }
         override suspend fun getPrazosParaSincronizar(provedores: List<String>): List<PrazoSugeridoEntity> = emptyList()
         override fun observeAll(): Flow<List<PrazoSugeridoEntity>> = prazos
+    }
+
+    private class FakeParticipanteDao : ParticipanteDao {
+        private val participantes = MutableStateFlow(emptyList<ParticipanteEntity>())
+
+        override suspend fun upsertAll(participantes: List<ParticipanteEntity>) {
+            this.participantes.value = participantes
+        }
+        override fun observeByNumeroProcesso(numeroProcesso: String): Flow<List<ParticipanteEntity>> =
+            participantes.map { itens -> itens.filter { it.numeroProcesso == numeroProcesso } }
+        override suspend fun getByNumeroProcesso(numeroProcesso: String): List<ParticipanteEntity> =
+            participantes.value.filter { it.numeroProcesso == numeroProcesso }
+        override fun observeAll(): Flow<List<ParticipanteEntity>> = participantes
+        override suspend fun getAll(): List<ParticipanteEntity> = participantes.value
+        override suspend fun deleteByNumeroProcesso(numeroProcesso: String) {
+            participantes.value = participantes.value.filterNot { it.numeroProcesso == numeroProcesso }
+        }
     }
 
     private class FakeCalendarSyncRepository : CalendarSyncRepository {

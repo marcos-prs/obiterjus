@@ -84,4 +84,26 @@ interface PublicacaoDao {
         """,
     )
     suspend fun atualizarStatusDuplicata(id: Long, duplicataDe: Long?, totalDuplicatas: Int)
+
+    @Query(
+        """
+        UPDATE publicacoes
+        SET prazoQuantidade = :quantidade,
+            prazoUnidade = :unidade,
+            prazoDiasUteis = :diasUteis,
+            prazoTexto = :texto,
+            prazoDataLimite = :dataLimite,
+            prazoConfianca = :confianca
+        WHERE id = :id
+        """,
+    )
+    suspend fun atualizarPrazo(
+        id: Long,
+        quantidade: Int,
+        unidade: String,
+        diasUteis: Boolean,
+        texto: String,
+        dataLimite: LocalDate,
+        confianca: String,
+    )
 }

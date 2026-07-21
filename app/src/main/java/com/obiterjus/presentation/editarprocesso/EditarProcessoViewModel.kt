@@ -2,13 +2,18 @@ package com.obiterjus.presentation.editarprocesso
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.obiterjus.domain.model.Cliente
 import com.obiterjus.domain.model.NaturezaProcesso
 import com.obiterjus.domain.model.ParticipanteProcesso
 import com.obiterjus.domain.model.ProcessoMonitorado
+import com.obiterjus.domain.repository.ClientesRepository
 import com.obiterjus.domain.repository.ProcessosRepository
+import com.obiterjus.domain.usecase.BuscarClientesSemelhantes
+import com.obiterjus.domain.usecase.DecisaoCliente
 import com.obiterjus.domain.usecase.ExcluirProcessoUseCase
 import com.obiterjus.data.viacep.ViaCepApi
 import com.obiterjus.domain.usecase.RessincronizarProcessoUseCase
+import com.obiterjus.domain.usecase.SincronizarClientesDoProcesso
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -21,6 +26,9 @@ class EditarProcessoViewModel(
     private val excluirProcesso: ExcluirProcessoUseCase,
     private val ressincronizarProcesso: RessincronizarProcessoUseCase,
     private val viaCepApi: ViaCepApi,
+    private val repositorioClientes: ClientesRepository,
+    private val buscarClientesSemelhantes: BuscarClientesSemelhantes,
+    private val sincronizarClientesDoProcesso: SincronizarClientesDoProcesso,
 ) : ViewModel() {
     private val _estado = MutableStateFlow(EstadoEditarProcesso())
     val estado: StateFlow<EstadoEditarProcesso> = _estado
@@ -29,10 +37,18 @@ class EditarProcessoViewModel(
         _estado.update { it.copy(carregado = false, numeroProcesso = numeroProcesso) }
         viewModelScope.launch {
             val processo = repositorio.obterProcesso(numeroProcesso)
+            // Partes já vinculadas entram com a decisão pronta, senão salvar de
+            // novo criaria um cliente duplicado para quem já está na carteira.
+            val decisoesExistentes = repositorioClientes.obterVinculosDoProcesso(numeroProcesso)
+                .mapNotNull { vinculo ->
+                    vinculo.participanteIdLocal?.let { it to DecisaoCliente.Vincular(vinculo.clienteId) }
+                }
+                .toMap()
             if (processo != null) {
                 _estado.update {
                     it.copy(
                         carregado = true,
+                        decisoesCliente = decisoesExistentes,
                         tribunal = processo.tribunal.orEmpty(),
                         grau = processo.grau.orEmpty(),
                         classeNome = processo.classeNome.orEmpty(),
@@ -87,6 +103,68 @@ class EditarProcessoViewModel(
     fun aoAlterarAssunto(valor: String) { _estado.update { it.copy(assuntoPrincipal = valor) } }
     fun aoAlterarSegredo(valor: String) { _estado.update { it.copy(segredoJustica = valor) } }
     fun aoAlterarNatureza(valor: String) { _estado.update { it.copy(natureza = valor) } }
+
+    /**
+     * Marcar a caixa "é cliente" abre a escolha entre vincular a alguém que já
+     * está na carteira ou criar um cadastro novo. Nada é gravado aqui: a
+     * decisão fica em estado e só é aplicada no [aoSalvar], como todo o resto
+     * desta tela.
+     */
+    fun aoMarcarComoCliente(participante: ParticipanteProcesso) {
+        aoAlterarParticipante(participante.idLocal, participante.copy(ehCliente = true))
+        viewModelScope.launch {
+            val candidatos = buscarClientesSemelhantes(participante)
+            _estado.update {
+                it.copy(
+                    sugestaoCliente = SugestaoCliente(
+                        idLocalParticipante = participante.idLocal,
+                        nomeParticipante = participante.nome.orEmpty(),
+                        candidatos = candidatos,
+                    ),
+                )
+            }
+        }
+    }
+
+    fun aoDesmarcarComoCliente(participante: ParticipanteProcesso) {
+        aoAlterarParticipante(participante.idLocal, participante.copy(ehCliente = false))
+        _estado.update { it.copy(decisoesCliente = it.decisoesCliente - participante.idLocal) }
+    }
+
+    fun aoVincularClienteExistente(clienteId: String) {
+        registrarDecisao(DecisaoCliente.Vincular(clienteId))
+    }
+
+    fun aoCriarClienteNovo() {
+        registrarDecisao(DecisaoCliente.CriarNovo)
+    }
+
+    /**
+     * Fechar sem escolher desfaz a marcação: manter a caixa marcada sem decisão
+     * levaria o [SincronizarClientesDoProcesso] a criar um cliente que o
+     * usuário não pediu.
+     */
+    fun aoDispensarSugestaoCliente() {
+        val sugestao = _estado.value.sugestaoCliente ?: return
+        _estado.update { atual ->
+            val lista = atual.participantes.toMutableList()
+            val index = lista.indexOfFirst { it.idLocal == sugestao.idLocalParticipante }
+            if (index != -1) {
+                lista[index] = lista[index].copy(ehCliente = false)
+            }
+            atual.copy(participantes = lista, sugestaoCliente = null)
+        }
+    }
+
+    private fun registrarDecisao(decisao: DecisaoCliente) {
+        val sugestao = _estado.value.sugestaoCliente ?: return
+        _estado.update {
+            it.copy(
+                decisoesCliente = it.decisoesCliente + (sugestao.idLocalParticipante to decisao),
+                sugestaoCliente = null,
+            )
+        }
+    }
 
     fun aoAlterarParticipante(idLocal: String, participante: ParticipanteProcesso) {
         _estado.update { atual ->
@@ -203,6 +281,12 @@ class EditarProcessoViewModel(
                     },
                 ),
             )
+            // Depois do processo: o vínculo tem chave estrangeira para ele.
+            sincronizarClientesDoProcesso(
+                numeroProcesso = atual.numeroProcesso,
+                participantes = atual.participantes,
+                decisoes = atual.decisoesCliente,
+            )
             _estado.update { it.copy(salvando = false, salvo = true) }
         }
     }
@@ -255,6 +339,9 @@ data class EstadoEditarProcesso(
     val erroNomeParticipanteVazio: Boolean = false,
     val cepBuscandoIdLocal: String? = null,
     val cepErroIdLocal: String? = null,
+    /** Decisão de vínculo por participante, aplicada ao salvar. */
+    val decisoesCliente: Map<String, DecisaoCliente> = emptyMap(),
+    val sugestaoCliente: SugestaoCliente? = null,
     // Campos expandidos
     val dataDistribuicao: Instant? = null,
     val comarcaSecao: String = "",
@@ -273,6 +360,13 @@ data class EstadoEditarProcesso(
     val assuntoPrincipal: String = "",
     val segredoJustica: String = "Não",
     val natureza: String = "",
+)
+
+/** Escolha pendente ao marcar uma parte como cliente. */
+data class SugestaoCliente(
+    val idLocalParticipante: String,
+    val nomeParticipante: String,
+    val candidatos: List<Cliente>,
 )
 
 const val OPCAO_NATUREZA_CIVEL = "Cível"

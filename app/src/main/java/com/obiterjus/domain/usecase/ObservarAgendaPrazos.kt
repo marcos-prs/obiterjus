@@ -12,13 +12,15 @@ import kotlinx.coroutines.flow.combine
 class ObservarAgendaPrazos(
     private val repository: PublicacoesRepository,
     private val prazoSugeridoDao: PrazoSugeridoDao,
+    private val observarClientesPorProcesso: ObservarClientesPorProcesso,
     private val classificarPublicacaoUC: ClassificarPublicacaoUC,
 ) {
     operator fun invoke(): Flow<List<PrazoAgendaItem>> =
         combine(
             repository.observarPublicacoes(),
             prazoSugeridoDao.observeAll(),
-        ) { publicacoes, prazosSugeridos ->
+            observarClientesPorProcesso(),
+        ) { publicacoes, prazosSugeridos, clientesPorProcesso ->
             val prazosPorPublicacao = prazosSugeridos.associateBy { it.publicacaoId }
             publicacoes
                 .map { publicacao ->
@@ -33,6 +35,9 @@ class ObservarAgendaPrazos(
                         PrazoAgendaItem(
                             publicacao = publicacao,
                             prazo = prazo.aplicarConfirmacao(prazosPorPublicacao[publicacao.id]),
+                            nomeCliente = publicacao.numeroProcesso
+                                ?.let { clientesPorProcesso[it] }
+                                ?.nome,
                         )
                     }
                 }
@@ -54,12 +59,25 @@ class ObservarAgendaPrazos(
     }
 }
 
-private fun PublicacaoPrazo.aplicarConfirmacao(
+// A linha em prazos_sugeridos é a fonte de verdade quando existe: além da
+// confirmação, sobrepõe os dados do prazo — protege um prazo cadastrado
+// manualmente de ser recalculado por cima num re-sync do DJEN.
+internal fun PublicacaoPrazo.aplicarConfirmacao(
     prazoSugerido: PrazoSugeridoEntity?,
 ): PublicacaoPrazo =
-    copy(
-        isConfirmado = prazoSugerido?.isConfirmado ?: isConfirmado,
-        idExternoCalendario = prazoSugerido?.idExternoCalendario ?: idExternoCalendario,
-        provedorCalendario = ProvedorCalendario.fromCodigo(prazoSugerido?.provedorCalendario)?.codigo
-            ?: provedorCalendario,
-    )
+    if (prazoSugerido == null) {
+        this
+    } else {
+        copy(
+            quantidade = prazoSugerido.quantidade,
+            unidade = prazoSugerido.unidade,
+            diasUteis = prazoSugerido.diasUteis,
+            textoOriginal = prazoSugerido.textoOriginal,
+            dataLimiteEstimada = prazoSugerido.dataLimite ?: dataLimiteEstimada,
+            isConfirmado = prazoSugerido.isConfirmado,
+            idExternoCalendario = prazoSugerido.idExternoCalendario ?: idExternoCalendario,
+            provedorCalendario = ProvedorCalendario.fromCodigo(prazoSugerido.provedorCalendario)?.codigo
+                ?: provedorCalendario,
+            isCumprido = prazoSugerido.isCumprido,
+        )
+    }

@@ -53,4 +53,5 @@ data class PublicacaoPrazo(
     val idExternoCalendario: String? = null,
     val provedorCalendario: String? = null,
     val confiancaCalculo: ConfiancaCalculo = ConfiancaCalculo.PENDENTE,
+    val isCumprido: Boolean = false,
 )

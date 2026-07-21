@@ -39,8 +39,6 @@ import com.obiterjus.core.time.FormatadorData
 import com.obiterjus.domain.logic.NormalizadorPublicacoes
 import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.Publicacao
-import com.obiterjus.domain.model.TipoAto
-import com.obiterjus.domain.model.tipoAto
 import com.obiterjus.presentation.componentes.EstadoVazioObiter
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.barras.BarraBusca
@@ -61,7 +59,6 @@ fun PublicacoesScreen(
     aoAlterarFiltroTexto: (String) -> Unit,
     aoAlterarFiltroTribunal: (String) -> Unit,
     aoAlterarFiltroTipo: (String) -> Unit,
-    aoAlterarFiltroTipoAto: (TipoAto?) -> Unit,
     aoAlterarFiltroDataInicio: (String) -> Unit,
     aoAlterarFiltroDataFim: (String) -> Unit,
     aoAlternarSomenteSigilosas: () -> Unit,
@@ -81,8 +78,6 @@ fun PublicacoesScreen(
     var limiteVisivel by remember { mutableIntStateOf(LOTE_PAGINACAO) }
     val publicacoesVisiveis = estado.publicacoes.take(limiteVisivel)
     val agrupadasVisiveis = NormalizadorPublicacoes.agruparPorData(publicacoesVisiveis)
-    val tribunalTodos = stringResource(R.string.filtro_todos)
-    val tiposAto = TipoAto.entries.map { tipo -> tipo to stringResource(tipo.rotuloRes) }
 
     LaunchedEffect(estado.publicacoes.size) {
         limiteVisivel = LOTE_PAGINACAO
@@ -181,17 +176,6 @@ fun PublicacoesScreen(
             )
         }
         item {
-            ChipFiltroRow(
-                chips = listOf(tribunalTodos) + tiposAto.map { (_, rotulo) -> rotulo },
-                chipAtivo = tiposAto.firstOrNull { (tipo, _) -> tipo == estado.filtros.tipoAto }?.second
-                    ?: tribunalTodos,
-                aoSelecionar = { chip ->
-                    val tipo = tiposAto.firstOrNull { (_, rotulo) -> rotulo == chip }?.first
-                    aoAlterarFiltroTipoAto(tipo)
-                },
-            )
-        }
-        item {
             val rotuloTodas = stringResource(R.string.confianca_filtro_todas)
             val rotuloDuplicatas = stringResource(R.string.publicacoes_filtro_duplicatas)
             val rotulosConfianca = listOf(
@@ -265,6 +249,8 @@ fun PublicacoesScreen(
                     }
                     CardPublicacaoResumo(
                         publicacao = pubItem,
+                        nomeCliente = pubItem.numeroProcesso
+                            ?.let { numero -> estado.clientesPorProcesso[numero]?.nome },
                         onClick = {
                             aoSelecionarPublicacao(pubId)
                             aoAbrirPublicacao(pubId)
@@ -440,7 +426,6 @@ fun ConteudoPublicacoes(
         aoAlterarFiltroTexto = viewModel::aoAlterarFiltroTexto,
         aoAlterarFiltroTribunal = viewModel::aoAlterarFiltroTribunal,
         aoAlterarFiltroTipo = viewModel::aoAlterarFiltroTipo,
-        aoAlterarFiltroTipoAto = viewModel::aoAlterarFiltroTipoAto,
         aoAlterarFiltroDataInicio = viewModel::aoAlterarFiltroDataInicio,
         aoAlterarFiltroDataFim = viewModel::aoAlterarFiltroDataFim,
         aoAlternarSomenteSigilosas = viewModel::aoAlternarSomenteSigilosas,

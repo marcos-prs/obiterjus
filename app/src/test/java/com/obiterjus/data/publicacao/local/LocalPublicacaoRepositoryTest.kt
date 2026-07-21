@@ -60,6 +60,16 @@ class LocalPublicacaoRepositoryTest {
         override suspend fun getByHashes(hashes: List<String>): List<PublicacaoEntity> =
             hashes.mapNotNull(existingByHash::get)
 
+        override suspend fun atualizarPrazo(
+            id: Long,
+            quantidade: Int,
+            unidade: String,
+            diasUteis: Boolean,
+            texto: String,
+            dataLimite: LocalDate,
+            confianca: String,
+        ) = Unit
+
         override suspend fun getById(id: Long): PublicacaoEntity? =
             upserted.firstOrNull { it.id == id }
 

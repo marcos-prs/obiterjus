@@ -85,6 +85,8 @@ object ProcessoDadosResolver {
             nome = base.nome.ouEntao(novo.nome),
             tipoPessoa = base.tipoPessoa.ouEntao(novo.tipoPessoa),
             tipoParticipacao = base.tipoParticipacao.ouEntao(novo.tipoParticipacao),
+            // Marcação do usuário vence a captura automática.
+            ehCliente = base.ehCliente || novo.ehCliente,
             cpfCnpj = base.cpfCnpj.ouEntao(novo.cpfCnpj),
             estadoCivil = base.estadoCivil.ouEntao(novo.estadoCivil),
             profissao = base.profissao.ouEntao(novo.profissao),

@@ -40,6 +40,15 @@ sealed interface ObiterRota {
     data class DetalhePublicacao(val publicacaoId: Long) : ObiterRota
 
     @Serializable
+    data class DetalheCliente(val clienteId: String) : ObiterRota
+
+    @Serializable
+    data object AdicionarCliente : ObiterRota
+
+    @Serializable
+    data class EditarCliente(val clienteId: String) : ObiterRota
+
+    @Serializable
     data object Auditoria : ObiterRota
 
     /** Telas de criação / edição de processo. */

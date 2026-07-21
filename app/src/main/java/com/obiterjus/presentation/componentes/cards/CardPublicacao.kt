@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.obiterjus.core.texto.formatarCnj
 import com.obiterjus.domain.model.ConfiancaMatch
+import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.chips.BadgeTipoAto
 import com.obiterjus.presentation.componentes.chips.VarianteBadge
 import com.obiterjus.ui.theme.ObiterTheme
@@ -50,6 +53,7 @@ fun CardPublicacao(
     data: String,
     tribunal: String? = null,
     juizo: String? = null,
+    nomeCliente: String? = null,
     numeroProcesso: String,
     prazoDias: String?,
     trechoTexto: String?,
@@ -62,6 +66,7 @@ fun CardPublicacao(
     onVerDetalhes: () -> Unit = {},
     mostrarBotaoDetalhes: Boolean = false,
     confianca: ConfiancaMatch? = null,
+    aoClicarCliente: (() -> Unit)? = null,
 ) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
@@ -189,6 +194,38 @@ fun CardPublicacao(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                }
+
+                nomeCliente?.trim()?.takeIf { it.isNotEmpty() }?.let { cliente ->
+                    Row(
+                        // Só vira alvo de toque quando há ficha para abrir: um
+                        // nome vindo apenas da parte marcada não tem destino.
+                        modifier = if (aoClicarCliente != null) {
+                            Modifier.clickable(onClick = aoClicarCliente)
+                        } else {
+                            Modifier
+                        },
+                        horizontalArrangement = Arrangement.spacedBy(dimens.space1),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = ObiterIcones.Cliente,
+                            contentDescription = null,
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(dimens.iconSearchSize),
+                        )
+                        Text(
+                            text = cliente,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (aoClicarCliente != null) {
+                                colorScheme.primary
+                            } else {
+                                colorScheme.onSurface
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
 
                 if (!trechoTexto.isNullOrBlank()) {

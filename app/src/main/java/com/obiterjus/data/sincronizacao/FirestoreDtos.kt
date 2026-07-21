@@ -195,6 +195,7 @@ data class ParticipanteFirestoreDto(
     val nome: String? = null,
     val tipoPessoa: String? = null,
     val tipoParticipacao: String? = null,
+    val ehCliente: Boolean = false,
 )
 
 fun ParticipanteEntity.toFirestoreDto() = ParticipanteFirestoreDto(
@@ -204,6 +205,7 @@ fun ParticipanteEntity.toFirestoreDto() = ParticipanteFirestoreDto(
     nome = nome,
     tipoPessoa = tipoPessoa,
     tipoParticipacao = tipoParticipacao,
+    ehCliente = ehCliente,
 )
 
 fun ParticipanteFirestoreDto.toEntity(): ParticipanteEntity? =
@@ -217,6 +219,7 @@ fun ParticipanteFirestoreDto.toEntity(): ParticipanteEntity? =
             nome = nome,
             tipoPessoa = tipoPessoa,
             tipoParticipacao = tipoParticipacao,
+            ehCliente = ehCliente,
         )
     }
 

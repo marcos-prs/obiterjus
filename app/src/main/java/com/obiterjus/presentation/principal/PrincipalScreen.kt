@@ -19,6 +19,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -28,6 +31,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.obiterjus.R
+import com.obiterjus.presentation.acervo.AbaAcervo
 import com.obiterjus.presentation.componentes.ObiterIcones
 import com.obiterjus.presentation.componentes.barras.BarraNavegacaoObiter
 import com.obiterjus.presentation.componentes.barras.BarraSuperiorSecundaria
@@ -55,10 +59,18 @@ fun PrincipalScreen(
     val isDetailPublicacaoScreen = destinoAtual?.hasRoute<ObiterRota.DetalhePublicacao>() == true
     val isAddScreen = destinoAtual?.hasRoute<ObiterRota.AdicionarProcesso>() == true
     val isEditScreen = destinoAtual?.hasRoute<ObiterRota.EditarProcesso>() == true
-    val isPushScreen = isDetailScreen || isDetailPublicacaoScreen || isAddScreen || isEditScreen
+    val isDetailClienteScreen = destinoAtual?.hasRoute<ObiterRota.DetalheCliente>() == true
+    val isEditClienteScreen = destinoAtual?.hasRoute<ObiterRota.EditarCliente>() == true
+    val isAddClienteScreen = destinoAtual?.hasRoute<ObiterRota.AdicionarCliente>() == true
+    val isPushScreen = isDetailScreen || isDetailPublicacaoScreen || isAddScreen ||
+        isEditScreen || isDetailClienteScreen || isEditClienteScreen || isAddClienteScreen
     val isAuthScreen = destinoAtual?.hasRoute<ObiterRota.Autenticacao>() == true
 
     val abasNavegacao = lembrarAbasNavegacao()
+
+    // A aba do acervo mora aqui porque a barra superior depende dela — título e
+    // ação de adicionar mudam entre Processos e Clientes.
+    var abaAcervo by rememberSaveable { mutableStateOf(AbaAcervo.PROCESSOS) }
 
     val abaAtual: ObiterRota? = when {
         destinoAtual?.hasRoute<ObiterRota.Inicio>() == true -> ObiterRota.Inicio
@@ -97,20 +109,32 @@ fun PrincipalScreen(
                         mostrarVoltar = false,
                     )
                     ObiterRota.Processos -> BarraSuperiorSecundaria(
-                        titulo = stringResource(R.string.nav_processos),
+                        titulo = when (abaAcervo) {
+                            AbaAcervo.PROCESSOS -> stringResource(R.string.nav_processos)
+                            AbaAcervo.CLIENTES -> stringResource(R.string.nav_clientes)
+                        },
                         onVoltar = { navController.popBackStack() },
                         mostrarVoltar = false,
                         acoes = {
+                            // Cada eixo tem seu "+": Processos abre o cadastro de
+                            // processo; Clientes abre o cadastro avulso de cliente,
+                            // sem depender de uma parte marcada num processo.
+                            val (rotaAdicionar, descricaoAdicionar) = when (abaAcervo) {
+                                AbaAcervo.PROCESSOS ->
+                                    ObiterRota.AdicionarProcesso to R.string.cd_adicionar_processo
+                                AbaAcervo.CLIENTES ->
+                                    ObiterRota.AdicionarCliente to R.string.cd_adicionar_cliente
+                            }
                             IconButton(
                                 onClick = {
-                                    navController.navigate(ObiterRota.AdicionarProcesso) {
+                                    navController.navigate(rotaAdicionar) {
                                         launchSingleTop = true
                                     }
                                 },
                             ) {
                                 Icon(
                                     imageVector = ObiterIcones.Adicionar,
-                                    contentDescription = stringResource(R.string.cd_adicionar_processo),
+                                    contentDescription = stringResource(descricaoAdicionar),
                                     tint = textColorBarra,
                                 )
                             }
@@ -203,6 +227,8 @@ fun PrincipalScreen(
         ObiterNavGraph(
             navController = navController,
             viewModels = viewModels,
+            abaAcervo = abaAcervo,
+            aoSelecionarAbaAcervo = { abaAcervo = it },
             modifier = Modifier.padding(paddingValues),
         )
     }
