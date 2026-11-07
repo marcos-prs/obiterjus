@@ -54,8 +54,9 @@ firebase hosting:channel:deploy preview-juridico --project obiterjus --expires 2
 - **`obiterjus.duckdns.org` não é o site**, é a API Obiter-Minuta. O `BASE_URL` em
   `ObiterMinutaRetrofitFactory.kt` aponta para lá e deve continuar apontando. Uma versão
   anterior deste README dizia que as páginas eram servidas por aquele host; não são.
-  Sobrou lá um `/exclusao-de-conta` publicado por engano, mais a configuração de Caddy que
-  o serve — vale remover ou redirecionar para o site.
+  Chegou a existir lá um `/exclusao-de-conta` publicado por engano, com `handle_path` no
+  Caddy e um bind mount `./publico`; foi **removido em 07/11/2026** e o host voltou a
+  servir só a API. Se alguém reintroduzir página estática ali, será no lugar errado.
 
 ## Detalhe que se perde
 
