@@ -46,6 +46,11 @@ class LocalPublicacaoRepositoryTest {
     ) : PublicacaoDao {
         var upserted: List<PublicacaoEntity> = emptyList()
 
+        override suspend fun getComPrazoPendente(
+            dataMinima: LocalDate,
+            limite: Int,
+        ): List<PublicacaoEntity> = emptyList()
+
         override suspend fun upsert(publicacao: PublicacaoEntity) {
             upserted = upserted + publicacao
         }

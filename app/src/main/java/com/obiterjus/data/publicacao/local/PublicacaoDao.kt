@@ -85,6 +85,29 @@ interface PublicacaoDao {
     )
     suspend fun atualizarStatusDuplicata(id: Long, duplicataDe: Long?, totalDuplicatas: Int)
 
+    /**
+     * Publicações que ficaram sem data-limite — a API de cálculo estava fora do
+     * ar no momento da ingestão, ou o tribunal ainda não estava cadastrado.
+     *
+     * Sem tribunal não há o que tentar: [com.obiterjus.core.time.CalculadoraPrazos]
+     * devolve Pendente antes de tocar a rede. A janela por [dataMinima] impede que
+     * publicações antigas sem prazo nenhum no texto sejam retentadas para sempre.
+     */
+    @Query(
+        """
+        SELECT * FROM publicacoes
+        WHERE prazoDataLimite IS NULL
+          AND ativo = 1
+          AND textoLimpo IS NOT NULL AND trim(textoLimpo) != ''
+          AND tribunal IS NOT NULL AND trim(tribunal) != ''
+          AND dataDisponibilizacao IS NOT NULL
+          AND dataDisponibilizacao >= :dataMinima
+        ORDER BY dataDisponibilizacao DESC, id DESC
+        LIMIT :limite
+        """,
+    )
+    suspend fun getComPrazoPendente(dataMinima: LocalDate, limite: Int): List<PublicacaoEntity>
+
     @Query(
         """
         UPDATE publicacoes

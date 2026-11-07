@@ -8,6 +8,7 @@ import com.obiterjus.core.worker.DjenSyncScheduler
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
+import com.obiterjus.data.settings.SessaoLocalRepository
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.model.MonitorarDjenModo
@@ -46,6 +47,7 @@ data class EstadoPerfil(
     val sincronizando: Boolean = false,
     val tema: TipoTema = TipoTema.SISTEMA,
     val apenasPorNome: Boolean = false,
+    val sincronizacaoNuvemAutorizada: Boolean = false,
 )
 
 class PerfilViewModel(
@@ -55,6 +57,7 @@ class PerfilViewModel(
     private val djenSyncExecutor: DjenSyncExecutor,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
     private val repositorioSincronizacao: SincronizacaoRepository,
+    private val sessaoLocal: SessaoLocalRepository,
 ) : ViewModel() {
     private val _sincronizando = MutableStateFlow(false)
     private val _mensagemSucesso = MutableStateFlow<String?>(null)
@@ -107,6 +110,7 @@ class PerfilViewModel(
             sincronizando = sincronizando,
             tema = preferencias.tema,
             apenasPorNome = preferencias.apenasPorNome,
+            sincronizacaoNuvemAutorizada = preferencias.sincronizacaoNuvemAutorizada,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -161,6 +165,16 @@ class PerfilViewModel(
         }
     }
 
+    /**
+     * O envio automático leva o inteiro teor das publicações para o Firestore,
+     * então depende de escolha explícita — nasce desligado.
+     */
+    fun aoAlternarSincronizacaoNuvem(ativo: Boolean) {
+        viewModelScope.launch {
+            perfilPreferencesRepository.saveSincronizacaoNuvemAutorizada(ativo)
+        }
+    }
+
     fun aoForcarSincronizacao() {
         if (_sincronizando.value) return
 
@@ -188,12 +202,18 @@ class PerfilViewModel(
         }
     }
 
+    /**
+     * Sair da conta apaga o acervo do aparelho. Sem isso, o próximo advogado a
+     * entrar enxergava os processos e clientes do anterior — e a primeira
+     * sincronização os enviava para a conta dele na nuvem.
+     */
     fun aoLogout() {
         viewModelScope.launch {
             _mensagemErro.value = null
             _mensagemSucesso.value = null
             runCatching {
                 authRepository.signOut()
+                sessaoLocal.limparTudo()
             }.onSuccess {
                 _statusNuvemOverride.value = null
                 _mensagemSucesso.value = context.getString(R.string.perfil_logout_sucesso)

@@ -9,6 +9,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
@@ -29,6 +30,7 @@ interface ObiterMinutaDataSource {
     @Multipart
     @POST("ingest")
     suspend fun ingerir(
+        @Header("Authorization") autorizacao: String,
         @Part file: MultipartBody.Part,
         @Part("tipo_declarado") tipoDeclarado: RequestBody,
         @Part("numero_processo") numeroProcesso: RequestBody? = null,
@@ -37,11 +39,20 @@ interface ObiterMinutaDataSource {
     ): IngestRespostaDto
 
     @GET("status/{jobId}")
-    suspend fun consultarStatus(@Path("jobId") jobId: String): StatusJobDto
+    suspend fun consultarStatus(
+        @Header("Authorization") autorizacao: String,
+        @Path("jobId") jobId: String,
+    ): StatusJobDto
 
     @GET("result/{jobId}")
-    suspend fun obterResultado(@Path("jobId") jobId: String): MinutaPackageDto
+    suspend fun obterResultado(
+        @Header("Authorization") autorizacao: String,
+        @Path("jobId") jobId: String,
+    ): MinutaPackageDto
 
     @POST("minuta/sugerir")
-    suspend fun sugerirMinuta(@Body pedido: SugestaoMinutaRequestDto): MinutaSugestaoDto
+    suspend fun sugerirMinuta(
+        @Header("Authorization") autorizacao: String,
+        @Body pedido: SugestaoMinutaRequestDto,
+    ): MinutaSugestaoDto
 }

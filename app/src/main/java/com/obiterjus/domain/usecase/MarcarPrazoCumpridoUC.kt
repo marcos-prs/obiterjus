@@ -3,6 +3,7 @@ package com.obiterjus.domain.usecase
 import com.obiterjus.data.agenda.local.PrazoSugeridoDao
 import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
 import com.obiterjus.domain.model.PublicacaoPrazo
+import kotlinx.coroutines.CancellationException
 
 /**
  * Marca (ou desmarca) um prazo como cumprido pelo usuário. Assim como na
@@ -35,6 +36,8 @@ class MarcarPrazoCumpridoUC(
 
             prazoSugeridoDao.update(entity.copy(isCumprido = cumprido))
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }

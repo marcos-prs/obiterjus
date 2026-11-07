@@ -310,6 +310,7 @@
     <string name="autenticacao_error_login_google">Não foi possível entrar com Google agora.</string>
     <string name="autenticacao_error_logout">Não foi possível sair da conta agora.</string>
     <string name="autenticacao_sucesso_login">Login concluído com sucesso.</string>
+    <string name="autenticacao_error_restaurar">Login concluído, mas não foi possível trazer seus dados da nuvem agora. Tente sincronizar pelo Perfil.</string>
     <string name="autenticacao_sucesso_redefinicao_senha">Enviamos as instruções de redefinição para seu e-mail.</string>
     <string name="autenticacao_sucesso_cadastro">Conta criada com sucesso.</string>
     <string name="autenticacao_sucesso_visitante">Você entrou como convidado.</string>
@@ -538,6 +539,8 @@
     <string name="perfil_enriquecimento_datajud">DataJud</string>
     <string name="perfil_forcar_sincronizacao">Sincronizar publicações</string>
     <string name="perfil_forcar_sincronizacao_loading">Sincronizando publicações...</string>
+    <string name="perfil_nuvem_autorizar">Guardar meus dados na nuvem</string>
+    <string name="perfil_nuvem_autorizar_descricao">Envia processos, publicações, clientes, prazos e minutas para a sua conta. O inteiro teor das publicações sai do aparelho; o que corre em segredo de justiça nunca é enviado.</string>
     <string name="perfil_sincronizacao_descricao">Sincronização automática diária às 7h. Toque para sincronizar agora.</string>
     <string name="perfil_sync_sucesso">Publicações sincronizadas: %1$d processo(s) e %2$d publicação(ões).</string>
     <string name="perfil_sync_falha">Não foi possível sincronizar publicações agora.</string>
@@ -708,6 +711,50 @@
     <string name="excluir_processo_sucesso">Processo removido.</string>
     <string name="excluir_processo_falha">Não foi possível remover o processo.</string>
 
+    <!-- Documentos jurídicos -->
+    <string name="url_termos_uso">https://obiterjus.web.app/termos</string>
+    <string name="url_politica_privacidade">https://obiterjus.web.app/privacidade</string>
+    <string name="autenticacao_ler_termos">Ler os Termos de Uso</string>
+    <string name="autenticacao_ler_privacidade">Ler a Política de Privacidade</string>
+    <string name="perfil_grupo_documentos">Documentos</string>
+    <string name="perfil_documento_termos">Termos de Uso</string>
+    <string name="perfil_documento_privacidade">Política de Privacidade</string>
+    <string name="acao_abrir">Abrir</string>
+
+    <!-- Exclusão de conta -->
+    <string name="url_exclusao_conta">https://obiterjus.web.app/exclusao-de-conta</string>
+    <string name="excluir_conta_titulo">excluir conta</string>
+    <string name="excluir_conta_menu">Excluir conta</string>
+    <string name="excluir_conta_aviso">A exclusão é definitiva e imediata. Não há lixeira: depois de confirmada, nem o Desenvolvedor consegue recuperar o que foi apagado.</string>
+    <string name="excluir_conta_conta_atual">Conta: %1$s</string>
+    <string name="excluir_conta_apagado_titulo">O QUE É APAGADO</string>
+    <string name="excluir_conta_apagado_acervo">Processos, publicações, movimentações, prazos, clientes e minutas</string>
+    <string name="excluir_conta_apagado_nuvem">Tudo o que a conta guarda na nuvem, inclusive o registro de sincronização</string>
+    <string name="excluir_conta_apagado_perfil">Dados de perfil: nome, inscrição na OAB, escritório e preferências</string>
+    <string name="excluir_conta_apagado_local">O acervo deste aparelho, as credenciais guardadas e a autorização do Google Calendar</string>
+    <string name="excluir_conta_apagado_acesso">O acesso: e-mail e senha deixam de existir</string>
+    <string name="excluir_conta_mantido_titulo">O QUE FICA</string>
+    <string name="excluir_conta_mantido_aceites">O registro de que você aceitou os Termos e a Política, guardado como prova do dever de informação</string>
+    <string name="excluir_conta_mantido_legal">O que a lei obrigar a conservar, pelo prazo legal</string>
+    <string name="excluir_conta_mantido_terceiros">As publicações no DJEN e os dados nas bases do CNJ, que são públicos e não pertencem ao aplicativo</string>
+    <string name="excluir_conta_label_senha">Sua senha</string>
+    <string name="excluir_conta_senha_motivo">Confirma que é você, e não quem pegou o aparelho destravado.</string>
+    <string name="excluir_conta_sem_senha">Esta conta entra por provedor externo, sem senha própria. A confirmação é feita na tela seguinte.</string>
+    <string name="excluir_conta_ciencia">Entendi que a exclusão é definitiva e não pode ser desfeita</string>
+    <string name="excluir_conta_acao">Excluir minha conta</string>
+    <string name="excluir_conta_outro_meio">Preferir pedir por escrito, fora do aplicativo</string>
+    <string name="excluir_conta_confirmar_titulo">Excluir a conta?</string>
+    <string name="excluir_conta_confirmar_texto">Todo o acervo desta conta será apagado da nuvem e deste aparelho. Esta ação não pode ser desfeita.</string>
+    <string name="excluir_conta_confirmar_acao">Excluir definitivamente</string>
+    <string name="excluir_conta_cancelar">Cancelar</string>
+    <string name="excluir_conta_pronto_titulo">Conta excluída</string>
+    <string name="excluir_conta_pronto_texto">A conta e os dados guardados na nuvem foram apagados, e este aparelho foi limpo.</string>
+    <string name="excluir_conta_pronto_acao">Entendi</string>
+    <string name="excluir_conta_erro_sem_sessao">Não há conta conectada para excluir.</string>
+    <string name="excluir_conta_erro_senha">Senha incorreta.</string>
+    <string name="excluir_conta_erro_nuvem">Não foi possível apagar os dados da nuvem. A conta segue ativa — tente de novo com conexão estável.</string>
+    <string name="excluir_conta_erro_conta">Os dados da nuvem foram apagados, mas a conta de acesso não pôde ser excluída. Entre de novo e repita a exclusão.</string>
+
     <!-- Content descriptions -->
     <string name="cd_adicionar_processo">Adicionar processo</string>
     <string name="cd_editar_processo">Editar processo</string>
@@ -794,4 +841,64 @@
     <string name="publicacoes_duplicatas_linha_hash">Hash: %1$s</string>
     <string name="perfil_apenas_por_nome">Buscar apenas pelo nome</string>
     <string name="perfil_apenas_por_nome_descricao">Útil para quem ainda não tem OAB cadastrada ou atua em UF diferente. Resultados podem incluir homônimos (badge "Verificar").</string>
+
+    <!-- Minuta -->
+    <string name="minuta_menu_gerar">Gerar minuta</string>
+    <string name="minuta_titulo_lista">Minutas</string>
+    <string name="minuta_titulo_upload">Nova minuta</string>
+    <string name="minuta_titulo_extraindo">Extraindo</string>
+    <string name="minuta_titulo_revisar">Revisar extração</string>
+    <string name="minuta_titulo_configurar">Configurar sugestão</string>
+    <string name="minuta_titulo_gerando">Gerando</string>
+    <string name="minuta_titulo_resultado">Rascunho gerado</string>
+    <string name="minuta_nova">Nova minuta a partir de uma peça</string>
+    <string name="minuta_vazio_titulo">Nenhuma minuta ainda</string>
+    <string name="minuta_vazio_corpo">Envie o PDF de uma peça recebida para gerar um rascunho de resposta.</string>
+    <string name="minuta_cd_excluir">Excluir</string>
+    <string name="minuta_upload_passo1">1. Selecione o PDF da peça recebida</string>
+    <string name="minuta_upload_escolher">Escolher arquivo PDF</string>
+    <string name="minuta_upload_passo2">2. Tipo da peça recebida</string>
+    <string name="minuta_upload_extrair">Extrair peça</string>
+    <string name="minuta_upload_aviso_tempo">A extração roda no servidor e pode levar até ~1 min.</string>
+    <string name="minuta_extraindo_titulo">Extraindo a peça…</string>
+    <string name="minuta_extraindo_enviando">Enviando ao servidor</string>
+    <string name="minuta_gerando_titulo">Gerando o rascunho…</string>
+    <string name="minuta_gerando_detalhe">A IA está redigindo a peça de resposta (10–45s)</string>
+    <string name="minuta_revisar_intro">Revise e ajuste a estrutura extraída antes de gerar. Você pode corrigir os textos, remover itens ou adicionar novos. Itens com baixa confiança merecem conferência no documento original.</string>
+    <string name="minuta_revisar_add_fato">Adicionar fato</string>
+    <string name="minuta_revisar_add_tese">Adicionar tese</string>
+    <string name="minuta_revisar_add_pedido">Adicionar pedido</string>
+    <string name="minuta_revisar_cd_remover">Remover item</string>
+    <string name="minuta_revisar_parte_vazia">Não extraído — toque para preencher</string>
+    <string name="minuta_revisar_lacunas">Lacunas na extração</string>
+    <string name="minuta_revisar_requerente">Requerente</string>
+    <string name="minuta_revisar_requerido">Requerido</string>
+    <string name="minuta_revisar_preliminares">Preliminares (%1$d)</string>
+    <string name="minuta_revisar_fatos">Fatos (%1$d)</string>
+    <string name="minuta_revisar_fato">Fato %1$d</string>
+    <string name="minuta_revisar_teses">Teses (%1$d)</string>
+    <string name="minuta_revisar_pedidos">Pedidos (%1$d)</string>
+    <string name="minuta_revisar_provas">Provas (%1$d)</string>
+    <string name="minuta_revisar_avancar">Configurar sugestão</string>
+    <string name="minuta_config_tipo">Peça a gerar em resposta</string>
+    <string name="minuta_config_orientacoes">Orientações (opcional)</string>
+    <string name="minuta_config_orientacoes_hint">Ex.: negar o dano moral com foco na Súmula 385; arguir prescrição.</string>
+    <string name="minuta_config_contador">%1$d/4000</string>
+    <string name="minuta_config_gerar">Gerar minuta</string>
+    <string name="minuta_config_aviso_revisao">O rascunho sempre requer revisão do advogado.</string>
+    <string name="minuta_resultado_requer_revisao_titulo">Requer revisão</string>
+    <string name="minuta_resultado_requer_revisao_corpo">Este é um rascunho gerado por IA. Revise antes de protocolar.</string>
+    <string name="minuta_resultado_pontos_atencao">Pontos de atenção</string>
+    <string name="minuta_resultado_lacunas">Lacunas</string>
+    <string name="minuta_resultado_secoes">Seções</string>
+    <string name="minuta_resultado_compartilhar">Compartilhar</string>
+    <string name="minuta_resultado_concluir">Concluir</string>
+    <string name="minuta_compartilhar_titulo">Compartilhar minuta</string>
+    <string name="minuta_stage_conversion">Convertendo o PDF</string>
+    <string name="minuta_stage_semantic">Analisando o conteúdo</string>
+    <string name="minuta_stage_validation">Validando a estrutura</string>
+    <string name="minuta_stage_packaging">Montando o resultado</string>
+    <string name="minuta_stage_done">Concluído</string>
+    <string name="minuta_stage_default">Processando</string>
+    <string name="minuta_erro_ok">OK</string>
 </resources>

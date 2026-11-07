@@ -217,8 +217,6 @@ class MonitoramentoViewModelTest {
 
         override val currentUser: Flow<AuthUser?> = MutableStateFlow(user)
 
-        override suspend fun signInAnonymously(): Result<AuthUser> = Result.success(user)
-
         override suspend fun linkWithGoogle(idToken: String): Result<AuthUser> = Result.success(user)
 
         override suspend fun signInWithEmail(email: String, password: String): Result<AuthUser> =
@@ -236,9 +234,17 @@ class MonitoramentoViewModelTest {
         ): Result<Unit> = Result.success(Unit)
 
         override suspend fun signOut() = Unit
+
+        override suspend fun temProvedorSenha(): Boolean = true
+
+        override suspend fun reautenticarComSenha(senha: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun excluirConta(): Result<Unit> = Result.success(Unit)
     }
 
     private class FakeSincronizacaoRepository : SincronizacaoRepository {
+        override suspend fun nuvemAutorizada(): Boolean = false
+
         override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo =
             SincronizacaoNuvemResumo()
 
@@ -248,6 +254,8 @@ class MonitoramentoViewModelTest {
         override suspend fun enviarPerfil(userId: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun restaurarPerfil(userId: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun excluirTudo(userId: String): Result<Unit> = Result.success(Unit)
     }
 
     private class FakeCadastroOabRepository(

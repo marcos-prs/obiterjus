@@ -1,15 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   O banco guarda dados de clientes (CPF/CNPJ, endereço, contato) e o inteiro
+   teor de publicações judiciais; o DataStore guarda a identidade do advogado.
+   Nada disso sai do aparelho por backup.
+
+   allowBackup="false" já cobre o backup em nuvem, mas a transferência entre
+   aparelhos (Android 12+) é independente dele e precisa da exclusão explícita
+   abaixo.
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
     </device-transfer>
-    -->
 </data-extraction-rules>

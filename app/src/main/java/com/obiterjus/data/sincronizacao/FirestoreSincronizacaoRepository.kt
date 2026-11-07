@@ -1,12 +1,20 @@
 package com.obiterjus.data.sincronizacao
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.obiterjus.data.agenda.local.PrazoSugeridoDao
+import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
+import com.obiterjus.data.cliente.local.ClienteDao
+import com.obiterjus.data.cliente.local.ClienteEntity
+import com.obiterjus.data.cliente.local.ClienteProcessoEntity
 import com.obiterjus.data.datajud.local.MovimentoEntity
 import com.obiterjus.data.datajud.local.ParticipanteEntity
 import com.obiterjus.data.djen.DjenPartesResolver
+import com.obiterjus.data.minuta.local.MinutaDao
+import com.obiterjus.data.minuta.local.MinutaEntity
 import com.obiterjus.data.processo.local.LocalProcessoRepository
 import com.obiterjus.data.processo.local.ProcessoEntity
 import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
@@ -15,8 +23,6 @@ import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.SincronizacaoNuvemResumo
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.repository.SincronizacaoRepository
-import java.time.Instant
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 
@@ -24,83 +30,79 @@ class FirestoreSincronizacaoRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val localProcessoRepository: LocalProcessoRepository,
     private val localPublicacaoRepository: LocalPublicacaoRepository,
+    private val clienteDao: ClienteDao,
+    private val prazoSugeridoDao: PrazoSugeridoDao,
+    private val minutaDao: MinutaDao,
     private val repositorioCadastroOab: CadastroOabRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
     private val partesResolver: DjenPartesResolver? = null,
 ) : SincronizacaoRepository {
 
+    override suspend fun nuvemAutorizada(): Boolean =
+        perfilPreferencesRepository.preferencias.first().sincronizacaoNuvemAutorizada
+
     override suspend fun enviarTudo(userId: String): SincronizacaoNuvemResumo {
         val userRef = firestore.usuarioRef(userId)
         val processos = localProcessoRepository.observeProcessos().first()
+
+        // Publicação sigilosa não sai do aparelho: o inteiro teor viaja no DTO,
+        // e o que corre em segredo de justiça não tem por que estar na nuvem.
         val publicacoes = localPublicacaoRepository.observePublicacoes().first()
+            .filterNot(PublicacaoEntity::isSigiloso)
+        val idsPublicacoes = publicacoes.mapTo(mutableSetOf(), PublicacaoEntity::id)
+
         val movimentos = processos.flatMap { processo ->
             localProcessoRepository.getMovimentos(processo.numeroProcesso)
         }
         val participantes = localProcessoRepository.getTodosParticipantes()
+        val clientes = clienteDao.observarTodos().first()
+        val vinculos = clienteDao.observarVinculos().first()
+        val prazos = prazoSugeridoDao.observeAll().first()
+            .filter { it.publicacaoId in idsPublicacoes }
+        val minutas = minutaDao.listarTodas()
 
-        processos.forEach { processo ->
-            userRef.collection(COLECAO_PROCESSOS)
-                .document(processo.numeroProcesso)
-                .set(processo.toFirestoreDto(), SetOptions.merge())
-                .await()
-        }
-
-        publicacoes.forEach { publicacao ->
-            userRef.collection(COLECAO_PUBLICACOES)
-                .document(publicacao.id.toString())
-                .set(publicacao.toFirestoreDto(), SetOptions.merge())
-                .await()
-        }
-
-        movimentos.forEach { movimento ->
-            userRef.collection(COLECAO_MOVIMENTOS)
-                .document(movimento.idLocal)
-                .set(movimento.toFirestoreDto(), SetOptions.merge())
-                .await()
-        }
-
-        participantes.forEach { participante ->
-            userRef.collection(COLECAO_PARTICIPANTES)
-                .document(participante.idLocal)
-                .set(participante.toFirestoreDto(), SetOptions.merge())
-                .await()
-        }
+        enviar(userRef.collection(COLECAO_PROCESSOS), processos, ProcessoEntity::numeroProcesso) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_PUBLICACOES), publicacoes, { it.id.toString() }) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_MOVIMENTOS), movimentos, MovimentoEntity::idLocal) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_PARTICIPANTES), participantes, ParticipanteEntity::idLocal) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_CLIENTES), clientes, ClienteEntity::id) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_VINCULOS), vinculos, { "${it.clienteId}_${it.numeroProcesso}" }) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_PRAZOS), prazos, { it.publicacaoId.toString() }) { it.toFirestoreDto() }
+        enviar(userRef.collection(COLECAO_MINUTAS), minutas, MinutaEntity::sugestaoId) { it.toFirestoreDto() }
 
         return SincronizacaoNuvemResumo(
             processos = processos.size,
             publicacoes = publicacoes.size,
             movimentos = movimentos.size,
             participantes = participantes.size,
+            clientes = clientes.size + vinculos.size,
+            prazos = prazos.size,
+            minutas = minutas.size,
         )
     }
 
     override suspend fun restaurarTudo(userId: String): SincronizacaoNuvemResumo {
         val userRef = firestore.usuarioRef(userId)
-        val processos = userRef.collection(COLECAO_PROCESSOS)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toObject(ProcessoFirestoreDto::class.java)?.toEntity() }
-        val publicacoes = userRef.collection(COLECAO_PUBLICACOES)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toObject(PublicacaoFirestoreDto::class.java)?.toEntity() }
-        val movimentos = userRef.collection(COLECAO_MOVIMENTOS)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toObject(MovimentoFirestoreDto::class.java)?.toEntity() }
-        val participantes = userRef.collection(COLECAO_PARTICIPANTES)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.toObject(ParticipanteFirestoreDto::class.java)?.toEntity() }
 
+        val processos = baixar(userRef.collection(COLECAO_PROCESSOS), ProcessoFirestoreDto::class.java) { it.toEntity() }
+        val publicacoes = baixar(userRef.collection(COLECAO_PUBLICACOES), PublicacaoFirestoreDto::class.java) { it.toEntity() }
+        val movimentos = baixar(userRef.collection(COLECAO_MOVIMENTOS), MovimentoFirestoreDto::class.java) { it.toEntity() }
+        val participantes = baixar(userRef.collection(COLECAO_PARTICIPANTES), ParticipanteFirestoreDto::class.java) { it.toEntity() }
+        val clientes = baixar(userRef.collection(COLECAO_CLIENTES), ClienteFirestoreDto::class.java) { it.toEntity() }
+        val vinculos = baixar(userRef.collection(COLECAO_VINCULOS), ClienteProcessoFirestoreDto::class.java) { it.toEntity() }
+        val prazos = baixar(userRef.collection(COLECAO_PRAZOS), PrazoSugeridoFirestoreDto::class.java) { it.toEntity() }
+        val minutas = baixar(userRef.collection(COLECAO_MINUTAS), MinutaFirestoreDto::class.java) { it.toEntity() }
+
+        // Ordem obrigatória: processos e publicações primeiro, porque prazos e
+        // vínculos têm chave estrangeira para elas.
         val processosRestaurados = mergeProcessos(processos)
         val publicacoesRestauradas = mergePublicacoes(publicacoes)
         val movimentosRestaurados = mergeMovimentos(movimentos)
         val participantesRestaurados = mergeParticipantes(participantes)
+        val clientesRestaurados = mergeClientes(clientes, vinculos)
+        val prazosRestaurados = mergePrazos(prazos)
+        minutas.forEach { minutaDao.upsert(it) }
+
         partesResolver?.atualizarPartesDosProcessos(
             processos.map(ProcessoEntity::numeroProcesso).distinct(),
         )
@@ -110,6 +112,9 @@ class FirestoreSincronizacaoRepository(
             publicacoes = publicacoesRestauradas,
             movimentos = movimentosRestaurados,
             participantes = participantesRestaurados,
+            clientes = clientesRestaurados,
+            prazos = prazosRestaurados,
+            minutas = minutas.size,
         )
     }
 
@@ -168,6 +173,57 @@ class FirestoreSincronizacaoRepository(
                 .getOrDefault(com.obiterjus.ui.theme.TipoTema.SISTEMA)
         )
         perfilPreferencesRepository.saveApenasPorNome(dto.apenasPorNome)
+        // A autorização de nuvem não vem do perfil remoto de propósito: é
+        // consentimento e tem de ser dado neste aparelho.
+    }
+
+    /**
+     * O Firestore não apaga subcoleção junto com o documento pai: apagar
+     * `users/{uid}` deixaria o acervo inteiro órfão, visível no console e sem
+     * dono que possa pedir sua exclusão. Daí a lista explícita — qualquer
+     * coleção nova em [enviarTudo] tem de entrar aqui também.
+     */
+    override suspend fun excluirTudo(userId: String): Result<Unit> = runCatching {
+        val userRef = firestore.usuarioRef(userId)
+        COLECOES_DA_CONTA.forEach { nome -> apagarColecao(userRef.collection(nome)) }
+        userRef.delete().await()
+    }
+
+    /**
+     * Grava em lotes de [TAMANHO_LOTE]. Antes era um `await()` por documento —
+     * milhares de idas e voltas numa rede móvel, e um erro no meio deixava a
+     * nuvem parcialmente escrita sem nenhum sinal.
+     */
+    private suspend fun <T> enviar(
+        colecao: CollectionReference,
+        itens: List<T>,
+        id: (T) -> String,
+        dto: (T) -> Any,
+    ) {
+        itens.chunked(TAMANHO_LOTE).forEach { lote ->
+            val batch = firestore.batch()
+            lote.forEach { item ->
+                batch.set(colecao.document(id(item)), dto(item), SetOptions.merge())
+            }
+            batch.commit().await()
+        }
+    }
+
+    private suspend fun apagarColecao(colecao: CollectionReference) {
+        val documentos = colecao.get().await().documents
+        documentos.chunked(TAMANHO_LOTE).forEach { lote ->
+            val batch = firestore.batch()
+            lote.forEach { documento -> batch.delete(documento.reference) }
+            batch.commit().await()
+        }
+    }
+
+    private suspend fun <D : Any, E> baixar(
+        colecao: CollectionReference,
+        tipo: Class<D>,
+        paraEntidade: (D) -> E?,
+    ): List<E> = colecao.get().await().documents.mapNotNull { documento ->
+        documento.toObject(tipo)?.let(paraEntidade)
     }
 
     private suspend fun mergeProcessos(processosNuvem: List<ProcessoEntity>): Int {
@@ -226,6 +282,51 @@ class FirestoreSincronizacaoRepository(
         return participantesPorProcesso.values.sumOf { it.size }
     }
 
+    private suspend fun mergeClientes(
+        clientesNuvem: List<ClienteEntity>,
+        vinculosNuvem: List<ClienteProcessoEntity>,
+    ): Int {
+        // Mesma regra dos processos: a nuvem só sobrescreve o que for mais
+        // recente, para não desfazer uma edição feita neste aparelho.
+        val clientesLocais = clienteDao.observarTodos().first().associateBy(ClienteEntity::id)
+        val clientesParaSalvar = clientesNuvem.filter { remoto ->
+            val local = clientesLocais[remoto.id]
+            local == null || remoto.atualizadoEm > local.atualizadoEm
+        }
+        clientesParaSalvar.forEach { clienteDao.upsert(it) }
+
+        val clientesExistentes = clientesNuvem.mapTo(mutableSetOf(), ClienteEntity::id)
+        val processosExistentes = localProcessoRepository
+            .getProcessos(vinculosNuvem.map(ClienteProcessoEntity::numeroProcesso).distinct())
+            .map(ProcessoEntity::numeroProcesso)
+            .toSet()
+        val vinculosValidos = vinculosNuvem.filter { vinculo ->
+            vinculo.clienteId in clientesExistentes && vinculo.numeroProcesso in processosExistentes
+        }
+        vinculosValidos.forEach { clienteDao.vincular(it) }
+
+        return clientesParaSalvar.size + vinculosValidos.size
+    }
+
+    /**
+     * Só traz prazo que ainda não existe aqui. A tabela não tem carimbo de
+     * atualização, e o `insert` é REPLACE — sobrescrever apagaria um "cumprido"
+     * marcado neste aparelho.
+     */
+    private suspend fun mergePrazos(prazosNuvem: List<PrazoSugeridoEntity>): Int {
+        val publicacoesExistentes = localPublicacaoRepository
+            .getPublicacoes(prazosNuvem.map(PrazoSugeridoEntity::publicacaoId).distinct())
+            .map(PublicacaoEntity::id)
+            .toSet()
+        val prazosLocais = prazoSugeridoDao.observeAll().first()
+            .mapTo(mutableSetOf(), PrazoSugeridoEntity::publicacaoId)
+        val prazosValidos = prazosNuvem.filter {
+            it.publicacaoId in publicacoesExistentes && it.publicacaoId !in prazosLocais
+        }
+        prazosValidos.forEach { prazoSugeridoDao.insert(it) }
+        return prazosValidos.size
+    }
+
     private fun FirebaseFirestore.usuarioRef(userId: String): DocumentReference =
         collection(COLECAO_USUARIOS).document(userId)
 
@@ -235,7 +336,27 @@ class FirestoreSincronizacaoRepository(
         const val COLECAO_PUBLICACOES = "publicacoes"
         const val COLECAO_MOVIMENTOS = "movimentos"
         const val COLECAO_PARTICIPANTES = "participantes"
+        const val COLECAO_CLIENTES = "clientes"
+        const val COLECAO_VINCULOS = "clientes_processos"
+        const val COLECAO_PRAZOS = "prazos"
+        const val COLECAO_MINUTAS = "minutas"
         const val COLECAO_PERFIL = "perfil"
         const val DOC_PERFIL = "profile"
+
+        /** Tudo o que pende de `users/{uid}` e vai embora com a conta. */
+        val COLECOES_DA_CONTA = listOf(
+            COLECAO_PROCESSOS,
+            COLECAO_PUBLICACOES,
+            COLECAO_MOVIMENTOS,
+            COLECAO_PARTICIPANTES,
+            COLECAO_CLIENTES,
+            COLECAO_VINCULOS,
+            COLECAO_PRAZOS,
+            COLECAO_MINUTAS,
+            COLECAO_PERFIL,
+        )
+
+        /** Teto de operações por WriteBatch no Firestore. */
+        const val TAMANHO_LOTE = 500
     }
 }

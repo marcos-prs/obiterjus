@@ -334,5 +334,7 @@ class DjenSyncExecutorTest {
         override suspend fun saveNotificarMovimentacoes(ativo: Boolean) {}
         override suspend fun saveTema(tema: com.obiterjus.ui.theme.TipoTema) {}
         override suspend fun saveApenasPorNome(ativo: Boolean) {}
+
+        override suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean) = Unit
     }
 }

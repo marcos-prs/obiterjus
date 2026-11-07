@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
 import com.obiterjus.data.settings.PerfilPreferencesRepository
+import com.obiterjus.data.settings.SessaoLocalRepository
 import com.obiterjus.domain.model.AuthUser
 import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.repository.AuthRepository
@@ -136,6 +137,7 @@ class AutenticacaoViewModel internal constructor(
     private val repositorioSincronizacao: SincronizacaoRepository,
     private val monitorarCnjUseCase: MonitorarCnjUseCase,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val sessaoLocal: SessaoLocalRepository,
     private val textos: TextosAutenticacao,
 ) : ViewModel() {
     constructor(
@@ -145,12 +147,14 @@ class AutenticacaoViewModel internal constructor(
         repositorioSincronizacao: SincronizacaoRepository,
         monitorarCnjUseCase: MonitorarCnjUseCase,
         perfilPreferencesRepository: PerfilPreferencesRepository,
+        sessaoLocal: SessaoLocalRepository,
     ) : this(
         authRepository = authRepository,
         repositorioCadastroOab = repositorioCadastroOab,
         repositorioSincronizacao = repositorioSincronizacao,
         monitorarCnjUseCase = monitorarCnjUseCase,
         perfilPreferencesRepository = perfilPreferencesRepository,
+        sessaoLocal = sessaoLocal,
         textos = ContextTextosAutenticacao(context),
     )
 
@@ -228,12 +232,25 @@ class AutenticacaoViewModel internal constructor(
             _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
             authRepository.signInWithEmail(email, senha).fold(
                 onSuccess = { authUser ->
-                    repositorioSincronizacao.restaurarPerfil(authUser.uid)
-                    repositorioSincronizacao.restaurarTudo(authUser.uid)
+                    // A restauração chamava o Firestore fora de runCatching: sem
+                    // rede, a exceção escapava do launch e derrubava o app logo
+                    // depois de um login bem-sucedido.
+                    val restauracao = runCatching {
+                        sessaoLocal.prepararPara(authUser.uid)
+                        repositorioSincronizacao.restaurarPerfil(authUser.uid)
+                        repositorioSincronizacao.restaurarTudo(authUser.uid)
+                    }
                     _estado.update {
                         it.copy(
                             carregando = false,
+                            senha = "",
+                            confirmarSenha = "",
                             mensagemSucesso = textos.get(R.string.autenticacao_sucesso_login),
+                            mensagemErro = if (restauracao.isFailure) {
+                                textos.get(R.string.autenticacao_error_restaurar)
+                            } else {
+                                null
+                            },
                         )
                     }
                 },
@@ -378,10 +395,15 @@ class AutenticacaoViewModel internal constructor(
             _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
             authRepository.signUpWithEmail(estadoAtual.email.trim(), estadoAtual.senha).fold(
                 onSuccess = { authUser ->
-                    repositorioSincronizacao.enviarPerfil(authUser.uid)
+                    runCatching {
+                        sessaoLocal.prepararPara(authUser.uid)
+                        repositorioSincronizacao.enviarPerfil(authUser.uid)
+                    }
                     _estado.update {
                         it.copy(
                             carregando = false,
+                            senha = "",
+                            confirmarSenha = "",
                             mensagemSucesso = textos.get(R.string.autenticacao_sucesso_cadastro),
                         )
                     }

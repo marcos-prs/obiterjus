@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Sem HTTP em claro em nenhuma versão do Android. minSdk é 26, e em API 26–27
+   o padrão da plataforma ainda permitiria cleartext — inclusive para uma URL
+   vinda do Remote Config.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

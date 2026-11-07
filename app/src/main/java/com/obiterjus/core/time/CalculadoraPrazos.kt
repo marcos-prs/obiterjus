@@ -7,6 +7,7 @@ import com.obiterjus.data.time.RespostaPrazo
 import com.obiterjus.domain.model.NaturezaProcesso
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import retrofit2.HttpException
 
@@ -103,6 +104,8 @@ class CalculadoraPrazos(
                     },
                 ),
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             return null
         }
@@ -127,6 +130,8 @@ class CalculadoraPrazos(
         repeat(TENTATIVAS - 1) { tentativa ->
             try {
                 return calendarioForense.calcularPrazo(pedido)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logFalha(pedido.tribunal, tentativa + 1, e)
                 delay(RETRY_DELAY_MS)
@@ -134,6 +139,8 @@ class CalculadoraPrazos(
         }
         return try {
             calendarioForense.calcularPrazo(pedido)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logFalha(pedido.tribunal, TENTATIVAS, e)
             null

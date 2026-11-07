@@ -109,7 +109,7 @@ fun DetalhePublicacaoScreen(
         coroutineScope.launch {
             googleCalendarAuthorizationRepository.completeAuthorization(result.data).fold(
                 onSuccess = { viewModel.aoConfirmarProvedor(ProvedorCalendario.GOOGLE) },
-                onFailure = { snackbarHostState.showSnackbar(feedbackErro) },
+                onFailure = { erro -> snackbarHostState.showSnackbar(erro.message ?: feedbackErro) },
             )
         }
     }
@@ -137,8 +137,8 @@ fun DetalhePublicacaoScreen(
                                 }
                             }
                         },
-                        onFailure = {
-                            snackbarHostState.showSnackbar(feedbackErro)
+                        onFailure = { erro ->
+                            snackbarHostState.showSnackbar(erro.message ?: feedbackErro)
                         },
                     )
                 }

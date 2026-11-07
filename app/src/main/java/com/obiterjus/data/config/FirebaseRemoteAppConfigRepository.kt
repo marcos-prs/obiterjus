@@ -5,6 +5,7 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.obiterjus.core.config.AppConfig
 import com.obiterjus.core.config.AppConfigRepository
 import com.obiterjus.core.config.AppConfigSource
+import java.net.URI
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.tasks.await
@@ -69,9 +70,9 @@ class FirebaseRemoteAppConfigRepository(
     ): AppConfig {
         val remoteApiKey = getString(KEY_DATAJUD_API_KEY).trim()
         return AppConfig(
-            djenBaseUrl = getString(KEY_DJEN_BASE_URL).trim().ifBlank { fallback.djenBaseUrl },
+            djenBaseUrl = getString(KEY_DJEN_BASE_URL).urlPermitidaOuNull() ?: fallback.djenBaseUrl,
             djenToken = getString(KEY_DJEN_TOKEN).trim().ifBlank { fallback.djenToken },
-            dataJudBaseUrl = getString(KEY_DATAJUD_BASE_URL).trim().ifBlank { fallback.dataJudBaseUrl },
+            dataJudBaseUrl = getString(KEY_DATAJUD_BASE_URL).urlPermitidaOuNull() ?: fallback.dataJudBaseUrl,
             dataJudApiKey = remoteApiKey.ifBlank { fallback.dataJudApiKey },
             djenDefaultItemsPerPage = getPositiveLongOrFallback(
                 KEY_DJEN_DEFAULT_ITEMS_PER_PAGE,
@@ -89,6 +90,20 @@ class FirebaseRemoteAppConfigRepository(
             ),
             source = source,
         )
+    }
+
+    /**
+     * A APIKey do DataJud e o token do DJEN vão no cabeçalho para o host que
+     * estiver configurado aqui. Sem esta checagem, um valor errado no console
+     * — ou acesso indevido ao projeto Firebase — entregaria as credenciais a
+     * um terceiro. Exige https e domínio do Judiciário.
+     */
+    private fun String.urlPermitidaOuNull(): String? {
+        val valor = trim().takeIf { it.isNotBlank() } ?: return null
+        if (!valor.startsWith("https://", ignoreCase = true)) return null
+        val host = runCatching { URI(valor).host }.getOrNull()?.lowercase() ?: return null
+        val permitido = host == DOMINIO_PERMITIDO || host.endsWith(".$DOMINIO_PERMITIDO")
+        return valor.takeIf { permitido }
     }
 
     private fun FirebaseRemoteConfig.getPositiveLongOrFallback(
@@ -118,5 +133,6 @@ class FirebaseRemoteAppConfigRepository(
         const val KEY_DJEN_ENABLED = "djen_enabled"
         const val KEY_REQUEST_TIMEOUT_SECONDS = "request_timeout_seconds"
         const val MIN_FETCH_INTERVAL_SECONDS = 60L * 60L
+        const val DOMINIO_PERMITIDO = "jus.br"
     }
 }

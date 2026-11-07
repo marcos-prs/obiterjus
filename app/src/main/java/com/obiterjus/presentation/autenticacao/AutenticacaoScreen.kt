@@ -1,5 +1,7 @@
 package com.obiterjus.presentation.autenticacao
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -8,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -574,12 +578,16 @@ private fun EtapaConta(
             subtitulo = stringResource(R.string.autenticacao_toggle_termos_sub),
             ativo = estado.aceitarTermos,
             aoAlternar = aoAlternarTermos,
+            rotuloLink = stringResource(R.string.autenticacao_ler_termos),
+            urlLink = stringResource(R.string.url_termos_uso),
         )
         ToggleLinha(
             titulo = stringResource(R.string.autenticacao_toggle_privacidade),
             subtitulo = stringResource(R.string.autenticacao_toggle_privacidade_sub),
             ativo = estado.aceitarPrivacidade,
             aoAlternar = aoAlternarPrivacidade,
+            rotuloLink = stringResource(R.string.autenticacao_ler_privacidade),
+            urlLink = stringResource(R.string.url_politica_privacidade),
         )
 
         Button(
@@ -986,7 +994,10 @@ private fun ToggleLinha(
     subtitulo: String?,
     ativo: Boolean,
     aoAlternar: (Boolean) -> Unit,
+    rotuloLink: String? = null,
+    urlLink: String? = null,
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1000,6 +1011,18 @@ private fun ToggleLinha(
                     style = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic),
                     color = ObiterTheme.colors.textMuted,
                 )
+            }
+            if (!rotuloLink.isNullOrBlank() && !urlLink.isNullOrBlank()) {
+                TextButton(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(urlLink)))
+                        }
+                    },
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                ) {
+                    Text(text = rotuloLink, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
         ToggleObiter(ativo = ativo, aoAlternar = aoAlternar)

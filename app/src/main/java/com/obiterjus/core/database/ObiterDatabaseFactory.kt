@@ -4,16 +4,36 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.obiterjus.core.security.CofreLocal
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 object ObiterDatabaseFactory {
     private const val DATABASE_NAME = "obiterjus.db"
+    private const val TAMANHO_SENHA_BYTES = 32
 
-    fun create(context: Context): ObiterDatabase =
-        Room.databaseBuilder(
+    /**
+     * O banco guarda qualificação de clientes e o inteiro teor de publicações,
+     * então vai cifrado com SQLCipher. A senha é aleatória, criada no primeiro
+     * uso e mantida no [CofreLocal] (Android Keystore).
+     */
+    fun create(context: Context): ObiterDatabase {
+        System.loadLibrary("sqlcipher")
+
+        val cofre = CofreLocal(context)
+        if (cofre.ler(CofreLocal.SEGREDO_BANCO) == null) {
+            // Nenhuma senha guardada. Ou é a primeira execução, ou a chave do
+            // Keystore se perdeu — e aí o arquivo que estiver no disco é
+            // ilegível de qualquer forma. Descarta para não travar o app.
+            context.deleteDatabase(DATABASE_NAME)
+        }
+        val senha = cofre.segredo(CofreLocal.SEGREDO_BANCO, TAMANHO_SENHA_BYTES)
+
+        return Room.databaseBuilder(
             context.applicationContext,
             ObiterDatabase::class.java,
             DATABASE_NAME,
         )
+            .openHelperFactory(SupportOpenHelperFactory(senha))
             .addMigrations(
                 MIGRATION_1_2,
                 MIGRATION_2_3,
@@ -29,8 +49,10 @@ object ObiterDatabaseFactory {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
             .build()
+    }
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -215,6 +237,27 @@ object ObiterDatabaseFactory {
                 """.trimIndent(),
             )
             db.execSQL("CREATE INDEX IF NOT EXISTS index_clientes_processos_numeroProcesso ON clientes_processos(numeroProcesso)")
+        }
+    }
+
+    private val MIGRATION_15_16 = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS minutas (
+                    sugestaoId TEXT NOT NULL PRIMARY KEY,
+                    numeroProcesso TEXT,
+                    tipoMinuta TEXT NOT NULL,
+                    titulo TEXT NOT NULL,
+                    confiancaGeral REAL NOT NULL,
+                    requerRevisao INTEGER NOT NULL,
+                    geradoEm INTEGER NOT NULL,
+                    payloadJson TEXT NOT NULL
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_minutas_numeroProcesso ON minutas(numeroProcesso)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_minutas_geradoEm ON minutas(geradoEm)")
         }
     }
 }

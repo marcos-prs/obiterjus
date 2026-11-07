@@ -6,6 +6,7 @@ import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.model.ConfirmacaoPrazoResultado
 import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.repository.CalendarSyncRepository
+import kotlinx.coroutines.CancellationException
 
 class ConfirmarPrazoUC(
     private val prazoSugeridoDao: PrazoSugeridoDao,
@@ -62,6 +63,8 @@ class ConfirmarPrazoUC(
             } else {
                 Result.success(ConfirmacaoPrazoResultado.SincronizacaoPendente(provedor))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }

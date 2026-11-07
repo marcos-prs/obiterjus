@@ -1,70 +1,38 @@
 package com.obiterjus.data.agenda.remote
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.obiterjus.data.settings.obiterSettingsDataStore
-import java.io.IOException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import com.obiterjus.core.security.CofreLocal
 
+/**
+ * Access token do Google Calendar.
+ *
+ * Fica no [CofreLocal] em vez do DataStore por dois motivos: é credencial e
+ * precisa estar cifrada em repouso, e a leitura tem de ser síncrona — o
+ * interceptor do OkHttp não pode suspender. A versão anterior usava um
+ * StateFlow hidratado por corrotina, e as primeiras chamadas depois de um cold
+ * start saíam sem cabeçalho, tomavam 401 e apagavam um token que era válido.
+ */
 interface GoogleCalendarTokenRepository {
-    val accessToken: StateFlow<String?>
+    fun accessToken(): String?
 
-    suspend fun saveAccessToken(token: String)
+    fun saveAccessToken(token: String)
 
-    suspend fun clearAccessToken()
+    fun clearAccessToken()
 }
 
-class DataStoreGoogleCalendarTokenRepository(
+class CofreGoogleCalendarTokenRepository(
     context: Context,
+    private val cofre: CofreLocal = CofreLocal(context),
 ) : GoogleCalendarTokenRepository {
-    private val dataStore = context.applicationContext.obiterSettingsDataStore
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val currentAccessToken = MutableStateFlow<String?>(null)
 
-    override val accessToken: StateFlow<String?> = currentAccessToken
+    override fun accessToken(): String? =
+        cofre.ler(CofreLocal.SEGREDO_TOKEN_CALENDAR)?.takeIf { it.isNotBlank() }
 
-    init {
-        scope.launch {
-            dataStore.safeData()
-                .map { prefs -> prefs[KEY_ACCESS_TOKEN] }
-                .collect { token -> currentAccessToken.value = token }
-        }
+    override fun saveAccessToken(token: String) {
+        cofre.guardar(CofreLocal.SEGREDO_TOKEN_CALENDAR, token.trim())
     }
 
-    override suspend fun saveAccessToken(token: String) {
-        dataStore.edit { prefs ->
-            prefs[KEY_ACCESS_TOKEN] = token.trim()
-        }
-    }
-
-    override suspend fun clearAccessToken() {
-        dataStore.edit { prefs ->
-            prefs.remove(KEY_ACCESS_TOKEN)
-        }
-    }
-
-    private fun DataStore<Preferences>.safeData() =
-        data.catch { error ->
-            if (error is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw error
-            }
-        }
-
-    private companion object {
-        val KEY_ACCESS_TOKEN = stringPreferencesKey("google_calendar_access_token")
+    override fun clearAccessToken() {
+        cofre.guardar(CofreLocal.SEGREDO_TOKEN_CALENDAR, null)
     }
 }

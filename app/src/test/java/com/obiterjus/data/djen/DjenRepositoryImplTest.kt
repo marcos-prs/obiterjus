@@ -215,6 +215,11 @@ class DjenRepositoryImplTest {
     ) : PublicacaoDao {
         val saved = mutableListOf<PublicacaoEntity>()
 
+        override suspend fun getComPrazoPendente(
+            dataMinima: LocalDate,
+            limite: Int,
+        ): List<PublicacaoEntity> = emptyList()
+
         override suspend fun upsert(publicacao: PublicacaoEntity) {
             saved += publicacao
         }

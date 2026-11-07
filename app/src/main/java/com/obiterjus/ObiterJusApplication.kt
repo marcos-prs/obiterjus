@@ -3,6 +3,7 @@ package com.obiterjus
 import android.app.Application
 import com.obiterjus.core.worker.DjenSyncScheduler
 import com.obiterjus.core.worker.PrazosWorkerScheduler
+import com.obiterjus.data.djen.CertidaoDjenRepositoryImpl
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.di.obiterModules
 import kotlinx.coroutines.CoroutineScope
@@ -38,5 +39,10 @@ class ObiterJusApplication : Application() {
 
         // Verificação diária de prazos (uma vez por dia, sem rede)
         PrazosWorkerScheduler.schedulePeriodic(this)
+
+        // Certidão é peça processual em claro no cache; expira em 24h.
+        applicationScope.launch(Dispatchers.IO) {
+            CertidaoDjenRepositoryImpl.limparCache(this@ObiterJusApplication)
+        }
     }
 }

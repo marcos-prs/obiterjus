@@ -32,9 +32,15 @@ sealed interface ObiterRota {
     @Serializable
     data object EditarPerfil : ObiterRota
 
+    @Serializable
+    data object ExcluirConta : ObiterRota
+
     /** Telas de detalhe (push navigation). */
     @Serializable
     data class DetalheProcesso(val numeroProcesso: String) : ObiterRota
+
+    @Serializable
+    data class Minuta(val numeroProcesso: String) : ObiterRota
     
     @Serializable
     data class DetalhePublicacao(val publicacaoId: Long) : ObiterRota

@@ -326,6 +326,11 @@ class DetalhePublicacaoViewModelTest {
     }
 
     private class PublicacaoDaoStub : PublicacaoDao {
+
+        override suspend fun getComPrazoPendente(
+            dataMinima: LocalDate,
+            limite: Int,
+        ): List<PublicacaoEntity> = emptyList()
         override suspend fun atualizarPrazo(
             id: Long,
             quantidade: Int,
