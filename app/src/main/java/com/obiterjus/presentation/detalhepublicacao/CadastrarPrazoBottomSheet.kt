@@ -303,9 +303,11 @@ private fun ConteudoProvedor(
 ) {
     val dimens = ObiterTheme.dimens
     var provedorSelecionado by rememberSaveable { mutableStateOf(ProvedorCalendario.GOOGLE) }
+    // Outlook está fora da lista: não há fluxo de autorização implementado, e o
+    // cliente sai sem token — toda confirmação tomava 401 e virava "pendente"
+    // em silêncio. O valor do enum continua existindo para os prazos já salvos.
     val provedores = listOf(
         ProvedorCalendario.GOOGLE to stringResource(R.string.prazos_provedor_google),
-        ProvedorCalendario.OUTLOOK to stringResource(R.string.prazos_provedor_outlook),
         ProvedorCalendario.LOCAL to stringResource(R.string.prazos_provedor_local),
     )
 

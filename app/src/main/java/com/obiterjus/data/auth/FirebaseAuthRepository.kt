@@ -1,5 +1,6 @@
 package com.obiterjus.data.auth
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.EmailAuthProvider
@@ -23,11 +24,6 @@ class FirebaseAuthRepository(
         }
         auth.addAuthStateListener(listener)
         awaitClose { auth.removeAuthStateListener(listener) }
-    }
-
-    override suspend fun signInAnonymously(): Result<AuthUser> = executarComResultado {
-        val result = auth.signInAnonymously().await()
-        result.user?.toAuthUser() ?: throw IllegalStateException("Usuário nulo após login anônimo")
     }
 
     override suspend fun linkWithGoogle(idToken: String): Result<AuthUser> = executarComResultado {
@@ -73,14 +69,44 @@ class FirebaseAuthRepository(
         auth.signOut()
     }
 
-    override suspend fun getIdToken(forceRefresh: Boolean): String? =
-        try {
-            auth.currentUser?.getIdToken(forceRefresh)?.await()?.token
+    override suspend fun temProvedorSenha(): Boolean {
+        val user = auth.currentUser ?: return false
+        return user.providerData.any { it.providerId == EmailAuthProvider.PROVIDER_ID }
+    }
+
+    override suspend fun reautenticarComSenha(senha: String): Result<Unit> = executarComResultado {
+        val user = auth.currentUser ?: throw IllegalStateException("Nenhum usuário autenticado")
+        val email = user.email ?: throw IllegalStateException("Usuário sem e-mail")
+        user.reauthenticate(EmailAuthProvider.getCredential(email, senha)).await()
+    }
+
+    override suspend fun excluirConta(): Result<Unit> = executarComResultado {
+        val user = auth.currentUser ?: throw IllegalStateException("Nenhum usuário autenticado")
+        user.delete().await()
+        // `delete()` já encerra a sessão, mas o listener do callbackFlow só
+        // acorda com o signOut explícito em alguns aparelhos — e a interface
+        // depende dele para voltar ao estado deslogado.
+        auth.signOut()
+    }
+
+    override suspend fun getIdToken(forceRefresh: Boolean): String? {
+        val user = auth.currentUser
+        if (user == null) {
+            // Causa nº 1 do 401 "Not authenticated" na API de minutas: nenhuma
+            // sessão Firebase (o app não tem gate de login e o reinstall zera a
+            // persistência). Sem usuário não há token para enviar.
+            Log.w(TAG, "getIdToken: sem sessão Firebase (currentUser == null)")
+            return null
+        }
+        return try {
+            user.getIdToken(forceRefresh).await().token
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
+            Log.w(TAG, "getIdToken: falha ao obter ID token (uid=${user.uid}, force=$forceRefresh)", error)
             null
         }
+    }
 
     private fun FirebaseUser.toAuthUser() = AuthUser(
         uid = uid,
@@ -98,4 +124,8 @@ class FirebaseAuthRepository(
         } catch (error: Exception) {
             Result.failure(error)
         }
+
+    private companion object {
+        const val TAG = "ObiterAuth"
+    }
 }

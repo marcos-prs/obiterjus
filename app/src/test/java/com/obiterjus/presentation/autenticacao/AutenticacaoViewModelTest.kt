@@ -120,6 +120,7 @@ class AutenticacaoViewModelTest {
             repositorioSincronizacao = SincronizacaoRepositoryFake(),
             monitorarCnjUseCase = monitorarCnjUseCase(),
             perfilPreferencesRepository = PerfilPreferencesRepositoryFake(),
+            sessaoLocal = SessaoLocalRepositoryFake(),
             textos = TextosFake,
         )
 
@@ -183,11 +184,6 @@ class AutenticacaoViewModelTest {
 
         override val currentUser: Flow<AuthUser?> = usuarioAtual
 
-        override suspend fun signInAnonymously(): Result<AuthUser> {
-            usuarioAtual.value = usuarioAnonimo
-            return Result.success(usuarioAnonimo)
-        }
-
         override suspend fun linkWithGoogle(idToken: String): Result<AuthUser> =
             Result.success(usuarioAnonimo)
 
@@ -212,6 +208,12 @@ class AutenticacaoViewModelTest {
         override suspend fun signOut() {
             usuarioAtual.value = null
         }
+
+        override suspend fun temProvedorSenha(): Boolean = true
+
+        override suspend fun reautenticarComSenha(senha: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun excluirConta(): Result<Unit> = Result.success(Unit)
 
         private companion object {
             val usuarioAnonimo = AuthUser(
@@ -251,9 +253,19 @@ class AutenticacaoViewModelTest {
         override suspend fun saveNotificarMovimentacoes(ativo: Boolean) = Unit
         override suspend fun saveTema(tema: TipoTema) = Unit
         override suspend fun saveApenasPorNome(ativo: Boolean) = Unit
+
+        override suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean) = Unit
+    }
+
+    private class SessaoLocalRepositoryFake : com.obiterjus.data.settings.SessaoLocalRepository {
+        override suspend fun prepararPara(uid: String) = Unit
+
+        override suspend fun limparTudo() = Unit
     }
 
     private class SincronizacaoRepositoryFake : com.obiterjus.domain.repository.SincronizacaoRepository {
+        override suspend fun nuvemAutorizada(): Boolean = false
+
         override suspend fun enviarTudo(userId: String): com.obiterjus.domain.model.SincronizacaoNuvemResumo =
             com.obiterjus.domain.model.SincronizacaoNuvemResumo()
 
@@ -263,5 +275,7 @@ class AutenticacaoViewModelTest {
         override suspend fun enviarPerfil(userId: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun restaurarPerfil(userId: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun excluirTudo(userId: String): Result<Unit> = Result.success(Unit)
     }
 }

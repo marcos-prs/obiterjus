@@ -68,6 +68,7 @@ fun DetalheProcessoScreen(
     aoEditarProcesso: () -> Unit,
     aoExcluirProcesso: () -> Unit,
     aoAbrirPublicacao: (Long) -> Unit,
+    aoAbrirMinutas: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(numeroProcesso) {
@@ -137,6 +138,16 @@ fun DetalheProcessoScreen(
                         expanded = menuExpandido,
                         onDismissRequest = { menuExpandido = false },
                     ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.minuta_menu_gerar)) },
+                            onClick = { menuExpandido = false; aoAbrirMinutas() },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = ObiterIcones.Artigo,
+                                    contentDescription = null,
+                                )
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.detalhe_menu_editar)) },
                             onClick = { menuExpandido = false; aoEditarProcesso() },

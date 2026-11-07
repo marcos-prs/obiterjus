@@ -25,8 +25,10 @@ import com.obiterjus.presentation.editarcliente.EditarClienteScreen
 import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoScreen
 import com.obiterjus.presentation.editarprocesso.EditarProcessoScreen
 import com.obiterjus.presentation.inicio.InicioScreen
+import com.obiterjus.presentation.minuta.MinutaScreen
 import com.obiterjus.presentation.perfil.PerfilScreen
 import com.obiterjus.presentation.perfil.EditarPerfilScreen
+import com.obiterjus.presentation.perfil.ExcluirContaScreen
 import com.obiterjus.presentation.prazos.PrazosScreen
 import com.obiterjus.presentation.principal.ObiterViewModels
 import com.obiterjus.presentation.publicacoes.ConteudoPublicacoes
@@ -186,6 +188,22 @@ fun ObiterNavGraph(
             )
         }
 
+        composable<ObiterRota.ExcluirConta> {
+            ExcluirContaScreen(
+                viewModel = org.koin.androidx.compose.koinViewModel(),
+                aoVoltar = { navController.popBackStack() },
+                aoExcluir = {
+                    navController.navigate(ObiterRota.Inicio) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = false
+                        }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                },
+            )
+        }
+
         composable<ObiterRota.Auditoria> {
             AuditoriaScreen(viewModel = viewModels.auditoria)
         }
@@ -211,6 +229,20 @@ fun ObiterNavGraph(
                         launchSingleTop = true
                     }
                 },
+                aoAbrirMinutas = {
+                    navController.navigate(ObiterRota.Minuta(rota.numeroProcesso)) {
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
+        composable<ObiterRota.Minuta> { backStackEntry ->
+            val rota = backStackEntry.toRoute<ObiterRota.Minuta>()
+            MinutaScreen(
+                viewModel = org.koin.androidx.compose.koinViewModel(),
+                numeroProcesso = rota.numeroProcesso,
+                onVoltar = { navController.popBackStack() },
             )
         }
 

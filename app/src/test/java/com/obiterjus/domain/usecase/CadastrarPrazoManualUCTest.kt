@@ -187,6 +187,11 @@ class CadastrarPrazoManualUCTest {
         )
 
     private class PublicacaoDaoFake : PublicacaoDao {
+
+        override suspend fun getComPrazoPendente(
+            dataMinima: LocalDate,
+            limite: Int,
+        ): List<PublicacaoEntity> = emptyList()
         data class AtualizacaoPrazo(
             val id: Long,
             val quantidade: Int,

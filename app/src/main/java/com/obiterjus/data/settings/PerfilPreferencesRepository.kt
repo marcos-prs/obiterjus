@@ -22,6 +22,11 @@ data class PerfilPreferences(
     val notificarMovimentacoes: Boolean = true,
     val tema: TipoTema = TipoTema.SISTEMA,
     val apenasPorNome: Boolean = false,
+    /**
+     * Envio do acervo para o Firestore. Desligado por padrão: sobe o inteiro
+     * teor das publicações, então depende de escolha explícita do advogado.
+     */
+    val sincronizacaoNuvemAutorizada: Boolean = false,
 )
 
 interface PerfilPreferencesRepository {
@@ -38,6 +43,7 @@ interface PerfilPreferencesRepository {
     suspend fun saveNotificarMovimentacoes(ativo: Boolean)
     suspend fun saveTema(tema: TipoTema)
     suspend fun saveApenasPorNome(ativo: Boolean)
+    suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean)
 }
 
 class DataStorePerfilPreferencesRepository(
@@ -58,6 +64,7 @@ class DataStorePerfilPreferencesRepository(
                 TipoTema.SISTEMA
             },
             apenasPorNome = prefs[KEY_APENAS_POR_NOME] ?: false,
+            sincronizacaoNuvemAutorizada = prefs[KEY_SINCRONIZACAO_NUVEM] ?: false,
         )
     }
 
@@ -103,6 +110,12 @@ class DataStorePerfilPreferencesRepository(
         }
     }
 
+    override suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SINCRONIZACAO_NUVEM] = ativo
+        }
+    }
+
     private fun DataStore<Preferences>.safeData(): Flow<Preferences> =
         data.catch { error ->
             if (error is IOException) {
@@ -120,5 +133,6 @@ class DataStorePerfilPreferencesRepository(
         val KEY_NOTIFICAR_MOVIMENTACOES = booleanPreferencesKey("notificar_movimentacoes")
         val KEY_TEMA = stringPreferencesKey("tema")
         val KEY_APENAS_POR_NOME = booleanPreferencesKey("apenas_por_nome")
+        val KEY_SINCRONIZACAO_NUVEM = booleanPreferencesKey("sincronizacao_nuvem_autorizada")
     }
 }

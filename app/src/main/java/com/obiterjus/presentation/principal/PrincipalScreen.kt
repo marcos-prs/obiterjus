@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -171,6 +172,22 @@ fun PrincipalScreen(
                                                     imageVector = Icons.Default.Edit,
                                                     contentDescription = null,
                                                     tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.excluir_conta_menu)) },
+                                            onClick = {
+                                                viewModels.perfil.aoFecharMenu()
+                                                navController.navigate(ObiterRota.ExcluirConta) {
+                                                    launchSingleTop = true
+                                                }
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteForever,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error
                                                 )
                                             }
                                         )

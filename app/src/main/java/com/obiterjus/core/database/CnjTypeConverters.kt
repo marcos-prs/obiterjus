@@ -17,14 +17,15 @@ class CnjTypeConverters {
     fun localDateToString(value: LocalDate?): String? = value?.toString()
 
     @TypeConverter
-    fun stringToLocalDate(value: String?): LocalDate? = value?.let(LocalDate::parse)
+    fun stringToLocalDate(value: String?): LocalDate? =
+        value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
     @TypeConverter
     fun processoSyncStatusToString(value: ProcessoSyncStatus?): String? = value?.name
 
     @TypeConverter
     fun stringToProcessoSyncStatus(value: String?): ProcessoSyncStatus? =
-        value?.let(ProcessoSyncStatus::valueOf)
+        value?.let { runCatching { ProcessoSyncStatus.valueOf(it) }.getOrNull() }
 
     @TypeConverter
     fun confiancaMatchToString(value: ConfiancaMatch?): String? = value?.name

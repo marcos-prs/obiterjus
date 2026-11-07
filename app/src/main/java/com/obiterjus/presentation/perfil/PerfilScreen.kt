@@ -1,5 +1,7 @@
 package com.obiterjus.presentation.perfil
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -151,6 +154,13 @@ fun PerfilScreen(
                     titulo = stringResource(R.string.perfil_grupo_sincronizacao),
                     modifier = Modifier.padding(horizontal = dimens.screenMargin),
                 ) {
+                    LinhaToggleDescritivo(
+                        rotulo = stringResource(R.string.perfil_nuvem_autorizar),
+                        descricao = stringResource(R.string.perfil_nuvem_autorizar_descricao),
+                        ativo = estado.sincronizacaoNuvemAutorizada,
+                        aoAlternar = viewModel::aoAlternarSincronizacaoNuvem,
+                    )
+                    DividerInterno()
                     LinhaSincronizacao(
                         rotulo = stringResource(R.string.perfil_forcar_sincronizacao),
                         descricao = stringResource(R.string.perfil_sincronizacao_descricao),
@@ -220,6 +230,12 @@ fun PerfilScreen(
                     ),
                 )
             }
+
+            Spacer(modifier = Modifier.height(dimens.cardGap))
+
+            SecaoDocumentos(
+                modifier = Modifier.padding(horizontal = dimens.screenMargin),
+            )
 
             Spacer(modifier = Modifier.height(dimens.cardGap))
 
@@ -501,6 +517,35 @@ private fun LinhaAcao(
 @Composable
 private fun DividerInterno() {
     HorizontalDivider(color = ObiterTheme.colors.divider)
+}
+
+@Composable
+private fun SecaoDocumentos(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val urlTermos = stringResource(R.string.url_termos_uso)
+    val urlPrivacidade = stringResource(R.string.url_politica_privacidade)
+    val rotuloAbrir = stringResource(R.string.acao_abrir)
+    val abrir: (String) -> Unit = { url ->
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+    }
+    SecaoConfiguracao(
+        titulo = stringResource(R.string.perfil_grupo_documentos),
+        modifier = modifier,
+    ) {
+        LinhaAcao(
+            rotulo = stringResource(R.string.perfil_documento_termos),
+            acao = { abrir(urlTermos) },
+            mostrarBotao = false,
+            rotuloBotao = rotuloAbrir,
+        )
+        DividerInterno()
+        LinhaAcao(
+            rotulo = stringResource(R.string.perfil_documento_privacidade),
+            acao = { abrir(urlPrivacidade) },
+            mostrarBotao = false,
+            rotuloBotao = rotuloAbrir,
+        )
+    }
 }
 
 @Composable

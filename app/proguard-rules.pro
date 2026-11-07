@@ -1,21 +1,17 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Remove os Log.d/v/i do release. A sincronização DJEN registra OAB e nome do
+# advogado, e os adapters de rede despejam corpo de erro HTTP — nada disso deve
+# chegar ao logcat de um aparelho em produção.
+# Só tem efeito com o proguard-android-optimize.txt, que é o arquivo usado aqui.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# O Firestore desserializa por reflexão (DocumentSnapshot.toObject), então os
+# DTOs de sincronização precisam manter nomes de campo e acessores.
+-keep class com.obiterjus.data.sincronizacao.*FirestoreDto { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Stacktrace legível nos relatórios de erro sem expor o nome do arquivo original.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

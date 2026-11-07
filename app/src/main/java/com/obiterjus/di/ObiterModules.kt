@@ -13,6 +13,7 @@ import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
 import com.obiterjus.data.auth.FirebaseAuthRepository
 import com.obiterjus.data.config.FirebaseRemoteAppConfigRepository
+import com.obiterjus.data.minuta.MinutaRepositoryImpl
 import com.obiterjus.data.minuta.remote.ObiterMinutaDataSource
 import com.obiterjus.data.minuta.remote.ObiterMinutaRetrofitFactory
 import com.obiterjus.data.time.CalendarioForenseDataSource
@@ -26,7 +27,7 @@ import com.obiterjus.domain.usecase.ResolverNaturezaProcessoUC
 import com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper
 import com.obiterjus.data.djen.mapper.DjenMapper
 import com.obiterjus.data.agenda.remote.CalendarRetrofitFactory
-import com.obiterjus.data.agenda.remote.DataStoreGoogleCalendarTokenRepository
+import com.obiterjus.data.agenda.remote.CofreGoogleCalendarTokenRepository
 import com.obiterjus.data.agenda.remote.GoogleCalendarAuthorizationRepository
 import com.obiterjus.data.agenda.remote.GoogleCalendarDataSource
 import com.obiterjus.data.agenda.remote.OutlookCalendarDataSource
@@ -49,6 +50,8 @@ import com.obiterjus.data.publicacao.local.LocalPublicacaoRepository
 import com.obiterjus.data.settings.PreferencesCadastroOabRepository
 import com.obiterjus.data.settings.DataStorePerfilPreferencesRepository
 import com.obiterjus.data.settings.PerfilPreferencesRepository
+import com.obiterjus.data.settings.DataStoreSessaoLocalRepository
+import com.obiterjus.data.settings.SessaoLocalRepository
 import com.obiterjus.data.sincronizacao.FirestoreSincronizacaoRepository
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.CertidaoDjenRepository
@@ -56,13 +59,17 @@ import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.repository.ClientesRepository
+import com.obiterjus.domain.repository.MinutaRepository
 import com.obiterjus.domain.repository.ProcessosRepository
 import com.obiterjus.domain.repository.PublicacoesRepository
 import com.obiterjus.domain.repository.SincronizacaoRepository
 import com.obiterjus.domain.usecase.AdicionarProcessoUseCase
-import com.obiterjus.domain.usecase.ClassificarPublicacaoUC
+import com.obiterjus.domain.usecase.RecalcularPrazosPendentesUC
+import com.obiterjus.domain.usecase.ExcluirMinutaUC
 import com.obiterjus.domain.usecase.ExcluirProcessoUseCase
+import com.obiterjus.domain.usecase.ExcluirContaUseCase
 import com.obiterjus.domain.usecase.ExportarRelatorioUC
+import com.obiterjus.domain.usecase.ExtrairPecaUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
 import com.obiterjus.domain.usecase.ObservarAgendaPrazos
@@ -70,23 +77,29 @@ import com.obiterjus.domain.usecase.BuscarClientesSemelhantes
 import com.obiterjus.domain.usecase.ObservarClientes
 import com.obiterjus.domain.usecase.ObservarClientesPorProcesso
 import com.obiterjus.domain.usecase.SincronizarClientesDoProcesso
+import com.obiterjus.domain.usecase.ObservarMinutasDoProcesso
 import com.obiterjus.domain.usecase.ObservarMovimentosProcesso
 import com.obiterjus.domain.usecase.ObservarProcessos
+import com.obiterjus.domain.usecase.ObterMinutaUC
+import com.obiterjus.domain.usecase.ObterResultadoExtracaoUC
 import com.obiterjus.domain.usecase.ObservarPublicacoes
 import com.obiterjus.domain.usecase.ObservarTimelineProcesso
 import com.obiterjus.domain.usecase.ObterPublicacaoPorId
 import com.obiterjus.domain.usecase.ObterCertidaoDjen
 import com.obiterjus.domain.usecase.RessincronizarProcessoUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
+import com.obiterjus.domain.usecase.SugerirMinutaUC
 import com.obiterjus.presentation.adicionarprocesso.AdicionarProcessoViewModel
 import com.obiterjus.presentation.detalheprocesso.DetalheProcessoViewModel
 import com.obiterjus.presentation.detalhepublicacao.DetalhePublicacaoViewModel
 import com.obiterjus.presentation.autenticacao.AutenticacaoViewModel
 import com.obiterjus.presentation.editarprocesso.EditarProcessoViewModel
 import com.obiterjus.presentation.inicio.InicioViewModel
+import com.obiterjus.presentation.minuta.MinutaViewModel
 import com.obiterjus.presentation.monitoramento.MonitoramentoViewModel
 import com.obiterjus.presentation.perfil.PerfilViewModel
 import com.obiterjus.presentation.perfil.EditarPerfilViewModel
+import com.obiterjus.presentation.perfil.ExcluirContaViewModel
 import com.obiterjus.presentation.clientes.ClientesViewModel
 import com.obiterjus.presentation.detalhecliente.DetalheClienteViewModel
 import com.obiterjus.presentation.editarcliente.EditarClienteViewModel
@@ -111,6 +124,7 @@ private val coreModule = module {
     single { get<ObiterDatabase>().syncLogDao() }
     single { get<ObiterDatabase>().prazoSugeridoDao() }
     single { get<ObiterDatabase>().clienteDao() }
+    single { get<ObiterDatabase>().minutaDao() }
     single { PublicacaoNotificationHelper(androidContext()) }
 
     // Prazos — API CalendárioForense é a única fonte de cálculo
@@ -127,25 +141,22 @@ private val dataModule = module {
         )
     }
     single<AuthRepository> { FirebaseAuthRepository() }
-    single<ObiterMinutaDataSource> {
-        ObiterMinutaRetrofitFactory.createApi(
-            tokenProvider = { get<AuthRepository>().getIdToken() },
-        )
-    }
+    single<ObiterMinutaDataSource> { ObiterMinutaRetrofitFactory.createApi() }
     single<CadastroOabRepository> { PreferencesCadastroOabRepository(androidContext()) }
     single<PerfilPreferencesRepository> { DataStorePerfilPreferencesRepository(androidContext()) }
     single { LocalPublicacaoRepository(get()) } bind PublicacoesRepository::class
-    single<GoogleCalendarTokenRepository> { DataStoreGoogleCalendarTokenRepository(androidContext()) }
+    single<GoogleCalendarTokenRepository> { CofreGoogleCalendarTokenRepository(androidContext()) }
     single { GoogleCalendarAuthorizationRepository(androidContext(), get()) }
     single<GoogleCalendarDataSource> {
         CalendarRetrofitFactory.createGoogleApi(
-            tokenProvider = { get<GoogleCalendarTokenRepository>().accessToken.value },
+            tokenProvider = { get<GoogleCalendarTokenRepository>().accessToken() },
         )
     }
 
     single<OutlookCalendarDataSource> { CalendarRetrofitFactory.createOutlookApi() }
+    single<SessaoLocalRepository> { DataStoreSessaoLocalRepository(androidContext(), get()) }
 
-    single<CalendarSyncRepository> { CalendarSyncRepositoryImpl(get(), get(), get()) }
+    single<CalendarSyncRepository> { CalendarSyncRepositoryImpl(androidContext(), get(), get(), get()) }
 
     single {
         LocalProcessoRepository(
@@ -156,7 +167,23 @@ private val dataModule = module {
     } bind ProcessosRepository::class
 
     single { LocalClienteRepository(clienteDao = get()) } bind ClientesRepository::class
-    
+
+    single<MinutaRepository> {
+        val authRepository = get<AuthRepository>()
+        MinutaRepositoryImpl(
+            dataSource = get(),
+            minutaDao = get(),
+            // A API valida o Firebase ID token. Login anônimo está DESABILITADO no
+            // projeto (accounts:signUp → ADMIN_ONLY_OPERATION), então não há fallback:
+            // sem sessão o token é nulo e a UI orienta o advogado a entrar.
+            // O forceRefresh cobre token expirado/rotacionado.
+            tokenProvider = {
+                authRepository.getIdToken()
+                    ?: authRepository.getIdToken(forceRefresh = true)
+            },
+        )
+    }
+
     single { ResolverNaturezaProcessoUC(get()) }
     single { CalcularPrazoRegraUC(get(), get()) }
     single { PublicacaoPrazoMapper(get(), get()) }
@@ -189,6 +216,9 @@ private val dataModule = module {
         FirestoreSincronizacaoRepository(
             localProcessoRepository = get(),
             localPublicacaoRepository = get(),
+            clienteDao = get(),
+            prazoSugeridoDao = get(),
+            minutaDao = get(),
             repositorioCadastroOab = get(),
             perfilPreferencesRepository = get(),
             partesResolver = get(),
@@ -216,12 +246,12 @@ private val domainModule = module {
             repositorioProcessos = get(),
         )
     }
-    factory { ClassificarPublicacaoUC(get(), get()) }
+    factory { RecalcularPrazosPendentesUC(get(), get(), get(), get()) }
     factory { ExportarRelatorioUC(get()) }
     factory { ObservarPublicacoes(get()) }
     factory { ObterPublicacaoPorId(get()) }
     factory { ObservarClientesPorProcesso(get(), get()) }
-    factory { ObservarAgendaPrazos(get(), get(), get(), get()) }
+    factory { ObservarAgendaPrazos(get(), get(), get()) }
     factory { ObterCertidaoDjen(get()) }
     factory { ObservarProcessos(get()) }
     factory { ObservarClientes(get()) }
@@ -239,7 +269,14 @@ private val domainModule = module {
     factory { CadastrarPrazoManualUC(get(), get(), get(), get()) }
     factory { AdicionarProcessoUseCase(get()) }
     factory { ExcluirProcessoUseCase(get()) }
+    factory { ExcluirContaUseCase(get(), get(), get()) }
     factory { RessincronizarProcessoUseCase(get()) }
+    factory { ExtrairPecaUC(get(), get()) }
+    factory { ObterResultadoExtracaoUC(get()) }
+    factory { SugerirMinutaUC(get()) }
+    factory { ObservarMinutasDoProcesso(get()) }
+    factory { ObterMinutaUC(get()) }
+    factory { ExcluirMinutaUC(get()) }
 }
 
 private val presentationModule = module {
@@ -260,14 +297,27 @@ private val presentationModule = module {
     viewModel { EditarClienteViewModel(get()) }
     viewModel { AuditoriaViewModel(get()) }
     viewModel { InicioViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
-    viewModel { PerfilViewModel(androidContext(), get(), get(), get(), get(), get()) }
-    viewModel { AutenticacaoViewModel(androidContext(), get(), get(), get(), get(), get()) }
+    viewModel { PerfilViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
+    viewModel { AutenticacaoViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditarPerfilViewModel(get(), get(), get(), get(), androidContext()) }
+    viewModel { ExcluirContaViewModel(androidContext(), get(), get()) }
     viewModel { DetalheProcessoViewModel(get(), get(), get(), get(), get()) }
     viewModel {
         DetalhePublicacaoViewModel(
             androidContext(),
             get(), get(), get(), get(), get(), get(),
+        )
+    }
+    viewModel {
+        MinutaViewModel(
+            context = androidContext(),
+            extrairPecaUC = get(),
+            obterResultadoExtracaoUC = get(),
+            sugerirMinutaUC = get(),
+            observarMinutasDoProcesso = get(),
+            obterMinutaUC = get(),
+            excluirMinutaUC = get(),
+            authRepository = get(),
         )
     }
     viewModel { AdicionarProcessoViewModel(get()) }
@@ -285,6 +335,7 @@ private val workerModule = module {
             notificationHelper = get(),
             perfilPreferencesRepository = get(),
             syncLogDao = get(),
+            recalcularPrazosPendentes = get(),
         )
     }
     worker { params ->
@@ -294,6 +345,8 @@ private val workerModule = module {
             repositorioPublicacoes = get(),
             notificationHelper = get(),
             syncLogDao = get(),
+            clock = get(),
+            recalcularPrazosPendentes = get(),
         )
     }
     worker { params ->

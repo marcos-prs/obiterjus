@@ -175,14 +175,18 @@ class MonitoramentoViewModel(
         }
     }
 
+    /**
+     * Envio automático só acontece com autorização explícita e com sessão real.
+     * Antes isto criava um login anônimo quando não havia usuário e subia o
+     * acervo sob um uid efêmero, perdido no reinstall.
+     */
     private suspend fun sincronizarNuvemSePossivel() {
-        val usuario = authRepository.currentUser.firstOrNull()
-            ?: authRepository.signInAnonymously().getOrNull()
-        usuario?.uid?.let { uid ->
-            runCatching {
-                withContext(ioDispatcher) {
-                    repositorioSincronizacao.enviarTudo(uid)
-                }
+        if (!repositorioSincronizacao.nuvemAutorizada()) return
+        val usuario = authRepository.currentUser.firstOrNull() ?: return
+        if (usuario.isAnonymous) return
+        runCatching {
+            withContext(ioDispatcher) {
+                repositorioSincronizacao.enviarTudo(usuario.uid)
             }
         }
     }

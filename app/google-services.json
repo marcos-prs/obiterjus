@@ -14,6 +14,30 @@
       },
       "oauth_client": [
         {
+          "client_id": "529769973008-bu7cjrmga1vmbr3m8q2ip1cchdon6eig.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.obiterjus",
+            "certificate_hash": "56c968b6e25d7369ec85b7aa7114db52ba8e36c5"
+          }
+        },
+        {
+          "client_id": "529769973008-gu565e4kuo2iu3efkp2fsdftbao9dotf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.obiterjus",
+            "certificate_hash": "002a3b2a13f131e986d8ce73a4071ec49e42030d"
+          }
+        },
+        {
+          "client_id": "529769973008-optd9h93i0f5naflljmunoruv0tn7d77.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.obiterjus",
+            "certificate_hash": "0ddd60bac0b841a2f8e3410ee8067906b40c99c2"
+          }
+        },
+        {
           "client_id": "529769973008-g2cd3d5u9ob1h903viaddeiqkstchqf3.apps.googleusercontent.com",
           "client_type": 3
         }

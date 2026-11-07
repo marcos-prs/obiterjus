@@ -137,8 +137,8 @@ fun PrazosScreen(
                         provedor = ProvedorCalendario.GOOGLE,
                     )
                 },
-                onFailure = {
-                    snackbarHostState.showSnackbar(feedbackErro)
+                onFailure = { erro ->
+                    snackbarHostState.showSnackbar(erro.message ?: feedbackErro)
                 },
             )
             prazoGooglePendente = null
@@ -441,9 +441,9 @@ fun PrazosScreen(
                                         }
                                         prazoEmDialogo = null
                                     },
-                                    onFailure = {
+                                    onFailure = { erro ->
                                         prazoGooglePendente = null
-                                        snackbarHostState.showSnackbar(feedbackErro)
+                                        snackbarHostState.showSnackbar(erro.message ?: feedbackErro)
                                     },
                                 )
                             }
@@ -754,9 +754,10 @@ private fun DialogConfirmarPrazo(
     var provedorSelecionado by rememberSaveable(prazo.item.publicacao.id) {
         mutableStateOf(ProvedorCalendario.GOOGLE)
     }
+    // Ver nota em CadastrarPrazoBottomSheet: Outlook não tem autorização
+    // implementada e falhava em silêncio.
     val provedores = listOf(
         ProvedorCalendario.GOOGLE to stringResource(R.string.prazos_provedor_google),
-        ProvedorCalendario.OUTLOOK to stringResource(R.string.prazos_provedor_outlook),
         ProvedorCalendario.LOCAL to stringResource(R.string.prazos_provedor_local),
     )
 

@@ -9,11 +9,20 @@ import com.obiterjus.domain.repository.PublicacoesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
+/**
+ * Leitura pura do banco — nenhuma chamada de rede acontece aqui.
+ *
+ * O cálculo de data-limite pertence à ingestão ([com.obiterjus.data.djen.mapper.PublicacaoPrazoMapper])
+ * e ao recálculo em background ([RecalcularPrazosPendentesUC]), ambos gravando o
+ * resultado. Recalcular na leitura significava uma chamada HTTP sequencial por
+ * publicação sem data, a cada emissão de qualquer um dos três fluxos, com o
+ * resultado descartado no fim — a agenda não pintava enquanto a API não
+ * respondesse, e o estado nunca convergia.
+ */
 class ObservarAgendaPrazos(
     private val repository: PublicacoesRepository,
     private val prazoSugeridoDao: PrazoSugeridoDao,
     private val observarClientesPorProcesso: ObservarClientesPorProcesso,
-    private val classificarPublicacaoUC: ClassificarPublicacaoUC,
 ) {
     operator fun invoke(): Flow<List<PrazoAgendaItem>> =
         combine(
@@ -23,13 +32,6 @@ class ObservarAgendaPrazos(
         ) { publicacoes, prazosSugeridos, clientesPorProcesso ->
             val prazosPorPublicacao = prazosSugeridos.associateBy { it.publicacaoId }
             publicacoes
-                .map { publicacao ->
-                    if (publicacao.prazo?.dataLimiteEstimada == null) {
-                        classificarPublicacaoUC(publicacao)
-                    } else {
-                        publicacao
-                    }
-                }
                 .mapNotNull { publicacao ->
                     publicacao.prazo?.let { prazo ->
                         PrazoAgendaItem(

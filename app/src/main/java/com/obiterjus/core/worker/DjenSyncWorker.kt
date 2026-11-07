@@ -1,6 +1,7 @@
 package com.obiterjus.core.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.obiterjus.core.notification.PublicacaoNotificationHelper
@@ -8,6 +9,7 @@ import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.MonitorarDjenModo
+import com.obiterjus.domain.usecase.RecalcularPrazosPendentesUC
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -19,6 +21,7 @@ class DjenSyncWorker(
     private val notificationHelper: PublicacaoNotificationHelper,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
     private val syncLogDao: SyncLogDao,
+    private val recalcularPrazosPendentes: RecalcularPrazosPendentesUC,
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val iniciadoEm = Instant.now()
@@ -30,6 +33,12 @@ class DjenSyncWorker(
             }
 
             val resumo = djenSyncExecutor.executar(MonitorarDjenModo.BACKGROUND)
+
+            // Fecha o que a API de cálculo recusou nesta e em execuções anteriores.
+            // Roda antes das notificações para que o alerta de prazo enxergue as
+            // datas recém-resolvidas. Falha aqui não invalida a sincronização.
+            runCatching { recalcularPrazosPendentes() }
+                .onFailure { erro -> Log.w(TAG, "Recálculo de prazos pendentes falhou", erro) }
 
             notificationHelper.notificarNovasPublicacoes(resumo.djen.novas)
             notificationHelper.notificarProcessosNovos(resumo.djen.processosNovos.size)
@@ -65,6 +74,7 @@ class DjenSyncWorker(
     }
 
     private companion object {
+        const val TAG = "DjenSyncWorker"
         const val MAX_TENTATIVAS = 3
 
         /** Mesmo rótulo usado pelo executor em modo BACKGROUND, para a tela de Auditoria. */

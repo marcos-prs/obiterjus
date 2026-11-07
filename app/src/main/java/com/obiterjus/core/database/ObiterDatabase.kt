@@ -19,6 +19,8 @@ import com.obiterjus.data.agenda.local.PrazoSugeridoDao
 import com.obiterjus.data.cliente.local.ClienteDao
 import com.obiterjus.data.cliente.local.ClienteEntity
 import com.obiterjus.data.cliente.local.ClienteProcessoEntity
+import com.obiterjus.data.minuta.local.MinutaDao
+import com.obiterjus.data.minuta.local.MinutaEntity
 
 @Database(
     entities = [
@@ -30,8 +32,9 @@ import com.obiterjus.data.cliente.local.ClienteProcessoEntity
         PrazoSugeridoEntity::class,
         ClienteEntity::class,
         ClienteProcessoEntity::class,
+        MinutaEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 @TypeConverters(CnjTypeConverters::class)
@@ -43,4 +46,5 @@ abstract class ObiterDatabase : RoomDatabase() {
     abstract fun syncLogDao(): SyncLogDao
     abstract fun prazoSugeridoDao(): PrazoSugeridoDao
     abstract fun clienteDao(): ClienteDao
+    abstract fun minutaDao(): MinutaDao
 }

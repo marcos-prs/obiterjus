@@ -9,6 +9,7 @@ import com.obiterjus.domain.model.ProvedorCalendario
 import com.obiterjus.domain.model.PublicacaoPrazo
 import com.obiterjus.domain.repository.CalendarSyncRepository
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 
 /**
  * Cadastra (ou substitui) o prazo de uma publicação a partir de dados
@@ -73,6 +74,8 @@ class CadastrarPrazoManualUC(
                 description = description,
                 provedor = provedor,
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }

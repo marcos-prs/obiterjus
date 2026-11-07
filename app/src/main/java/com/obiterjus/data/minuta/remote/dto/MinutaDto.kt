@@ -140,6 +140,9 @@ data class MinutaPackageDto(
 data class SugestaoMinutaRequestDto(
     @SerialName("tipo_minuta") val tipoMinuta: String,
     @SerialName("tipo_peca_origem") val tipoPecaOrigem: String,
+    // Texto integral da peça de origem (o `markdown` da extração). Obrigatório:
+    // a API redige a resposta a partir dele, não do resumo estruturado.
+    @SerialName("texto_origem") val textoOrigem: String,
     val estrutura: EstruturaPecaDto,
     @SerialName("numero_processo") val numeroProcesso: String? = null,
     val vara: String? = null,
@@ -165,7 +168,7 @@ data class QualidadeSugestaoDto(
 data class AuditoriaSugestaoDto(
     @SerialName("modelo_ia") val modeloIa: String,
     @SerialName("versao_prompt") val versaoPrompt: String,
-    @SerialName("hash_estrutura") val hashEstrutura: String,
+    @SerialName("hash_origem") val hashOrigem: String,
 )
 
 @Serializable

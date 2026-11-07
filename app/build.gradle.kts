@@ -21,7 +21,7 @@ val releaseKeyPassword = providers.gradleProperty("RELEASE_KEY_PASSWORD").orElse
 android {
     namespace = "com.obiterjus"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -44,7 +44,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.001"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DATAJUD_API_KEY", "\"$dataJudApiKey\"")
@@ -52,7 +52,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -77,6 +77,22 @@ kotlin {
     jvmToolchain(11)
 }
 
+// Sem keystore o release saía sem assinatura em silêncio. Continua sendo válido
+// montar o projeto sem as credenciais; o que não pode é empacotar para publicação.
+val temAssinaturaDeRelease = releaseStoreFile != null
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    // O valor precisa virar um local aqui: uma leitura direta de `temAssinaturaDeRelease`
+    // dentro do doFirst captura o objeto do script, que o configuration cache nao serializa
+    // e o bundleRelease terminava em FAILURE mesmo depois de assinar o .aab.
+    val assinado = temAssinaturaDeRelease
+    doFirst {
+        check(assinado) {
+            "Release sem assinatura: defina RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, " +
+                "RELEASE_KEY_ALIAS e RELEASE_KEY_PASSWORD em ~/.gradle/gradle.properties."
+        }
+    }
+}
+
 ksp {
     arg("room.incremental", "true")
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -99,6 +115,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
     implementation(libs.retrofit)

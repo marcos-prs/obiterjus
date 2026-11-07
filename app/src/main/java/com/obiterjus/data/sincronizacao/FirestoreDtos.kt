@@ -3,8 +3,14 @@ package com.obiterjus.data.sincronizacao
 import com.google.firebase.Timestamp
 import com.obiterjus.data.datajud.local.MovimentoEntity
 import com.obiterjus.data.datajud.local.ParticipanteEntity
+import com.obiterjus.data.agenda.local.PrazoSugeridoEntity
+import com.obiterjus.data.cliente.local.ClienteEntity
+import com.obiterjus.data.cliente.local.ClienteProcessoEntity
+import com.obiterjus.data.cliente.local.RepresentanteLegalEmbutido
+import com.obiterjus.data.minuta.local.MinutaEntity
 import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.data.processo.local.ProcessoEntity
+import com.obiterjus.domain.model.ConfiancaMatch
 import com.obiterjus.domain.model.ProcessoSyncStatus
 import java.time.Instant
 import java.time.LocalDate
@@ -33,6 +39,10 @@ data class PublicacaoFirestoreDto(
     val fonte: String = "",
     val capturadoEm: Timestamp? = null,
     val atualizadoEm: Timestamp? = null,
+    val prazoConfianca: String? = null,
+    val confiancaMatch: String = ConfiancaMatch.ALTA.name,
+    val duplicataDe: Long? = null,
+    val totalDuplicatas: Int = 0,
 )
 
 fun PublicacaoEntity.toFirestoreDto() = PublicacaoFirestoreDto(
@@ -59,6 +69,10 @@ fun PublicacaoEntity.toFirestoreDto() = PublicacaoFirestoreDto(
     fonte = fonte,
     capturadoEm = capturadoEm.toTimestamp(),
     atualizadoEm = atualizadoEm.toTimestamp(),
+    prazoConfianca = prazoConfianca,
+    confiancaMatch = confiancaMatch.name,
+    duplicataDe = duplicataDe,
+    totalDuplicatas = totalDuplicatas,
 )
 
 fun PublicacaoFirestoreDto.toEntity(): PublicacaoEntity? =
@@ -93,6 +107,11 @@ fun PublicacaoFirestoreDto.toEntity(): PublicacaoEntity? =
             fonte = fonte.ifBlank { FONTE_NUVEM },
             capturadoEm = capturadoEm.toJavaInstant(),
             atualizadoEm = atualizadoEm.toJavaInstant(),
+            prazoConfianca = prazoConfianca,
+            confiancaMatch = runCatching { ConfiancaMatch.valueOf(confiancaMatch) }
+                .getOrDefault(ConfiancaMatch.ALTA),
+            duplicataDe = duplicataDe,
+            totalDuplicatas = totalDuplicatas,
         )
     }
 
@@ -112,6 +131,22 @@ data class ProcessoFirestoreDto(
     val atualizadoEm: Timestamp? = null,
     val dataJudTentativasRestantes: Int = 0,
     val natureza: String? = null,
+    // Campos expandidos. Ficaram de fora até aqui, e como o restore faz UPDATE
+    // de todas as colunas, um documento mais recente apagava os 14 de uma vez.
+    val dataDistribuicao: Timestamp? = null,
+    val comarcaSecao: String? = null,
+    val juizo: String? = null,
+    val prioridadeTramitacao: String? = null,
+    val gratuidadeJustica: String? = null,
+    val valorCausa: Double? = null,
+    val faseProcessual: String? = null,
+    val situacaoAtual: String? = null,
+    val tutelaAntecipadaLiminar: String? = null,
+    val advogadosAtivo: String? = null,
+    val advogadosPassivo: String? = null,
+    val defensoriaPublica: String? = null,
+    val ministerioPublico: String? = null,
+    val terceirosAuxiliares: String? = null,
 )
 
 fun ProcessoEntity.toFirestoreDto() = ProcessoFirestoreDto(
@@ -130,6 +165,20 @@ fun ProcessoEntity.toFirestoreDto() = ProcessoFirestoreDto(
     atualizadoEm = atualizadoEm.toTimestamp(),
     dataJudTentativasRestantes = dataJudTentativasRestantes,
     natureza = natureza,
+    dataDistribuicao = dataDistribuicao?.toTimestamp(),
+    comarcaSecao = comarcaSecao,
+    juizo = juizo,
+    prioridadeTramitacao = prioridadeTramitacao,
+    gratuidadeJustica = gratuidadeJustica,
+    valorCausa = valorCausa,
+    faseProcessual = faseProcessual,
+    situacaoAtual = situacaoAtual,
+    tutelaAntecipadaLiminar = tutelaAntecipadaLiminar,
+    advogadosAtivo = advogadosAtivo,
+    advogadosPassivo = advogadosPassivo,
+    defensoriaPublica = defensoriaPublica,
+    ministerioPublico = ministerioPublico,
+    terceirosAuxiliares = terceirosAuxiliares,
 )
 
 fun ProcessoFirestoreDto.toEntity(): ProcessoEntity? =
@@ -153,6 +202,20 @@ fun ProcessoFirestoreDto.toEntity(): ProcessoEntity? =
             atualizadoEm = atualizadoEm.toJavaInstant(),
             dataJudTentativasRestantes = dataJudTentativasRestantes,
             natureza = natureza,
+            dataDistribuicao = dataDistribuicao?.toJavaInstant(),
+            comarcaSecao = comarcaSecao,
+            juizo = juizo,
+            prioridadeTramitacao = prioridadeTramitacao,
+            gratuidadeJustica = gratuidadeJustica,
+            valorCausa = valorCausa,
+            faseProcessual = faseProcessual,
+            situacaoAtual = situacaoAtual,
+            tutelaAntecipadaLiminar = tutelaAntecipadaLiminar,
+            advogadosAtivo = advogadosAtivo,
+            advogadosPassivo = advogadosPassivo,
+            defensoriaPublica = defensoriaPublica,
+            ministerioPublico = ministerioPublico,
+            terceirosAuxiliares = terceirosAuxiliares,
         )
     }
 
@@ -196,6 +259,17 @@ data class ParticipanteFirestoreDto(
     val tipoPessoa: String? = null,
     val tipoParticipacao: String? = null,
     val ehCliente: Boolean = false,
+    // Qualificação da parte: também ficava de fora e era zerada no restore.
+    val cpfCnpj: String? = null,
+    val estadoCivil: String? = null,
+    val profissao: String? = null,
+    val endereco: String? = null,
+    val contatos: String? = null,
+    val cep: String? = null,
+    val logradouro: String? = null,
+    val numeroEndereco: String? = null,
+    val telefone: String? = null,
+    val email: String? = null,
 )
 
 fun ParticipanteEntity.toFirestoreDto() = ParticipanteFirestoreDto(
@@ -206,6 +280,16 @@ fun ParticipanteEntity.toFirestoreDto() = ParticipanteFirestoreDto(
     tipoPessoa = tipoPessoa,
     tipoParticipacao = tipoParticipacao,
     ehCliente = ehCliente,
+    cpfCnpj = cpfCnpj,
+    estadoCivil = estadoCivil,
+    profissao = profissao,
+    endereco = endereco,
+    contatos = contatos,
+    cep = cep,
+    logradouro = logradouro,
+    numeroEndereco = numeroEndereco,
+    telefone = telefone,
+    email = email,
 )
 
 fun ParticipanteFirestoreDto.toEntity(): ParticipanteEntity? =
@@ -220,6 +304,16 @@ fun ParticipanteFirestoreDto.toEntity(): ParticipanteEntity? =
             tipoPessoa = tipoPessoa,
             tipoParticipacao = tipoParticipacao,
             ehCliente = ehCliente,
+            cpfCnpj = cpfCnpj,
+            estadoCivil = estadoCivil,
+            profissao = profissao,
+            endereco = endereco,
+            contatos = contatos,
+            cep = cep,
+            logradouro = logradouro,
+            numeroEndereco = numeroEndereco,
+            telefone = telefone,
+            email = email,
         )
     }
 
@@ -239,6 +333,230 @@ data class PerfilFirestoreDto(
     val apenasPorNome: Boolean = false,
     val atualizadoEm: Timestamp? = null,
 )
+
+/* ---------- Clientes ---------- */
+
+data class RepresentanteFirestoreDto(
+    val nome: String? = null,
+    val documento: String? = null,
+    val nacionalidade: String? = null,
+    val estadoCivil: String? = null,
+    val profissao: String? = null,
+    val cargo: String? = null,
+)
+
+data class ClienteFirestoreDto(
+    val id: String = "",
+    val tipoPessoa: String = "",
+    val nome: String = "",
+    val nomeNormalizado: String = "",
+    val documento: String? = null,
+    val documentoNormalizado: String? = null,
+    val nacionalidade: String? = null,
+    val estadoCivil: String? = null,
+    val profissao: String? = null,
+    val cep: String? = null,
+    val logradouro: String? = null,
+    val numeroEndereco: String? = null,
+    val complemento: String? = null,
+    val bairro: String? = null,
+    val municipio: String? = null,
+    val uf: String? = null,
+    val telefone: String? = null,
+    val email: String? = null,
+    val observacoes: String? = null,
+    val representante: RepresentanteFirestoreDto? = null,
+    val criadoEm: Timestamp? = null,
+    val atualizadoEm: Timestamp? = null,
+)
+
+fun ClienteEntity.toFirestoreDto() = ClienteFirestoreDto(
+    id = id,
+    tipoPessoa = tipoPessoa,
+    nome = nome,
+    nomeNormalizado = nomeNormalizado,
+    documento = documento,
+    documentoNormalizado = documentoNormalizado,
+    nacionalidade = nacionalidade,
+    estadoCivil = estadoCivil,
+    profissao = profissao,
+    cep = cep,
+    logradouro = logradouro,
+    numeroEndereco = numeroEndereco,
+    complemento = complemento,
+    bairro = bairro,
+    municipio = municipio,
+    uf = uf,
+    telefone = telefone,
+    email = email,
+    observacoes = observacoes,
+    representante = representante?.let {
+        RepresentanteFirestoreDto(
+            nome = it.nome,
+            documento = it.documento,
+            nacionalidade = it.nacionalidade,
+            estadoCivil = it.estadoCivil,
+            profissao = it.profissao,
+            cargo = it.cargo,
+        )
+    },
+    criadoEm = criadoEm.toTimestamp(),
+    atualizadoEm = atualizadoEm.toTimestamp(),
+)
+
+fun ClienteFirestoreDto.toEntity(): ClienteEntity? =
+    if (id.isBlank() || nome.isBlank() || criadoEm == null || atualizadoEm == null) {
+        null
+    } else {
+        ClienteEntity(
+            id = id,
+            tipoPessoa = tipoPessoa,
+            nome = nome,
+            nomeNormalizado = nomeNormalizado,
+            documento = documento,
+            documentoNormalizado = documentoNormalizado,
+            nacionalidade = nacionalidade,
+            estadoCivil = estadoCivil,
+            profissao = profissao,
+            cep = cep,
+            logradouro = logradouro,
+            numeroEndereco = numeroEndereco,
+            complemento = complemento,
+            bairro = bairro,
+            municipio = municipio,
+            uf = uf,
+            telefone = telefone,
+            email = email,
+            observacoes = observacoes,
+            representante = representante?.let {
+                RepresentanteLegalEmbutido(
+                    nome = it.nome,
+                    documento = it.documento,
+                    nacionalidade = it.nacionalidade,
+                    estadoCivil = it.estadoCivil,
+                    profissao = it.profissao,
+                    cargo = it.cargo,
+                )
+            },
+            criadoEm = criadoEm.toJavaInstant(),
+            atualizadoEm = atualizadoEm.toJavaInstant(),
+        )
+    }
+
+data class ClienteProcessoFirestoreDto(
+    val clienteId: String = "",
+    val numeroProcesso: String = "",
+    val participanteIdLocal: String? = null,
+    val vinculadoEm: Timestamp? = null,
+)
+
+fun ClienteProcessoEntity.toFirestoreDto() = ClienteProcessoFirestoreDto(
+    clienteId = clienteId,
+    numeroProcesso = numeroProcesso,
+    participanteIdLocal = participanteIdLocal,
+    vinculadoEm = vinculadoEm.toTimestamp(),
+)
+
+fun ClienteProcessoFirestoreDto.toEntity(): ClienteProcessoEntity? =
+    if (clienteId.isBlank() || numeroProcesso.isBlank() || vinculadoEm == null) {
+        null
+    } else {
+        ClienteProcessoEntity(
+            clienteId = clienteId,
+            numeroProcesso = numeroProcesso,
+            participanteIdLocal = participanteIdLocal,
+            vinculadoEm = vinculadoEm.toJavaInstant(),
+        )
+    }
+
+/* ---------- Prazos e minutas ---------- */
+
+/**
+ * O `id` da entidade é autoGenerate e não é estável entre aparelhos; o
+ * documento é identificado por `publicacaoId`, que é a chave real (índice
+ * único na tabela).
+ */
+data class PrazoSugeridoFirestoreDto(
+    val publicacaoId: Long = 0,
+    val quantidade: Int = 0,
+    val unidade: String = "",
+    val diasUteis: Boolean = false,
+    val textoOriginal: String = "",
+    val dataLimite: String? = null,
+    val isConfirmado: Boolean = false,
+    val idExternoCalendario: String? = null,
+    val provedorCalendario: String? = null,
+    val isCumprido: Boolean = false,
+)
+
+fun PrazoSugeridoEntity.toFirestoreDto() = PrazoSugeridoFirestoreDto(
+    publicacaoId = publicacaoId,
+    quantidade = quantidade,
+    unidade = unidade,
+    diasUteis = diasUteis,
+    textoOriginal = textoOriginal,
+    dataLimite = dataLimite?.toString(),
+    isConfirmado = isConfirmado,
+    idExternoCalendario = idExternoCalendario,
+    provedorCalendario = provedorCalendario,
+    isCumprido = isCumprido,
+)
+
+fun PrazoSugeridoFirestoreDto.toEntity(): PrazoSugeridoEntity? =
+    if (publicacaoId == 0L) {
+        null
+    } else {
+        PrazoSugeridoEntity(
+            publicacaoId = publicacaoId,
+            quantidade = quantidade,
+            unidade = unidade,
+            diasUteis = diasUteis,
+            textoOriginal = textoOriginal,
+            dataLimite = dataLimite?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+            isConfirmado = isConfirmado,
+            idExternoCalendario = idExternoCalendario,
+            provedorCalendario = provedorCalendario,
+            isCumprido = isCumprido,
+        )
+    }
+
+data class MinutaFirestoreDto(
+    val sugestaoId: String = "",
+    val numeroProcesso: String? = null,
+    val tipoMinuta: String = "",
+    val titulo: String = "",
+    val confiancaGeral: Double = 0.0,
+    val requerRevisao: Boolean = true,
+    val geradoEm: Timestamp? = null,
+    val payloadJson: String = "",
+)
+
+fun MinutaEntity.toFirestoreDto() = MinutaFirestoreDto(
+    sugestaoId = sugestaoId,
+    numeroProcesso = numeroProcesso,
+    tipoMinuta = tipoMinuta,
+    titulo = titulo,
+    confiancaGeral = confiancaGeral,
+    requerRevisao = requerRevisao,
+    geradoEm = geradoEm.toTimestamp(),
+    payloadJson = payloadJson,
+)
+
+fun MinutaFirestoreDto.toEntity(): MinutaEntity? =
+    if (sugestaoId.isBlank() || geradoEm == null) {
+        null
+    } else {
+        MinutaEntity(
+            sugestaoId = sugestaoId,
+            numeroProcesso = numeroProcesso,
+            tipoMinuta = tipoMinuta,
+            titulo = titulo,
+            confiancaGeral = confiancaGeral,
+            requerRevisao = requerRevisao,
+            geradoEm = geradoEm.toJavaInstant(),
+            payloadJson = payloadJson,
+        )
+    }
 
 private fun Instant.toTimestamp(): Timestamp =
     Timestamp(epochSecond, (nano / FIRESTORE_NANOS_STEP) * FIRESTORE_NANOS_STEP)
