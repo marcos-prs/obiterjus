@@ -1,0 +1,9 @@
+{
+  "_leia-me": "Preencha os campos vazios e rode: python web/build.py. O script recusa gerar as páginas enquanto sobrar campo em branco. Os valores entram na Política de Privacidade, nos Termos de Uso e nas páginas publicadas.",
+  "NOME_TITULAR": "Marcos Paulo Rocha de Souza",
+  "_NOME_TITULAR": "Nome civil do titular. Identifica o Encarregado (DPO) na Política e o titular do aplicativo na Cláusula 1 dos Termos. O controlador, na tabela da Política, é o próprio aplicativo: ObiterJus, sem razão social, sem CNPJ/CPF e sem endereço.",
+  "REGIAO_OBITER_MINUTA": "Brasil — Oracle Cloud, região sa-vinhedo-1 (Vinhedo, São Paulo)",
+  "_REGIAO_OBITER_MINUTA": "Região da instância Oracle Cloud que hospeda a API Obiter-Minuta. Veja em cloud.oracle.com, no canto superior direito.",
+  "DATA_VIGENCIA": "06/11/2026",
+  "_DATA_VIGENCIA": "Data de início de vigência dos documentos. Deve ser igual ou anterior ao dia em que o teste fechado abre."
+}
