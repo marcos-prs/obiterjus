@@ -14,6 +14,7 @@ import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.PedidoCalculoPrazo
 import com.obiterjus.data.time.RespostaPrazo
+import com.obiterjus.data.time.RespostaSaude
 import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
 import com.obiterjus.domain.model.MovimentoProcesso
@@ -208,6 +209,10 @@ class DjenRepositoryImplTest {
     private class FakeCalendarioForenseDataSource : CalendarioForenseDataSource {
         override suspend fun calcularPrazo(pedido: PedidoCalculoPrazo): RespostaPrazo =
             RespostaPrazo(estado = "INDISPONIVEL")
+
+        // Sem cobertura declarada a calculadora não rebaixa nada: estes
+        // testes olham só o mapeamento do estado da resposta.
+        override suspend fun consultarSaude(ano: Int): RespostaSaude = RespostaSaude()
     }
 
     private class FakePublicacaoDao(

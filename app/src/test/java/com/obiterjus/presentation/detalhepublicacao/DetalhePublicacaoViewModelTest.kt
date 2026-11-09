@@ -6,6 +6,7 @@ import com.obiterjus.data.publicacao.local.PublicacaoDao
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.PedidoCalculoPrazo
 import com.obiterjus.data.time.RespostaPrazo
+import com.obiterjus.data.time.RespostaSaude
 import com.obiterjus.domain.model.ConfiancaCalculo
 import com.obiterjus.domain.model.ConfirmacaoPrazoResultado
 import com.obiterjus.domain.model.ParticipanteProcesso
@@ -302,6 +303,9 @@ class DetalhePublicacaoViewModelTest {
             object : CalendarioForenseDataSource {
                 override suspend fun calcularPrazo(pedido: PedidoCalculoPrazo): RespostaPrazo =
                     calendarioForense(pedido)
+
+                override suspend fun consultarSaude(ano: Int): RespostaSaude =
+                    RespostaSaude()
             },
         )
         return DetalhePublicacaoViewModel(

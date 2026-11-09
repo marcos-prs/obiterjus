@@ -5,6 +5,7 @@ import com.obiterjus.core.time.CalculadoraPrazos
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.PedidoCalculoPrazo
 import com.obiterjus.data.time.RespostaPrazo
+import com.obiterjus.data.time.RespostaSaude
 import com.obiterjus.domain.model.ConfiancaCalculo
 import com.obiterjus.domain.model.NaturezaProcesso
 import java.time.LocalDate
@@ -97,5 +98,9 @@ class CalcularPrazoRegraUCTest {
             ultimoPedido = pedido
             return resposta
         }
+
+        // Sem cobertura declarada a calculadora não rebaixa nada: estes
+        // testes olham só o mapeamento do estado da resposta.
+        override suspend fun consultarSaude(ano: Int): RespostaSaude = RespostaSaude()
     }
 }

@@ -7,6 +7,7 @@ import com.obiterjus.data.publicacao.local.PublicacaoEntity
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.PedidoCalculoPrazo
 import com.obiterjus.data.time.RespostaPrazo
+import com.obiterjus.data.time.RespostaSaude
 import com.obiterjus.domain.model.ConfiancaCalculo
 import java.time.Clock
 import java.time.Instant
@@ -22,6 +23,7 @@ class RecalcularPrazosPendentesUCTest {
 
     private val hoje = LocalDate.of(2026, 6, 24)
     private val clock = Clock.fixed(Instant.parse("2026-06-24T12:00:00Z"), ZoneOffset.UTC)
+    private lateinit var calendario: FakeCalendarioForense
 
     @Test
     fun pendenteViraConfiavelEPersiste() = runBlocking {
@@ -74,6 +76,23 @@ class RecalcularPrazosPendentesUCTest {
     }
 
     @Test
+    fun tribunalSemCalendarioJudicialNaoEhReperguntadoNoMesmoCiclo() = runBlocking {
+        val dao = FakePublicacaoDao(listOf(publicacao(id = 1L), publicacao(id = 2L)))
+        val uc = useCase(dao, RespostaPrazo(estado = "BLOQUEADO_SEM_CALENDARIO"))
+
+        val resumo = uc()
+
+        // As duas seguem pendentes — sem data não se grava —, mas a API foi
+        // chamada uma vez: a resposta da primeira já vale para o mesmo tribunal
+        // e ano. Insistir nas outras 199 não resolveria nenhuma.
+        assertEquals(2, resumo.analisadas)
+        assertEquals(0, resumo.resolvidas)
+        assertEquals(2, resumo.pendentes)
+        assertEquals(1, calendario.chamadas)
+        assertTrue(dao.atualizacoes.isEmpty())
+    }
+
+    @Test
     fun consultaRespeitaJanelaELimite() = runBlocking {
         val dao = FakePublicacaoDao(emptyList())
         val uc = useCase(dao, RespostaPrazo(estado = "CONFIAVEL", dataVencimento = "2026-07-15"))
@@ -89,7 +108,8 @@ class RecalcularPrazosPendentesUCTest {
         resposta: RespostaPrazo,
         falharNaPublicacao: Long? = null,
     ): RecalcularPrazosPendentesUC {
-        val calculadora = CalculadoraPrazos(FakeCalendarioForense(resposta))
+        calendario = FakeCalendarioForense(resposta)
+        val calculadora = CalculadoraPrazos(calendario)
         return RecalcularPrazosPendentesUC(
             publicacaoDao = dao.apply { this.falharNaPublicacao = falharNaPublicacao },
             calcularPrazoRegraUC = CalcularPrazoRegraUC(
@@ -195,6 +215,16 @@ class RecalcularPrazosPendentesUCTest {
     private class FakeCalendarioForense(
         private val resposta: RespostaPrazo,
     ) : CalendarioForenseDataSource {
-        override suspend fun calcularPrazo(pedido: PedidoCalculoPrazo): RespostaPrazo = resposta
+        var chamadas = 0
+            private set
+
+        override suspend fun calcularPrazo(pedido: PedidoCalculoPrazo): RespostaPrazo {
+            chamadas += 1
+            return resposta
+        }
+
+        // Sem cobertura declarada a calculadora não rebaixa nada: estes
+        // testes olham só o mapeamento do estado da resposta.
+        override suspend fun consultarSaude(ano: Int): RespostaSaude = RespostaSaude()
     }
 }

@@ -2,6 +2,8 @@ package com.obiterjus.domain.usecase
 
 import android.util.Log
 import com.obiterjus.data.publicacao.local.PublicacaoDao
+import com.obiterjus.data.publicacao.local.PublicacaoEntity
+import com.obiterjus.domain.model.ConfiancaCalculo
 import java.time.Clock
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -41,8 +43,21 @@ class RecalcularPrazosPendentesUC(
 
         var resolvidas = 0
         var falhas = 0
+        var ignoradas = 0
+
+        // Tribunal sem calendário judicial do ano responde sem data para todas
+        // as publicações daquele ano (BLOQUEADO_SEM_CALENDARIO): a primeira já
+        // disse o que as outras ouviriam, e são até 200 chamadas por execução
+        // numa API que hiberna. O próximo ciclo pergunta de novo — a coleta do
+        // calendário pode ter entrado nesse meio-tempo.
+        val semDataNoCiclo = mutableSetOf<Pair<String, Int>>()
 
         candidatas.forEach { entity ->
+            val tribunalAno = entity.tribunalAno()
+            if (tribunalAno != null && tribunalAno in semDataNoCiclo) {
+                ignoradas += 1
+                return@forEach
+            }
             try {
                 val prazo = calcularPrazoRegraUC.invoke(
                     texto = entity.textoLimpo,
@@ -53,7 +68,15 @@ class RecalcularPrazosPendentesUC(
                 )
                 // Sem data a publicação continua elegível: não adianta gravar
                 // quantidade sem vencimento, e o próximo ciclo tenta de novo.
-                val dataLimite = prazo?.dataLimiteEstimada ?: return@forEach
+                val dataLimite = prazo?.dataLimiteEstimada
+                if (dataLimite == null) {
+                    // INCERTO sem data é resposta da API, não falha de rede
+                    // (essa sai PENDENTE, e aí vale a pena insistir).
+                    if (tribunalAno != null && prazo?.confiancaCalculo == ConfiancaCalculo.INCERTO) {
+                        semDataNoCiclo += tribunalAno
+                    }
+                    return@forEach
+                }
 
                 publicacaoDao.atualizarPrazo(
                     id = entity.id,
@@ -76,7 +99,8 @@ class RecalcularPrazosPendentesUC(
 
         Log.d(
             TAG,
-            "Recálculo: analisadas=${candidatas.size} | resolvidas=$resolvidas | falhas=$falhas",
+            "Recálculo: analisadas=${candidatas.size} | resolvidas=$resolvidas | " +
+                "falhas=$falhas | ignoradas=$ignoradas",
         )
         return ResumoRecalculo(
             analisadas = candidatas.size,
@@ -97,6 +121,13 @@ class RecalcularPrazosPendentesUC(
         /** Teto por execução: a API responde uma chamada por vez e hiberna. */
         const val LIMITE_POR_EXECUCAO = 200
     }
+}
+
+/** Chave do que a API já respondeu sobre calendário judicial: sigla + ano. */
+private fun PublicacaoEntity.tribunalAno(): Pair<String, Int>? {
+    val sigla = tribunal?.trim()?.uppercase()?.takeIf { it.isNotEmpty() } ?: return null
+    val ano = dataDisponibilizacao?.year ?: return null
+    return sigla to ano
 }
 
 data class ResumoRecalculo(
