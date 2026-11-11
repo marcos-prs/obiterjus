@@ -55,7 +55,8 @@ data class EstadoPerfil(
     /**
      * Só então o toggle da pré-checagem aparece. Fica atrás de flag porque
      * pedir essa autorização antes de a política de privacidade descrever o que
-     * o servidor enxerga seria pedir consentimento para algo não contado.
+     * o servidor passa a guardar seria pedir consentimento para algo não
+     * contado.
      */
     val pushPreChecagemDisponivel: Boolean = false,
 )

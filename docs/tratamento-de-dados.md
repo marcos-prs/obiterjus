@@ -103,23 +103,31 @@ advogado, o modo de busca por nome, e a marca d'água — o maior `id` de
 comunicação do DJEN já conhecido pelo aparelho.
 
 Com isso o servidor consulta o DJEN pela OAB para decidir se vale acordar o
-aparelho. **Duas consequências que precisam estar claras:**
+aparelho. **Três consequências que precisam estar claras:**
 
-1. O servidor **vê o inteiro teor das publicações em trânsito, incluindo as
-   sigilosas**. A API do DJEN devolve os itens completos; não existe consulta
-   que responda só "qual o maior id". É exposição nova — sigilosa é filtrada na
-   subida ao Firestore e bloqueada no upload de minuta, e até aqui nunca passou
-   por servidor nosso.
-2. O desenho manda persistir só a marca d'água, um inteiro. Como no
-   `pdf_descartado: true` da API de minutas, isso é afirmação do servidor e não
-   fato verificável pelo app: **ponto de confiança, não garantia.**
+1. Um servidor nosso passa a guardar OAB, UF e nome do advogado. São dados que
+   já vão para o DJEN hoje, mas não para servidor nosso — e passam a dizer de
+   quem é cada registro.
+2. E passa a saber em que dias aquela OAB tem publicação. É metadado sobre a
+   rotina do escritório: derivável do Diário por qualquer um, mas que até aqui
+   nenhum servidor nosso tinha.
+3. O conteúdo lido na resposta **não** é exposição nova: a API do DJEN devolve
+   os itens completos, e são os mesmos que o Diário mostra a qualquer pesquisa
+   pela mesma OAB — nada mais, nada menos. Não existe publicação sigilosa: se
+   está no Diário, é pública. O `isSigiloso` da tabela acima é heurística do
+   `SigiloDetector` sobre marcadores no próprio texto público, usada como porta
+   de saída para a nuvem e para as minutas; marca o que convém reter, não
+   conteúdo secreto em trânsito. O desenho manda persistir só a marca d'água,
+   um inteiro; como no `pdf_descartado: true` da API de minutas, isso é
+   afirmação do servidor e não fato verificável pelo app: **ponto de confiança,
+   não garantia.**
 
 O push em si nunca carrega conteúdo — nem contagem. Quem consulta o DJEN para
 notificar é sempre o app, então o inteiro teor continua chegando só ao
 aparelho.
 
 **Pendência bloqueante:** a Fase 2 não pode entrar em produção antes de a
-política de privacidade descrever os itens 1 e 2 e o site ser republicado.
+política de privacidade descrever os itens acima e o site ser republicado.
 
 ### Consultas a serviços públicos
 
@@ -156,6 +164,6 @@ calendários). **Pendência:** `calendar.events` bastaria.
 4. Reduzir o escopo do OAuth do Google Calendar.
 5. Confirmar retenção e subcontratados do serviço de minutas.
 6. **Bloqueante para a Fase 2 do push:** descrever na política de privacidade
-   que o servidor vê publicação sigilosa em trânsito durante a pré-checagem, e
-   republicar o site. Enquanto isso não existir, `pushPreChecagemAutorizada`
-   não deve ser oferecida em produção.
+   que um servidor nosso passa a guardar a OAB e o nome do advogado e a
+   consultar o DJEN por ele, e republicar o site. Enquanto isso não existir,
+   `pushPreChecagemAutorizada` não deve ser oferecida em produção.

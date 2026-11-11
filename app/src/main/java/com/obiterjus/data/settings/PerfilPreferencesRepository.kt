@@ -31,9 +31,13 @@ data class PerfilPreferences(
      * Autoriza o servidor de push a consultar o DJEN pela OAB do advogado para
      * decidir se vale acordar o aparelho (Fase 2 do push diário).
      *
-     * Desligado por padrão, e por um motivo concreto: a API do DJEN devolve os
-     * itens completos, então o servidor vê o inteiro teor em trânsito —
-     * incluindo publicação sigilosa, que hoje nunca passa por servidor nosso.
+     * Desligado por padrão, e por um motivo concreto: um servidor nosso passa a
+     * guardar OAB e nome do advogado, e a saber em que dias aquela OAB tem
+     * publicação. O que ele lê na resposta do DJEN não é exposição nova — é o
+     * que o Diário devolve a qualquer pesquisa pela mesma OAB, e não existe
+     * publicação sigilosa: se está no Diário, é pública. O que muda é haver
+     * identificação do advogado fora do aparelho.
+     *
      * Sem esta autorização o servidor só manda um "acorda" cego no horário, sem
      * saber de quem é o aparelho nem o que ele vai procurar.
      */

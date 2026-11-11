@@ -161,7 +161,7 @@ fun PerfilScreen(
                         aoAlternar = viewModel::aoAlternarSincronizacaoNuvem,
                     )
                     // Só aparece quando o servidor de push está no ar E a
-                    // política de privacidade já descreve o que ele enxerga.
+                    // política de privacidade já descreve o que ele guarda.
                     if (estado.pushPreChecagemDisponivel) {
                         DividerInterno()
                         LinhaToggleDescritivo(

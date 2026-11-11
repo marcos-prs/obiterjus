@@ -549,7 +549,7 @@
     <string name="perfil_nuvem_autorizar">Guardar meus dados na nuvem</string>
     <string name="perfil_nuvem_autorizar_descricao">Envia processos, publicações, clientes, prazos e minutas para a sua conta. O inteiro teor das publicações sai do aparelho; o que corre em segredo de justiça nunca é enviado.</string>
     <string name="perfil_push_pre_checagem">Avisar só quando houver publicação</string>
-    <string name="perfil_push_pre_checagem_descricao">Autoriza o ObiterJus a consultar o Diário pela sua OAB no servidor, para só acordar o aparelho quando houver algo novo. Nesse caminho o servidor enxerga as publicações durante a consulta, inclusive as sigilosas, e não guarda nenhuma. Desligado, o aparelho é acordado todo dia no horário e a busca acontece só aqui.</string>
+    <string name="perfil_push_pre_checagem_descricao">Autoriza o ObiterJus a consultar o Diário pela sua OAB no servidor, para só acordar o aparelho quando houver algo novo. O servidor passa a guardar sua OAB e seu nome, e a saber em que dias você tem publicação; na consulta ele lê o mesmo que o Diário mostra a qualquer pesquisa, e não guarda nenhuma publicação. Desligado, o aparelho é acordado todo dia no horário e a busca acontece só aqui.</string>
     <string name="perfil_sincronizacao_descricao">Sincronização automática diária às 7h. Toque para sincronizar agora.</string>
     <string name="perfil_sync_sucesso">Publicações sincronizadas: %1$d processo(s) e %2$d publicação(ões).</string>
     <string name="perfil_sync_falha">Não foi possível sincronizar publicações agora.</string>

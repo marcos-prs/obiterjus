@@ -21,9 +21,10 @@ data class AppConfig(
      *
      * Flag separado de [pushDiarioEnabled] de propósito: a Fase 1 pode entrar
      * em produção sozinha, enquanto a Fase 2 depende de a política de
-     * privacidade descrever que o servidor enxerga publicação sigilosa em
-     * trânsito. Oferecer o toggle antes disso seria pedir autorização para algo
-     * que a política não conta. Ver `docs/tratamento-de-dados.md`.
+     * privacidade registrar que um servidor nosso passa a guardar a OAB e o
+     * nome do advogado e a consultar o DJEN por ele. Oferecer o toggle antes
+     * disso seria pedir autorização para algo que a política não conta. Ver
+     * `docs/tratamento-de-dados.md`.
      */
     val pushPreChecagemDisponivel: Boolean = false,
     val requestTimeoutSeconds: Long = DEFAULT_REQUEST_TIMEOUT_SECONDS,
