@@ -11,6 +11,16 @@ val dataJudApiKey = providers.gradleProperty("DATAJUD_API_KEY")
     .get()
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
+
+// Identifica o app no endpoint de registro de push. Não é segredo de verdade —
+// vai dentro do APK e é extraível —, serve para cortar abuso casual do endpoint.
+// Vazia enquanto o servidor não existir; o registro só liga com o flag do
+// Remote Config `push_diario_enabled`.
+val pushAppKey = providers.gradleProperty("PUSH_APP_KEY")
+    .orElse("")
+    .get()
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
 val releaseStoreFile = providers.gradleProperty("RELEASE_STORE_FILE").orNull
     ?.let(::file)
     ?.takeIf { it.exists() }
@@ -44,10 +54,11 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.001"
+        versionName = "0.0001"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DATAJUD_API_KEY", "\"$dataJudApiKey\"")
+        buildConfigField("String", "PUSH_APP_KEY", "\"$pushAppKey\"")
     }
 
     buildTypes {
@@ -129,6 +140,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.config)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.messaging)
     implementation(libs.play.services.auth)
     implementation(libs.googleid)
     ksp(libs.androidx.room.compiler)

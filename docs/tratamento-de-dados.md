@@ -4,7 +4,7 @@ Documento de trabalho exigido pelo art. 37 da LGPD. Descreve o que o app coleta,
 onde guarda e para quem envia. Atualizar junto com qualquer mudança que altere o
 fluxo de dados.
 
-Última revisão: 13/08/2026.
+Última revisão: 11/11/2026.
 
 ## Titulares
 
@@ -77,6 +77,50 @@ mas isso é afirmação do servidor. Verificar retenção real, política de log
 qual provedor de IA processa o texto — e se há contrato de tratamento de dados
 com ele.
 
+### Push diário das 7h (FCM) — Fase 1 ativa, Fase 2 sob autorização
+
+O WorkManager não garante horário: em bucket Rare ou Restricted a rede em
+segundo plano é desligada, e FCM de alta prioridade é a única exceção a Doze e a
+bucket. Por isso quem acorda o app é o servidor. Desenho em
+`docs/plans/2026-11-11-push-das-7h.md`.
+
+**Nada disso está no ar ainda**: o flag `push_diario_enabled` do Remote Config
+nasce `false` e só liga quando o cron existir.
+
+**Fase 1 — acordar cego.** O aparelho se inscreve num tópico do FCM cujo nome
+carrega apenas a hora e o deslocamento de fuso (`sync-diaria-h07-utcm180`). Não
+há identificação de aparelho nem de advogado, e **nenhum dado sai do aparelho
+para servidor nosso** — não há endpoint, registro, token nem banco. O que o
+Google vê é a inscrição em tópico, mecânica própria do FCM. O
+`firebase-messaging` 26 depreciou `getToken()`, então o app nunca manuseia
+credencial de entrega.
+
+**Fase 2 — pré-checagem no servidor.** Só com `pushPreChecagemAutorizada`
+ligada no Perfil, que **nasce desligada**. A API de push
+(`obiterjus.duckdns.org`) passa a receber: uuid opaco da instalação, tópico
+derivado da OAB por HMAC com sal, hora e fuso, número e UF da OAB, nome do
+advogado, o modo de busca por nome, e a marca d'água — o maior `id` de
+comunicação do DJEN já conhecido pelo aparelho.
+
+Com isso o servidor consulta o DJEN pela OAB para decidir se vale acordar o
+aparelho. **Duas consequências que precisam estar claras:**
+
+1. O servidor **vê o inteiro teor das publicações em trânsito, incluindo as
+   sigilosas**. A API do DJEN devolve os itens completos; não existe consulta
+   que responda só "qual o maior id". É exposição nova — sigilosa é filtrada na
+   subida ao Firestore e bloqueada no upload de minuta, e até aqui nunca passou
+   por servidor nosso.
+2. O desenho manda persistir só a marca d'água, um inteiro. Como no
+   `pdf_descartado: true` da API de minutas, isso é afirmação do servidor e não
+   fato verificável pelo app: **ponto de confiança, não garantia.**
+
+O push em si nunca carrega conteúdo — nem contagem. Quem consulta o DJEN para
+notificar é sempre o app, então o inteiro teor continua chegando só ao
+aparelho.
+
+**Pendência bloqueante:** a Fase 2 não pode entrar em produção antes de a
+política de privacidade descrever os itens 1 e 2 e o site ser republicado.
+
 ### Consultas a serviços públicos
 
 DJEN (`comunicaapi.pje.jus.br`) e DataJud (`api-publica.datajud.cnj.jus.br`)
@@ -106,7 +150,12 @@ calendários). **Pendência:** `calendar.events` bastaria.
 ## Pendências abertas
 
 1. Fluxo de exclusão de conta que remova os dados do Firestore.
-2. Certificate pinning e domínio próprio para a API de minutas.
+2. Certificate pinning e domínio próprio para a API de minutas — passa a valer
+   também para a API de push na Fase 2, que recebe OAB e nome.
 3. Token de escopo restrito no lugar do Firebase ID token.
 4. Reduzir o escopo do OAuth do Google Calendar.
 5. Confirmar retenção e subcontratados do serviço de minutas.
+6. **Bloqueante para a Fase 2 do push:** descrever na política de privacidade
+   que o servidor vê publicação sigilosa em trânsito durante a pré-checagem, e
+   republicar o site. Enquanto isso não existir, `pushPreChecagemAutorizada`
+   não deve ser oferecida em produção.

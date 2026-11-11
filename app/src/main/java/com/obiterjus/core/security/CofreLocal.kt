@@ -94,6 +94,21 @@ class CofreLocal(context: Context) {
         /** Access token do Google Calendar. */
         const val SEGREDO_TOKEN_CALENDAR = "google_calendar_access_token"
 
+        /**
+         * Identificador da instalação no servidor de push. Opaco e gerado no
+         * aparelho: o registro de push não pode exigir conta, porque o app não
+         * tem gate de login de propósito.
+         */
+        const val SEGREDO_INSTALACAO_PUSH = "push_instalacao_id"
+
+        /**
+         * Tópicos do FCM em que o aparelho está inscrito hoje. Guardado para a
+         * reconciliação poder sair dos antigos: fuso muda em viagem e a OAB
+         * pode ser corrigida, e sem isso o aparelho seguiria sendo acordado
+         * pelo tópico errado para sempre.
+         */
+        const val SEGREDO_TOPICOS_PUSH = "push_topicos_inscritos"
+
         private const val ARQUIVO_PREFS = "obiter_cofre"
         private const val PROVEDOR = "AndroidKeyStore"
         private const val ALIAS = "obiter_cofre_v1"

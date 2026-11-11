@@ -160,6 +160,17 @@ fun PerfilScreen(
                         ativo = estado.sincronizacaoNuvemAutorizada,
                         aoAlternar = viewModel::aoAlternarSincronizacaoNuvem,
                     )
+                    // Só aparece quando o servidor de push está no ar E a
+                    // política de privacidade já descreve o que ele enxerga.
+                    if (estado.pushPreChecagemDisponivel) {
+                        DividerInterno()
+                        LinhaToggleDescritivo(
+                            rotulo = stringResource(R.string.perfil_push_pre_checagem),
+                            descricao = stringResource(R.string.perfil_push_pre_checagem_descricao),
+                            ativo = estado.pushPreChecagemAutorizada,
+                            aoAlternar = viewModel::aoAlternarPushPreChecagem,
+                        )
+                    }
                     DividerInterno()
                     LinhaSincronizacao(
                         rotulo = stringResource(R.string.perfil_forcar_sincronizacao),

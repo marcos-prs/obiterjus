@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class FirebaseAuthRepository(
+    private val credencialGoogle: CredencialGoogleProvider,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
 ) : AuthRepository {
 
@@ -67,6 +68,9 @@ class FirebaseAuthRepository(
 
     override suspend fun signOut() {
         auth.signOut()
+        // Encerrar a sessão do Firebase não desautoriza a conta Google no
+        // aparelho — quem faz isso é o Credential Manager.
+        credencialGoogle.limparEstadoDeCredencial()
     }
 
     override suspend fun temProvedorSenha(): Boolean {
@@ -87,6 +91,7 @@ class FirebaseAuthRepository(
         // acorda com o signOut explícito em alguns aparelhos — e a interface
         // depende dele para voltar ao estado deslogado.
         auth.signOut()
+        credencialGoogle.limparEstadoDeCredencial()
     }
 
     override suspend fun getIdToken(forceRefresh: Boolean): String? {

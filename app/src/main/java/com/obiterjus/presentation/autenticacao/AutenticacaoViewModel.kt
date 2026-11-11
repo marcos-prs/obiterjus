@@ -6,6 +6,8 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
+import com.obiterjus.data.auth.CredencialGoogleProvider
+import com.obiterjus.data.auth.ResultadoCredencialGoogle
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.data.settings.SessaoLocalRepository
 import com.obiterjus.domain.model.AuthUser
@@ -13,6 +15,7 @@ import com.obiterjus.domain.model.OabCadastro
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.repository.SincronizacaoRepository
+import com.obiterjus.domain.usecase.AplicarPreferenciaSincronizacaoUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.model.MonitorarDjenModo
 import com.obiterjus.domain.model.MonitorarDjenParams
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -108,6 +112,11 @@ data class EstadoAutenticacao(
     val autenticado: Boolean = false,
     val emailUsuarioAtual: String? = null,
     val resumoBuscaPublicacoes: Int = 0,
+    /**
+     * A etapa Conta foi cumprida por uma credencial Google: a conta já existe no
+     * Firebase e não há senha neste cadastro. O resto do assistente segue igual.
+     */
+    val contaGoogle: Boolean = false,
 ) {
     val senhaConfere: Boolean
         get() = senha.isNotBlank() && senha == confirmarSenha
@@ -123,9 +132,9 @@ data class EstadoAutenticacao(
     val contaValida: Boolean
         get() = nomeCompleto.isNotBlank() &&
             email.isNotBlank() &&
-            senhaValida &&
-            senhaConfere &&
-            aceitaPoliticas
+            aceitaPoliticas &&
+            // Cadastro por Google não tem senha para validar.
+            (contaGoogle || (senhaValida && senhaConfere))
 
     val oabValida: Boolean
         get() = uf.length == 2 && numeroOab.isNotBlank()
@@ -137,7 +146,9 @@ class AutenticacaoViewModel internal constructor(
     private val repositorioSincronizacao: SincronizacaoRepository,
     private val monitorarCnjUseCase: MonitorarCnjUseCase,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val aplicarPreferenciaSincronizacao: AplicarPreferenciaSincronizacaoUC,
     private val sessaoLocal: SessaoLocalRepository,
+    private val credencialGoogle: CredencialGoogleProvider,
     private val textos: TextosAutenticacao,
 ) : ViewModel() {
     constructor(
@@ -147,14 +158,18 @@ class AutenticacaoViewModel internal constructor(
         repositorioSincronizacao: SincronizacaoRepository,
         monitorarCnjUseCase: MonitorarCnjUseCase,
         perfilPreferencesRepository: PerfilPreferencesRepository,
+        aplicarPreferenciaSincronizacao: AplicarPreferenciaSincronizacaoUC,
         sessaoLocal: SessaoLocalRepository,
+        credencialGoogle: CredencialGoogleProvider,
     ) : this(
         authRepository = authRepository,
         repositorioCadastroOab = repositorioCadastroOab,
         repositorioSincronizacao = repositorioSincronizacao,
         monitorarCnjUseCase = monitorarCnjUseCase,
         perfilPreferencesRepository = perfilPreferencesRepository,
+        aplicarPreferenciaSincronizacao = aplicarPreferenciaSincronizacao,
         sessaoLocal = sessaoLocal,
+        credencialGoogle = credencialGoogle,
         textos = ContextTextosAutenticacao(context),
     )
 
@@ -231,29 +246,7 @@ class AutenticacaoViewModel internal constructor(
         viewModelScope.launch {
             _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
             authRepository.signInWithEmail(email, senha).fold(
-                onSuccess = { authUser ->
-                    // A restauração chamava o Firestore fora de runCatching: sem
-                    // rede, a exceção escapava do launch e derrubava o app logo
-                    // depois de um login bem-sucedido.
-                    val restauracao = runCatching {
-                        sessaoLocal.prepararPara(authUser.uid)
-                        repositorioSincronizacao.restaurarPerfil(authUser.uid)
-                        repositorioSincronizacao.restaurarTudo(authUser.uid)
-                    }
-                    _estado.update {
-                        it.copy(
-                            carregando = false,
-                            senha = "",
-                            confirmarSenha = "",
-                            mensagemSucesso = textos.get(R.string.autenticacao_sucesso_login),
-                            mensagemErro = if (restauracao.isFailure) {
-                                textos.get(R.string.autenticacao_error_restaurar)
-                            } else {
-                                null
-                            },
-                        )
-                    }
-                },
+                onSuccess = { authUser -> concluirLogin(authUser) },
                 onFailure = {
                     _estado.update {
                         it.copy(
@@ -261,6 +254,165 @@ class AutenticacaoViewModel internal constructor(
                             mensagemErro = textos.get(R.string.autenticacao_error_login_email),
                         )
                     }
+                },
+            )
+        }
+    }
+
+    /**
+     * Acesso com Google. Serve de entrada e de cadastro: na primeira vez o
+     * Firebase cria a conta a partir da credencial, sem passar pelo assistente
+     * de e-mail/senha — a OAB e as preferências seguem editáveis no Perfil.
+     *
+     * [contextoDaTela] tem de ser o contexto da Activity: o seletor de contas do
+     * Credential Manager não abre a partir do contexto de aplicação.
+     */
+    fun aoEntrarComGoogle(contextoDaTela: Context?) {
+        if (_estado.value.carregando) return
+
+        viewModelScope.launch {
+            _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
+            val (authUser, _) = autenticarComGoogle(contextoDaTela) ?: return@launch
+            concluirLogin(authUser)
+        }
+    }
+
+    /**
+     * Mesma credencial Google, outro destino: aqui ela cumpre a etapa Conta do
+     * assistente e o cadastro continua nas etapas de OAB, verificação e
+     * preferências, que é o que faz o monitoramento DJEN funcionar depois.
+     *
+     * Por isso não marca [EstadoAutenticacao.mensagemSucesso]: ela é o gatilho de
+     * saída da tela, e sair aqui abandonaria o cadastro pela metade.
+     *
+     * Exige os aceites antes de pedir a credencial — a conta no Firebase nasce
+     * desta chamada, e não se cria conta antes de aceitar os termos.
+     */
+    fun aoCadastrarComGoogle(contextoDaTela: Context?) {
+        val estadoAtual = _estado.value
+        if (estadoAtual.carregando) return
+        if (!estadoAtual.aceitaPoliticas) {
+            _estado.update { it.copy(mensagemErro = textos.get(R.string.autenticacao_error_politicas)) }
+            return
+        }
+
+        viewModelScope.launch {
+            _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
+            val (authUser, credencial) = autenticarComGoogle(contextoDaTela) ?: return@launch
+
+            // A credencial também entra em conta que já existe. Traz o que houver
+            // na nuvem antes de adiantar os campos: sem isso o assistente seguiria
+            // em branco e o `enviarPerfil` do fim sobrescreveria o perfil bom.
+            val restauracao = restaurarDaNuvem(authUser.uid)
+            val cadastro = runCatching { repositorioCadastroOab.cadastro.first() }.getOrNull()
+            val preferencias = runCatching { perfilPreferencesRepository.preferencias.first() }.getOrNull()
+
+            _estado.update { atual ->
+                atual.copy(
+                    carregando = false,
+                    contaGoogle = true,
+                    senha = "",
+                    confirmarSenha = "",
+                    nomeCompleto = credencial.nomeExibicao
+                        ?: cadastro?.nomeAdvogado?.takeIf { it.isNotBlank() }
+                        ?: atual.nomeCompleto,
+                    email = credencial.email ?: authUser.email ?: atual.email,
+                    uf = cadastro?.uf?.takeIf { it.isNotBlank() } ?: atual.uf,
+                    numeroOab = cadastro?.numero?.takeIf { it.isNotBlank() } ?: atual.numeroOab,
+                    tipoInscricao = cadastro?.tipoInscricao?.let(::tipoInscricaoDe) ?: atual.tipoInscricao,
+                    nomeEscritorio = cadastro?.nomeEscritorio?.takeIf { it.isNotBlank() } ?: atual.nomeEscritorio,
+                    areasAtuacao = cadastro?.areasAtuacao?.takeIf { it.isNotEmpty() }?.toSet() ?: atual.areasAtuacao,
+                    janelaBuscaDias = preferencias?.intervaloBuscaDias ?: atual.janelaBuscaDias,
+                    sincronizacaoAutomatica = preferencias?.sincronizacaoAutomatica ?: atual.sincronizacaoAutomatica,
+                    notificarPublicacoes = preferencias?.notificarPublicacoes ?: atual.notificarPublicacoes,
+                    notificarPrazosUrgentes = preferencias?.notificarPrazosUrgentes ?: atual.notificarPrazosUrgentes,
+                    notificarMovimentacoes = preferencias?.notificarMovimentacoes ?: atual.notificarMovimentacoes,
+                    temaEscuro = preferencias?.let { it.tema == TipoTema.ESCURO } ?: atual.temaEscuro,
+                    etapaCadastro = EtapaCadastro.OAB,
+                    mensagemErro = if (restauracao.isFailure) {
+                        textos.get(R.string.autenticacao_error_restaurar)
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
+    }
+
+    /**
+     * Pede a credencial ao sistema e a troca por sessão no Firebase. Em qualquer
+     * desfecho que não seja sucesso já deixa o estado resolvido — mensagem de
+     * erro, ou apenas o fim do carregamento quando o advogado desistiu — e
+     * devolve null para quem chamou apenas encerrar.
+     */
+    private suspend fun autenticarComGoogle(
+        contextoDaTela: Context?,
+    ): Pair<AuthUser, ResultadoCredencialGoogle.Sucesso>? =
+        when (val resultado = credencialGoogle.obterIdToken(contextoDaTela)) {
+            // Fechar o seletor é desistência, não falha: nada de mensagem.
+            ResultadoCredencialGoogle.Cancelado -> {
+                _estado.update { it.copy(carregando = false) }
+                null
+            }
+
+            ResultadoCredencialGoogle.SemConta -> {
+                _estado.update {
+                    it.copy(
+                        carregando = false,
+                        mensagemErro = textos.get(R.string.autenticacao_error_google_sem_conta),
+                    )
+                }
+                null
+            }
+
+            is ResultadoCredencialGoogle.Falha -> {
+                _estado.update {
+                    it.copy(
+                        carregando = false,
+                        mensagemErro = textos.get(R.string.autenticacao_error_login_google),
+                    )
+                }
+                null
+            }
+
+            is ResultadoCredencialGoogle.Sucesso -> {
+                val authUser = authRepository.linkWithGoogle(resultado.idToken).getOrNull()
+                if (authUser == null) {
+                    _estado.update {
+                        it.copy(
+                            carregando = false,
+                            mensagemErro = textos.get(R.string.autenticacao_error_login_google),
+                        )
+                    }
+                    null
+                } else {
+                    authUser to resultado
+                }
+            }
+        }
+
+    private fun tipoInscricaoDe(valor: String): TipoInscricaoCadastro? =
+        runCatching { TipoInscricaoCadastro.valueOf(valor) }.getOrNull()
+
+    /**
+     * Fecha o login: deixa o aparelho pronto para o uid e traz o que a conta tem
+     * na nuvem.
+     *
+     * A restauração chamava o Firestore fora de runCatching: sem rede, a exceção
+     * escapava do launch e derrubava o app logo depois de um login bem-sucedido.
+     */
+    private suspend fun concluirLogin(authUser: AuthUser) {
+        val restauracao = restaurarDaNuvem(authUser.uid)
+        _estado.update {
+            it.copy(
+                carregando = false,
+                senha = "",
+                confirmarSenha = "",
+                mensagemSucesso = textos.get(R.string.autenticacao_sucesso_login),
+                mensagemErro = if (restauracao.isFailure) {
+                    textos.get(R.string.autenticacao_error_restaurar)
+                } else {
+                    null
                 },
             )
         }
@@ -348,7 +500,7 @@ class AutenticacaoViewModel internal constructor(
             EtapaCadastro.PREFERENCIAS -> {
                 viewModelScope.launch {
                     perfilPreferencesRepository.saveIntervaloBuscaDias(estadoAtual.janelaBuscaDias)
-                    perfilPreferencesRepository.saveSincronizacaoAutomatica(estadoAtual.sincronizacaoAutomatica)
+                    aplicarPreferenciaSincronizacao(estadoAtual.sincronizacaoAutomatica)
                     perfilPreferencesRepository.saveNotificarPublicacoes(estadoAtual.notificarPublicacoes)
                     perfilPreferencesRepository.saveNotificarPrazosUrgentes(estadoAtual.notificarPrazosUrgentes)
                     perfilPreferencesRepository.saveNotificarMovimentacoes(estadoAtual.notificarMovimentacoes)
@@ -391,6 +543,33 @@ class AutenticacaoViewModel internal constructor(
         val estadoAtual = _estado.value
         if (estadoAtual.carregando) return
 
+        if (estadoAtual.contaGoogle) {
+            // A conta nasceu da credencial na etapa Conta; aqui só falta publicar
+            // o perfil que o assistente acabou de coletar. Chamar signUp de novo
+            // tentaria criar uma segunda conta, agora com senha.
+            viewModelScope.launch {
+                _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
+                val uid = authRepository.currentUser.firstOrNull()?.uid
+                if (uid == null) {
+                    _estado.update {
+                        it.copy(
+                            carregando = false,
+                            mensagemErro = textos.get(R.string.autenticacao_error_signup),
+                        )
+                    }
+                    return@launch
+                }
+                runCatching { repositorioSincronizacao.enviarPerfil(uid) }
+                _estado.update {
+                    it.copy(
+                        carregando = false,
+                        mensagemSucesso = textos.get(R.string.autenticacao_sucesso_cadastro),
+                    )
+                }
+            }
+            return
+        }
+
         viewModelScope.launch {
             _estado.update { it.copy(carregando = true, mensagemErro = null, mensagemSucesso = null) }
             authRepository.signUpWithEmail(estadoAtual.email.trim(), estadoAtual.senha).fold(
@@ -419,6 +598,18 @@ class AutenticacaoViewModel internal constructor(
             )
         }
     }
+
+    /**
+     * Deixa o aparelho pronto para o uid e traz o que a conta tem na nuvem.
+     *
+     * A restauração chamava o Firestore fora de runCatching: sem rede, a exceção
+     * escapava do launch e derrubava o app logo depois de um login bem-sucedido.
+     */
+    private suspend fun restaurarDaNuvem(uid: String): Result<Unit> = runCatching {
+        sessaoLocal.prepararPara(uid)
+        repositorioSincronizacao.restaurarPerfil(uid)
+        repositorioSincronizacao.restaurarTudo(uid)
+    }.map { }
 
     private fun executarVerificacaoAutomatica() {
         val estadoAtual = _estado.value

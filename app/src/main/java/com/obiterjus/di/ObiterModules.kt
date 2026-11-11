@@ -7,15 +7,26 @@ import com.obiterjus.core.config.AppConfigRepository
 import com.obiterjus.core.database.ObiterDatabase
 import com.obiterjus.core.database.ObiterDatabaseFactory
 import com.obiterjus.core.notification.PublicacaoNotificationHelper
+import com.obiterjus.core.security.CofreLocal
+import com.obiterjus.core.worker.AgendadorSincronizacaoWorkManager
 import com.obiterjus.core.worker.DjenSyncWorker
 import com.obiterjus.core.worker.PrazosWorker
 import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.presentation.auditoria.AuditoriaViewModel
+import com.obiterjus.R
+import com.obiterjus.data.auth.CredencialGoogleProvider
+import com.obiterjus.data.auth.CredentialManagerGoogleProvider
 import com.obiterjus.data.auth.FirebaseAuthRepository
 import com.obiterjus.data.config.FirebaseRemoteAppConfigRepository
 import com.obiterjus.data.minuta.MinutaRepositoryImpl
 import com.obiterjus.data.minuta.remote.ObiterMinutaDataSource
 import com.obiterjus.data.minuta.remote.ObiterMinutaRetrofitFactory
+import com.obiterjus.data.publicacao.local.PublicacaoDao
+import com.obiterjus.data.push.CofreMemoriaPush
+import com.obiterjus.data.push.MemoriaPush
+import com.obiterjus.data.push.PushRegistroDataSource
+import com.obiterjus.data.push.PushRegistroRepository
+import com.obiterjus.data.push.PushRetrofitFactory
 import com.obiterjus.data.time.CalendarioForenseDataSource
 import com.obiterjus.data.time.CalendarioForenseRetrofitFactory
 import com.obiterjus.data.viacep.ViaCepApi
@@ -53,6 +64,7 @@ import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.data.settings.DataStoreSessaoLocalRepository
 import com.obiterjus.data.settings.SessaoLocalRepository
 import com.obiterjus.data.sincronizacao.FirestoreSincronizacaoRepository
+import com.obiterjus.domain.repository.AgendadorSincronizacao
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.CertidaoDjenRepository
 import com.obiterjus.domain.repository.DataJudRepository
@@ -64,6 +76,7 @@ import com.obiterjus.domain.repository.ProcessosRepository
 import com.obiterjus.domain.repository.PublicacoesRepository
 import com.obiterjus.domain.repository.SincronizacaoRepository
 import com.obiterjus.domain.usecase.AdicionarProcessoUseCase
+import com.obiterjus.domain.usecase.AplicarPreferenciaSincronizacaoUC
 import com.obiterjus.domain.usecase.RecalcularPrazosPendentesUC
 import com.obiterjus.domain.usecase.ExcluirMinutaUC
 import com.obiterjus.domain.usecase.ExcluirProcessoUseCase
@@ -116,6 +129,8 @@ import java.time.Clock
 
 private val coreModule = module {
     single { Clock.systemDefaultZone() }
+    single<AgendadorSincronizacao> { AgendadorSincronizacaoWorkManager(androidContext()) }
+    single { CofreLocal(androidContext()) }
     single<ObiterDatabase> { ObiterDatabaseFactory.create(androidContext()) }
     single { get<ObiterDatabase>().publicacaoDao() }
     single { get<ObiterDatabase>().processoDao() }
@@ -140,8 +155,31 @@ private val dataModule = module {
             fallbackDataJudApiKey = BuildConfig.DATAJUD_API_KEY,
         )
     }
-    single<AuthRepository> { FirebaseAuthRepository() }
+    single<AuthRepository> { FirebaseAuthRepository(credencialGoogle = get()) }
+    // default_web_client_id vem do plugin google-services, a partir do OAuth
+    // client web do projeto Firebase. É esse que o Firebase aceita no token.
+    single<CredencialGoogleProvider> {
+        CredentialManagerGoogleProvider(
+            serverClientId = androidContext().getString(R.string.default_web_client_id),
+            appContext = androidContext(),
+        )
+    }
     single<ObiterMinutaDataSource> { ObiterMinutaRetrofitFactory.createApi() }
+    single<PushRegistroDataSource> { PushRetrofitFactory.createApi() }
+    single<MemoriaPush> { CofreMemoriaPush(get()) }
+    single {
+        val publicacaoDao = get<PublicacaoDao>()
+        PushRegistroRepository(
+            dataSource = get(),
+            memoria = get(),
+            appConfigRepository = get(),
+            perfilPreferencesRepository = get(),
+            repositorioCadastroOab = get(),
+            marcaDagua = { publicacaoDao.maiorIdConhecido() },
+            chaveApp = BuildConfig.PUSH_APP_KEY,
+            clock = get(),
+        )
+    }
     single<CadastroOabRepository> { PreferencesCadastroOabRepository(androidContext()) }
     single<PerfilPreferencesRepository> { DataStorePerfilPreferencesRepository(androidContext()) }
     single { LocalPublicacaoRepository(get()) } bind PublicacoesRepository::class
@@ -221,6 +259,7 @@ private val dataModule = module {
             minutaDao = get(),
             repositorioCadastroOab = get(),
             perfilPreferencesRepository = get(),
+            aplicarPreferenciaSincronizacao = get(),
             partesResolver = get(),
         )
     }
@@ -237,6 +276,7 @@ private val dataModule = module {
 }
 
 private val domainModule = module {
+    factory { AplicarPreferenciaSincronizacaoUC(get(), get()) }
     factory { MonitorarDjenUseCase(get()) }
     factory { SincronizarProcessosDataJudUseCase(get()) }
     factory {
@@ -297,10 +337,27 @@ private val presentationModule = module {
     viewModel { EditarClienteViewModel(get()) }
     viewModel { AuditoriaViewModel(get()) }
     viewModel { InicioViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
-    viewModel { PerfilViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
-    viewModel { AutenticacaoViewModel(androidContext(), get(), get(), get(), get(), get(), get()) }
+    viewModel {
+        PerfilViewModel(
+            androidContext(),
+            get(), get(), get(), get(), get(), get(), get(), get(), get(),
+        )
+    }
+    viewModel {
+        AutenticacaoViewModel(
+            context = androidContext(),
+            authRepository = get(),
+            repositorioCadastroOab = get(),
+            repositorioSincronizacao = get(),
+            monitorarCnjUseCase = get(),
+            perfilPreferencesRepository = get(),
+            aplicarPreferenciaSincronizacao = get(),
+            sessaoLocal = get(),
+            credencialGoogle = get(),
+        )
+    }
     viewModel { EditarPerfilViewModel(get(), get(), get(), get(), androidContext()) }
-    viewModel { ExcluirContaViewModel(androidContext(), get(), get()) }
+    viewModel { ExcluirContaViewModel(androidContext(), get(), get(), get()) }
     viewModel { DetalheProcessoViewModel(get(), get(), get(), get(), get()) }
     viewModel {
         DetalhePublicacaoViewModel(
@@ -336,6 +393,7 @@ private val workerModule = module {
             perfilPreferencesRepository = get(),
             syncLogDao = get(),
             recalcularPrazosPendentes = get(),
+            repositorioCadastroOab = get(),
         )
     }
     worker { params ->

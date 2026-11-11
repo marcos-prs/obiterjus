@@ -163,6 +163,8 @@ class RecalcularPrazosPendentesUCTest {
         var limiteConsultado: Int? = null
         var falharNaPublicacao: Long? = null
 
+        override suspend fun maiorIdConhecido(): Long? = null
+
         override suspend fun getComPrazoPendente(
             dataMinima: LocalDate,
             limite: Int,

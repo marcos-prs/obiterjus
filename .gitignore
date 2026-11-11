@@ -14,3 +14,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Cache de sessão do compilador Kotlin, gerado a cada build.
+.kotlin/

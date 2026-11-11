@@ -2,10 +2,12 @@ package com.obiterjus.presentation.autenticacao
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -54,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -87,6 +91,10 @@ fun AutenticacaoScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val dimens = ObiterTheme.dimens
     ObiterTheme.colors
+    // O seletor de contas do Credential Manager precisa da Activity; LocalContext
+    // fica como rede de segurança para previews e hosts sem Activity no escopo.
+    val contexto = LocalContext.current
+    val activity = LocalActivity.current
 
     val acaoRetry = when {
         estado.modo == ModoAutenticacao.ENTRAR -> viewModel::aoEntrar
@@ -145,6 +153,7 @@ fun AutenticacaoScreen(
                     aoAlterarEmail = viewModel::aoAlterarEmail,
                     aoAlterarSenha = viewModel::aoAlterarSenha,
                     aoEntrar = viewModel::aoEntrar,
+                    aoEntrarComGoogle = { viewModel.aoEntrarComGoogle(activity ?: contexto) },
                     aoEnviarRedefinicaoSenha = viewModel::aoEnviarRedefinicaoSenha,
                     aoIrParaCadastro = viewModel::aoIrParaCadastro,
                 )
@@ -179,6 +188,9 @@ fun AutenticacaoScreen(
                             aoAlternarTermos = viewModel::aoAlternarTermos,
                             aoAlternarPrivacidade = viewModel::aoAlternarPrivacidade,
                             aoAvancar = viewModel::aoAvancarCadastro,
+                            aoCadastrarComGoogle = {
+                                viewModel.aoCadastrarComGoogle(activity ?: contexto)
+                            },
                         )
 
                         EtapaCadastro.OAB -> EtapaOab(
@@ -227,6 +239,7 @@ private fun ConteudoLogin(
     aoAlterarEmail: (String) -> Unit,
     aoAlterarSenha: (String) -> Unit,
     aoEntrar: () -> Unit,
+    aoEntrarComGoogle: () -> Unit,
     aoEnviarRedefinicaoSenha: () -> Unit,
     aoIrParaCadastro: () -> Unit,
 ) {
@@ -246,6 +259,14 @@ private fun ConteudoLogin(
             aoEnviarRedefinicaoSenha = aoEnviarRedefinicaoSenha,
         )
 
+        AcessoGoogle(
+            rotulo = stringResource(R.string.autenticacao_action_login_google),
+            hint = stringResource(R.string.autenticacao_google_hint),
+            habilitado = !estado.carregando,
+            aoContinuarComGoogle = aoEntrarComGoogle,
+            mostrarPoliticas = true,
+        )
+
         TextButton(
             onClick = aoIrParaCadastro,
             modifier = Modifier.fillMaxWidth(),
@@ -253,6 +274,96 @@ private fun ConteudoLogin(
             Text(stringResource(R.string.autenticacao_action_signup))
         }
     }
+}
+
+/**
+ * Caminho do Google, usado nos dois modos: na entrada abre a sessão direto; no
+ * cadastro cumpre a etapa Conta e o assistente continua.
+ *
+ * [mostrarPoliticas] serve ao login, onde não há caixas de aceite e a primeira
+ * entrada com Google também cria a conta: o aviso fica no texto e os documentos
+ * a um toque.
+ */
+@Composable
+private fun AcessoGoogle(
+    rotulo: String,
+    hint: String,
+    habilitado: Boolean,
+    aoContinuarComGoogle: () -> Unit,
+    mostrarPoliticas: Boolean = false,
+) {
+    val dimens = ObiterTheme.dimens
+    val context = LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(dimens.space3)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(dimens.space3),
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = ObiterTheme.colors.divider)
+            Text(
+                text = stringResource(R.string.autenticacao_google_divisor),
+                style = MaterialTheme.typography.labelMedium,
+                color = ObiterTheme.colors.textMuted,
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = ObiterTheme.colors.divider)
+        }
+
+        OutlinedButton(
+            onClick = aoContinuarComGoogle,
+            enabled = habilitado,
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(dimens.borderWidth, ObiterTheme.colors.border),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_logo_google),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = rotulo,
+                modifier = Modifier.padding(start = dimens.space2),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+        }
+
+        Text(
+            text = hint,
+            style = MaterialTheme.typography.bodySmall,
+            color = ObiterTheme.colors.textMuted,
+        )
+
+        if (mostrarPoliticas) {
+            val termos = stringResource(R.string.url_termos_uso)
+            val privacidade = stringResource(R.string.url_politica_privacidade)
+            Column {
+                TextButton(
+                    onClick = { abrirUrl(context, termos) },
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.autenticacao_ler_termos),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                TextButton(
+                    onClick = { abrirUrl(context, privacidade) },
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.autenticacao_ler_privacidade),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun abrirUrl(context: android.content.Context, url: String) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
 }
 
 @Composable
@@ -547,31 +658,38 @@ private fun EtapaConta(
     aoAlternarTermos: (Boolean) -> Unit,
     aoAlternarPrivacidade: (Boolean) -> Unit,
     aoAvancar: () -> Unit,
+    aoCadastrarComGoogle: () -> Unit,
 ) {
     val dimens = ObiterTheme.dimens
     Column(verticalArrangement = Arrangement.spacedBy(dimens.space2)) {
         Text(stringResource(R.string.autenticacao_step_dados_acesso), style = MaterialTheme.typography.headlineMedium)
         CampoTexto(stringResource(R.string.autenticacao_label_nome), estado.nomeCompleto, aoAlterarNome)
-        CampoTexto(
-            label = stringResource(R.string.autenticacao_label_email),
-            value = estado.email,
-            onValueChange = aoAlterarEmail,
-            keyboardType = KeyboardType.Email,
-        )
-        CampoTexto(
-            label = stringResource(R.string.autenticacao_label_password),
-            value = estado.senha,
-            onValueChange = aoAlterarSenha,
-            oculto = true,
-            keyboardType = KeyboardType.Password,
-        )
-        CampoTexto(
-            label = stringResource(R.string.autenticacao_label_confirm_password),
-            value = estado.confirmarSenha,
-            onValueChange = aoAlterarConfirmarSenha,
-            oculto = true,
-            keyboardType = KeyboardType.Password,
-        )
+        if (estado.contaGoogle) {
+            // E-mail e senha deixam de ser editáveis: quem manda na conta agora é
+            // a credencial Google, e mudar o campo aqui não mudaria o acesso.
+            LinhaResumo(stringResource(R.string.autenticacao_google_conta_rotulo), estado.email)
+        } else {
+            CampoTexto(
+                label = stringResource(R.string.autenticacao_label_email),
+                value = estado.email,
+                onValueChange = aoAlterarEmail,
+                keyboardType = KeyboardType.Email,
+            )
+            CampoTexto(
+                label = stringResource(R.string.autenticacao_label_password),
+                value = estado.senha,
+                onValueChange = aoAlterarSenha,
+                oculto = true,
+                keyboardType = KeyboardType.Password,
+            )
+            CampoTexto(
+                label = stringResource(R.string.autenticacao_label_confirm_password),
+                value = estado.confirmarSenha,
+                onValueChange = aoAlterarConfirmarSenha,
+                oculto = true,
+                keyboardType = KeyboardType.Password,
+            )
+        }
 
         ToggleLinha(
             titulo = stringResource(R.string.autenticacao_toggle_termos),
@@ -596,6 +714,16 @@ private fun EtapaConta(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.autenticacao_action_continue))
+        }
+
+        if (!estado.contaGoogle) {
+            AcessoGoogle(
+                rotulo = stringResource(R.string.autenticacao_action_signup_google),
+                hint = stringResource(R.string.autenticacao_google_cadastro_hint),
+                // A conta no Firebase nasce deste toque: os aceites vêm antes.
+                habilitado = estado.aceitaPoliticas && !estado.carregando,
+                aoContinuarComGoogle = aoCadastrarComGoogle,
+            )
         }
     }
 }

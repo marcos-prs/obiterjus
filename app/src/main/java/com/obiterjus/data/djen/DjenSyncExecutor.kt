@@ -178,6 +178,7 @@ class DjenSyncExecutorImpl(
         when (modo) {
             MonitorarDjenModo.BACKGROUND -> "DJEN + DataJud · Diária"
             MonitorarDjenModo.MANUAL -> "DJEN + DataJud · Manual"
+            MonitorarDjenModo.PUSH -> "DJEN + DataJud · Push"
         }
 
     private class DjenSyncExecutionException(

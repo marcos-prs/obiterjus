@@ -4,18 +4,53 @@ import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 object DjenSyncScheduler {
     private const val UNIQUE_WORK_NAME = "djen_periodic_sync"
+    private const val UNIQUE_WORK_IMEDIATA = "djen_sync_push"
     private const val INTERVAL_HOURS = 24L
     private const val TARGET_HOUR = 7
     private const val BACKOFF_MINUTES = 30L
+
+    /** Marca a execução como disparada por push, para a fonte da Auditoria. */
+    const val KEY_ORIGEM_PUSH = "origem_push"
+
+    /**
+     * Dispara a sincronização agora, em resposta a um push do servidor.
+     *
+     * `setExpedited` é o ponto: job expedito é isento da constraint FLEXIBILITY
+     * (carregando + ocioso + bateria ok) que segura o periódico — justamente a
+     * que faz a execução das 7h escorregar até o usuário abrir o app. O
+     * fallback `RUN_AS_NON_EXPEDITED_WORK_REQUEST` cobre a cota esgotada: a
+     * execução vira comum em vez de ser descartada.
+     *
+     * KEEP evita empilhar execução se chegarem dois pushes seguidos.
+     */
+    fun agendarAgora(context: Context) {
+        val request = OneTimeWorkRequestBuilder<DjenSyncWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build(),
+            )
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setInputData(workDataOf(KEY_ORIGEM_PUSH to true))
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, Duration.ofMinutes(BACKOFF_MINUTES))
+            .build()
+
+        WorkManager.getInstance(context.applicationContext)
+            .enqueueUniqueWork(UNIQUE_WORK_IMEDIATA, ExistingWorkPolicy.KEEP, request)
+    }
 
     /**
      * Garante que a sincronização diária está agendada, sem mexer no horário já ancorado.

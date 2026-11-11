@@ -14,7 +14,16 @@ data class MonitorarDjenParams(
 
 enum class MonitorarDjenModo {
     MANUAL,
+
+    /** Execução periódica do WorkManager — a rede de segurança das 7h. */
     BACKGROUND,
+
+    /**
+     * Execução disparada por push do servidor. Separada de [BACKGROUND] só para
+     * que a Auditoria mostre qual mecanismo acordou o app: é o instrumento para
+     * saber se o push está chegando, sem precisar de adb.
+     */
+    PUSH,
 }
 
 data class MonitorarDjenResumo(

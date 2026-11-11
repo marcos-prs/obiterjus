@@ -214,6 +214,11 @@
     <string name="autenticacao_email_title">Acesso por e-mail</string>
     <string name="autenticacao_google_title">Acesso com Google</string>
     <string name="autenticacao_action_login_google">Entrar com Google</string>
+    <string name="autenticacao_google_divisor">ou</string>
+    <string name="autenticacao_google_hint">A conta Google serve para entrar e para criar conta: na primeira vez, o ObiterJus cria o acesso com o e-mail escolhido. Ao continuar com o Google você aceita os Termos de Uso e a Política de Privacidade.</string>
+    <string name="autenticacao_action_signup_google">Continuar com Google</string>
+    <string name="autenticacao_google_cadastro_hint">Com o Google você não define senha. Aceite os Termos e a Política acima para seguir por aqui; OAB e preferências vêm nas próximas etapas.</string>
+    <string name="autenticacao_google_conta_rotulo">Acesso pelo Google</string>
     <string name="autenticacao_action_login_email">Entrar com e-mail</string>
     <string name="autenticacao_action_logout">Sair da conta</string>
     <string name="autenticacao_action_loading">Aguarde...</string>
@@ -308,6 +313,8 @@
     <string name="autenticacao_error_signup">Não foi possível criar a conta agora.</string>
     <string name="autenticacao_error_guest">Não foi possível entrar como convidado agora.</string>
     <string name="autenticacao_error_login_google">Não foi possível entrar com Google agora.</string>
+    <string name="autenticacao_error_google_sem_conta">Nenhuma conta Google disponível neste aparelho. Adicione uma em Configurações do Android e tente de novo.</string>
+    <string name="autenticacao_error_politicas">Aceite os Termos de Uso e a Política de Privacidade para criar a conta.</string>
     <string name="autenticacao_error_logout">Não foi possível sair da conta agora.</string>
     <string name="autenticacao_sucesso_login">Login concluído com sucesso.</string>
     <string name="autenticacao_error_restaurar">Login concluído, mas não foi possível trazer seus dados da nuvem agora. Tente sincronizar pelo Perfil.</string>
@@ -541,6 +548,8 @@
     <string name="perfil_forcar_sincronizacao_loading">Sincronizando publicações...</string>
     <string name="perfil_nuvem_autorizar">Guardar meus dados na nuvem</string>
     <string name="perfil_nuvem_autorizar_descricao">Envia processos, publicações, clientes, prazos e minutas para a sua conta. O inteiro teor das publicações sai do aparelho; o que corre em segredo de justiça nunca é enviado.</string>
+    <string name="perfil_push_pre_checagem">Avisar só quando houver publicação</string>
+    <string name="perfil_push_pre_checagem_descricao">Autoriza o ObiterJus a consultar o Diário pela sua OAB no servidor, para só acordar o aparelho quando houver algo novo. Nesse caminho o servidor enxerga as publicações durante a consulta, inclusive as sigilosas, e não guarda nenhuma. Desligado, o aparelho é acordado todo dia no horário e a busca acontece só aqui.</string>
     <string name="perfil_sincronizacao_descricao">Sincronização automática diária às 7h. Toque para sincronizar agora.</string>
     <string name="perfil_sync_sucesso">Publicações sincronizadas: %1$d processo(s) e %2$d publicação(ões).</string>
     <string name="perfil_sync_falha">Não foi possível sincronizar publicações agora.</string>
@@ -901,4 +910,5 @@
     <string name="minuta_stage_done">Concluído</string>
     <string name="minuta_stage_default">Processando</string>
     <string name="minuta_erro_ok">OK</string>
+    <string name="minuta_erro_entrar">Entrar</string>
 </resources>

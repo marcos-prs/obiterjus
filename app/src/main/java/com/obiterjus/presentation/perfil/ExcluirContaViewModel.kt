@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
 import com.obiterjus.core.worker.DjenSyncScheduler
+import com.obiterjus.data.push.PushRegistroRepository
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.usecase.ExcluirContaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ class ExcluirContaViewModel(
     private val context: Context,
     private val authRepository: AuthRepository,
     private val excluirConta: ExcluirContaUseCase,
+    private val pushRegistro: PushRegistroRepository,
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(EstadoExcluirConta())
@@ -78,6 +80,9 @@ class ExcluirContaViewModel(
                     // A sync das 7h sobreviveria à conta: o WorkManager não sabe
                     // que não há mais sessão e tentaria buscar publicações.
                     DjenSyncScheduler.cancel(context)
+                    // E o servidor de push seguiria acordando este aparelho,
+                    // com a OAB registrada lá se a pré-checagem estava ligada.
+                    pushRegistro.cancelar()
                     _estado.update {
                         it.copy(senha = "", excluindo = false, excluida = true)
                     }

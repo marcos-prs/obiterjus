@@ -17,6 +17,17 @@ interface PublicacaoDao {
     @Query("SELECT id FROM publicacoes WHERE id IN (:ids)")
     suspend fun getExistingIds(ids: List<Long>): List<Long>
 
+    /**
+     * Marca d'água enviada ao servidor de push: o maior `id` de comunicação do
+     * DJEN já conhecido por este aparelho. O servidor compara com o que a
+     * consulta dele devolve e só empurra quando houver `id` maior.
+     *
+     * É um inteiro, de propósito — o servidor não precisa guardar nada do
+     * conteúdo para decidir se vale acordar o app.
+     */
+    @Query("SELECT MAX(id) FROM publicacoes")
+    suspend fun maiorIdConhecido(): Long?
+
     @Query("SELECT * FROM publicacoes WHERE hash IN (:hashes)")
     suspend fun getByHashes(hashes: List<String>): List<PublicacaoEntity>
 

@@ -9,7 +9,9 @@ import com.obiterjus.data.auditoria.local.SyncLogDao
 import com.obiterjus.data.djen.DjenSyncExecutor
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.MonitorarDjenModo
+import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.usecase.RecalcularPrazosPendentesUC
+import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
@@ -22,7 +24,17 @@ class DjenSyncWorker(
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
     private val syncLogDao: SyncLogDao,
     private val recalcularPrazosPendentes: RecalcularPrazosPendentesUC,
+    private val repositorioCadastroOab: CadastroOabRepository,
 ) : CoroutineWorker(appContext, workerParams) {
+
+    /**
+     * Distingue a execução disparada por push da execução periódica. Serve só
+     * para o rótulo da Auditoria: é por ele que se sabe, sem adb, qual dos dois
+     * mecanismos acordou o app.
+     */
+    private val origemPush: Boolean
+        get() = inputData.getBoolean(DjenSyncScheduler.KEY_ORIGEM_PUSH, false)
+
     override suspend fun doWork(): Result {
         val iniciadoEm = Instant.now()
         return try {
@@ -32,7 +44,13 @@ class DjenSyncWorker(
                 return Result.success()
             }
 
-            val resumo = djenSyncExecutor.executar(MonitorarDjenModo.BACKGROUND)
+            if (sincronizadoRecentemente()) {
+                reancorarProximaExecucao()
+                return Result.success()
+            }
+
+            val modo = if (origemPush) MonitorarDjenModo.PUSH else MonitorarDjenModo.BACKGROUND
+            val resumo = djenSyncExecutor.executar(modo)
 
             // Fecha o que a API de cálculo recusou nesta e em execuções anteriores.
             // Roda antes das notificações para que o alerta de prazo enxergue as
@@ -73,9 +91,24 @@ class DjenSyncWorker(
         DjenSyncScheduler.schedulePeriodic(applicationContext)
     }
 
+    /**
+     * Evita a busca dupla quando o push e o periódico caem na mesma janela —
+     * às 7h os dois querem rodar, e a segunda execução só gastaria rede e cota
+     * do DJEN para encontrar `novas = 0`.
+     *
+     * A janela é curta de propósito. Publicação entra ao longo da manhã, então
+     * uma janela larga suprimiria execução legítima: quem sincronizou às 6h30
+     * ainda precisa da busca das 7h.
+     */
+    private suspend fun sincronizadoRecentemente(): Boolean {
+        val ultimoSucessoEm = repositorioCadastroOab.status.first().ultimoSucessoEm ?: return false
+        return Duration.between(ultimoSucessoEm, Instant.now()) < JANELA_ANTI_DUPLICIDADE
+    }
+
     private companion object {
         const val TAG = "DjenSyncWorker"
         const val MAX_TENTATIVAS = 3
+        val JANELA_ANTI_DUPLICIDADE: Duration = Duration.ofMinutes(30)
 
         /** Mesmo rótulo usado pelo executor em modo BACKGROUND, para a tela de Auditoria. */
         const val FONTE_AUDITORIA = "DJEN + DataJud · Diária"

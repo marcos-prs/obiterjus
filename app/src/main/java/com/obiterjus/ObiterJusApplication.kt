@@ -4,6 +4,7 @@ import android.app.Application
 import com.obiterjus.core.worker.DjenSyncScheduler
 import com.obiterjus.core.worker.PrazosWorkerScheduler
 import com.obiterjus.data.djen.CertidaoDjenRepositoryImpl
+import com.obiterjus.data.push.PushRegistroRepository
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.di.obiterModules
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +37,14 @@ class ObiterJusApplication : Application() {
                 DjenSyncScheduler.cancel(this@ObiterJusApplication)
             }
         }
+
+        // Quem acorda o app às 7h é o push do servidor; o WorkManager periódico
+        // acima é a rede de segurança. O registro é reenviado a cada abertura
+        // porque o token do FCM rotaciona — é idempotente, e a falha é
+        // silenciosa. Fica inerte até `push_diario_enabled` ligar no Remote
+        // Config, o que só acontece quando o cron estiver no ar.
+        val pushRegistro = koinApp.koin.get<PushRegistroRepository>()
+        applicationScope.launch { pushRegistro.sincronizar() }
 
         // Verificação diária de prazos (uma vez por dia, sem rede)
         PrazosWorkerScheduler.schedulePeriodic(this)

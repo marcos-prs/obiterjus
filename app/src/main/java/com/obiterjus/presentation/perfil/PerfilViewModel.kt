@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.obiterjus.R
-import com.obiterjus.core.worker.DjenSyncScheduler
+import com.obiterjus.core.config.AppConfig
+import com.obiterjus.core.config.AppConfigRepository
 import com.obiterjus.data.djen.DjenSyncExecutor
+import com.obiterjus.data.push.PushRegistroRepository
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.data.settings.SessaoLocalRepository
@@ -16,6 +18,7 @@ import com.obiterjus.domain.model.SincronizacaoStatus
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.repository.SincronizacaoRepository
+import com.obiterjus.domain.usecase.AplicarPreferenciaSincronizacaoUC
 import com.obiterjus.ui.theme.TipoTema
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +51,13 @@ data class EstadoPerfil(
     val tema: TipoTema = TipoTema.SISTEMA,
     val apenasPorNome: Boolean = false,
     val sincronizacaoNuvemAutorizada: Boolean = false,
+    val pushPreChecagemAutorizada: Boolean = false,
+    /**
+     * Só então o toggle da pré-checagem aparece. Fica atrás de flag porque
+     * pedir essa autorização antes de a política de privacidade descrever o que
+     * o servidor enxerga seria pedir consentimento para algo não contado.
+     */
+    val pushPreChecagemDisponivel: Boolean = false,
 )
 
 class PerfilViewModel(
@@ -56,6 +66,9 @@ class PerfilViewModel(
     repositorioCadastroOab: CadastroOabRepository,
     private val djenSyncExecutor: DjenSyncExecutor,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val aplicarPreferenciaSincronizacao: AplicarPreferenciaSincronizacaoUC,
+    private val pushRegistro: PushRegistroRepository,
+    private val appConfigRepository: AppConfigRepository,
     private val repositorioSincronizacao: SincronizacaoRepository,
     private val sessaoLocal: SessaoLocalRepository,
 ) : ViewModel() {
@@ -77,6 +90,7 @@ class PerfilViewModel(
         perfilPreferencesRepository.preferencias,
         _sincronizando,
         _statusNuvemOverride,
+        appConfigRepository.config,
     ) { values: Array<Any?> ->
         val usuario = values[0] as AuthUser?
         val cadastro = values[1] as OabCadastro
@@ -84,6 +98,7 @@ class PerfilViewModel(
         val preferencias = values[3] as PerfilPreferences
         val sincronizando = values[4] as Boolean
         val statusOverride = values[5] as String?
+        val appConfig = values[6] as AppConfig
         val autenticado = usuario != null && !usuario.isAnonymous
         EstadoPerfil(
             nomeUsuario = cadastro.nomeAdvogado.ifBlank {
@@ -111,6 +126,8 @@ class PerfilViewModel(
             tema = preferencias.tema,
             apenasPorNome = preferencias.apenasPorNome,
             sincronizacaoNuvemAutorizada = preferencias.sincronizacaoNuvemAutorizada,
+            pushPreChecagemAutorizada = preferencias.pushPreChecagemAutorizada,
+            pushPreChecagemDisponivel = appConfig.pushPreChecagemDisponivel,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -120,13 +137,23 @@ class PerfilViewModel(
 
     fun aoAlternarSincronizacaoAutomatica(ativo: Boolean) {
         viewModelScope.launch {
-            perfilPreferencesRepository.saveSincronizacaoAutomatica(ativo)
-            if (ativo) {
-                DjenSyncScheduler.schedulePeriodic(context)
-            } else {
-                DjenSyncScheduler.cancel(context)
-            }
+            aplicarPreferenciaSincronizacao(ativo)
+            // Desligar aqui também precisa avisar o servidor de push, senão ele
+            // seguiria acordando um aparelho que pediu para parar. `sincronizar`
+            // cuida dos dois sentidos: registra se ligado, cancela se desligado.
+            pushRegistro.sincronizar()
             syncPerfilToCloud()
+        }
+    }
+
+    /**
+     * Autoriza o servidor a consultar o DJEN pela OAB para decidir se vale
+     * acordar o aparelho. Sem isso o push chega cego, todo dia, no horário.
+     */
+    fun aoAlternarPushPreChecagem(ativo: Boolean) {
+        viewModelScope.launch {
+            perfilPreferencesRepository.savePushPreChecagemAutorizada(ativo)
+            pushRegistro.sincronizar()
         }
     }
 

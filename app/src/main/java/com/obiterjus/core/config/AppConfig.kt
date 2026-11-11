@@ -9,6 +9,23 @@ data class AppConfig(
     val djenToken: String = "",
     val dataJudEnabled: Boolean = true,
     val djenEnabled: Boolean = true,
+    /**
+     * Liga o registro no servidor de push. **Nasce desligado**: o app vai para
+     * a loja antes do servidor existir, e registrar contra um endpoint
+     * inexistente só geraria falha silenciosa a cada abertura. Vira `true` no
+     * console do Remote Config quando o cron estiver no ar.
+     */
+    val pushDiarioEnabled: Boolean = false,
+    /**
+     * Expõe no Perfil o opt-in da pré-checagem no servidor (Fase 2 do push).
+     *
+     * Flag separado de [pushDiarioEnabled] de propósito: a Fase 1 pode entrar
+     * em produção sozinha, enquanto a Fase 2 depende de a política de
+     * privacidade descrever que o servidor enxerga publicação sigilosa em
+     * trânsito. Oferecer o toggle antes disso seria pedir autorização para algo
+     * que a política não conta. Ver `docs/tratamento-de-dados.md`.
+     */
+    val pushPreChecagemDisponivel: Boolean = false,
     val requestTimeoutSeconds: Long = DEFAULT_REQUEST_TIMEOUT_SECONDS,
     val source: AppConfigSource = AppConfigSource.FALLBACK,
 ) {

@@ -26,8 +26,13 @@ sealed interface ObiterRota {
     @Serializable
     data object Perfil : ObiterRota
 
+    /**
+     * [retornarAoConcluir] faz a tela de acesso voltar para onde veio em vez de
+     * reiniciar no Início. É o caminho de quem foi barrado por falta de sessão
+     * no meio de uma tarefa — gerar minuta, por exemplo — e precisa retomá-la.
+     */
     @Serializable
-    data object Autenticacao : ObiterRota
+    data class Autenticacao(val retornarAoConcluir: Boolean = false) : ObiterRota
 
     @Serializable
     data object EditarPerfil : ObiterRota

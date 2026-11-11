@@ -23,6 +23,7 @@ import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.SincronizacaoNuvemResumo
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.repository.SincronizacaoRepository
+import com.obiterjus.domain.usecase.AplicarPreferenciaSincronizacaoUC
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 
@@ -35,6 +36,7 @@ class FirestoreSincronizacaoRepository(
     private val minutaDao: MinutaDao,
     private val repositorioCadastroOab: CadastroOabRepository,
     private val perfilPreferencesRepository: PerfilPreferencesRepository,
+    private val aplicarPreferenciaSincronizacao: AplicarPreferenciaSincronizacaoUC,
     private val partesResolver: DjenPartesResolver? = null,
 ) : SincronizacaoRepository {
 
@@ -164,7 +166,9 @@ class FirestoreSincronizacaoRepository(
             areasAtuacao = dto.areasAtuacao,
         )
         perfilPreferencesRepository.saveIntervaloBuscaDias(dto.intervaloBuscaDias)
-        perfilPreferencesRepository.saveSincronizacaoAutomatica(dto.sincronizacaoAutomatica)
+        // Precisa reagendar junto: restaurar `false` aqui e deixar o agendamento
+        // intacto fazia o próximo onCreate cancelar o job das 7h sem rastro.
+        aplicarPreferenciaSincronizacao(dto.sincronizacaoAutomatica)
         perfilPreferencesRepository.saveNotificarPublicacoes(dto.notificarPublicacoes)
         perfilPreferencesRepository.saveNotificarPrazosUrgentes(dto.notificarPrazosUrgentes)
         perfilPreferencesRepository.saveNotificarMovimentacoes(dto.notificarMovimentacoes)

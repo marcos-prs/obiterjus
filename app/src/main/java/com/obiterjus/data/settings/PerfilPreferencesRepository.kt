@@ -27,6 +27,17 @@ data class PerfilPreferences(
      * teor das publicações, então depende de escolha explícita do advogado.
      */
     val sincronizacaoNuvemAutorizada: Boolean = false,
+    /**
+     * Autoriza o servidor de push a consultar o DJEN pela OAB do advogado para
+     * decidir se vale acordar o aparelho (Fase 2 do push diário).
+     *
+     * Desligado por padrão, e por um motivo concreto: a API do DJEN devolve os
+     * itens completos, então o servidor vê o inteiro teor em trânsito —
+     * incluindo publicação sigilosa, que hoje nunca passa por servidor nosso.
+     * Sem esta autorização o servidor só manda um "acorda" cego no horário, sem
+     * saber de quem é o aparelho nem o que ele vai procurar.
+     */
+    val pushPreChecagemAutorizada: Boolean = false,
 )
 
 interface PerfilPreferencesRepository {
@@ -44,6 +55,7 @@ interface PerfilPreferencesRepository {
     suspend fun saveTema(tema: TipoTema)
     suspend fun saveApenasPorNome(ativo: Boolean)
     suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean)
+    suspend fun savePushPreChecagemAutorizada(ativo: Boolean)
 }
 
 class DataStorePerfilPreferencesRepository(
@@ -65,6 +77,7 @@ class DataStorePerfilPreferencesRepository(
             },
             apenasPorNome = prefs[KEY_APENAS_POR_NOME] ?: false,
             sincronizacaoNuvemAutorizada = prefs[KEY_SINCRONIZACAO_NUVEM] ?: false,
+            pushPreChecagemAutorizada = prefs[KEY_PUSH_PRE_CHECAGEM] ?: false,
         )
     }
 
@@ -116,6 +129,12 @@ class DataStorePerfilPreferencesRepository(
         }
     }
 
+    override suspend fun savePushPreChecagemAutorizada(ativo: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_PUSH_PRE_CHECAGEM] = ativo
+        }
+    }
+
     private fun DataStore<Preferences>.safeData(): Flow<Preferences> =
         data.catch { error ->
             if (error is IOException) {
@@ -134,5 +153,6 @@ class DataStorePerfilPreferencesRepository(
         val KEY_TEMA = stringPreferencesKey("tema")
         val KEY_APENAS_POR_NOME = booleanPreferencesKey("apenas_por_nome")
         val KEY_SINCRONIZACAO_NUVEM = booleanPreferencesKey("sincronizacao_nuvem_autorizada")
+        val KEY_PUSH_PRE_CHECAGEM = booleanPreferencesKey("push_pre_checagem_autorizada")
     }
 }

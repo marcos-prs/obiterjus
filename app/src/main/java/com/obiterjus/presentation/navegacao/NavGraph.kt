@@ -152,30 +152,36 @@ fun ObiterNavGraph(
                 aoForcarSincronizacao = viewModels.perfil::aoForcarSincronizacao,
                 aoEntrar = {
                     viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.ENTRAR)
-                    navController.navigate(ObiterRota.Autenticacao) {
+                    navController.navigate(ObiterRota.Autenticacao()) {
                         launchSingleTop = true
                     }
                 },
                 aoCriarConta = {
                     viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
-                    navController.navigate(ObiterRota.Autenticacao) {
+                    navController.navigate(ObiterRota.Autenticacao()) {
                         launchSingleTop = true
                     }
                 },
             )
         }
 
-        composable<ObiterRota.Autenticacao> {
+        composable<ObiterRota.Autenticacao> { backStackEntry ->
+            val rota = backStackEntry.toRoute<ObiterRota.Autenticacao>()
             AutenticacaoScreen(
                 viewModel = viewModels.autenticacao,
                 aoVoltar = { navController.popBackStack() },
                 aoAutenticado = {
-                    navController.navigate(ObiterRota.Inicio) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = false
+                    if (rota.retornarAoConcluir) {
+                        // Quem entrou para desbloquear uma tarefa volta para ela.
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(ObiterRota.Inicio) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = false
+                            }
+                            launchSingleTop = true
+                            restoreState = false
                         }
-                        launchSingleTop = true
-                        restoreState = false
                     }
                 },
             )
@@ -243,6 +249,12 @@ fun ObiterNavGraph(
                 viewModel = org.koin.androidx.compose.koinViewModel(),
                 numeroProcesso = rota.numeroProcesso,
                 onVoltar = { navController.popBackStack() },
+                aoEntrar = {
+                    viewModels.autenticacao.aoSelecionarModo(ModoAutenticacao.ENTRAR)
+                    navController.navigate(ObiterRota.Autenticacao(retornarAoConcluir = true)) {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 

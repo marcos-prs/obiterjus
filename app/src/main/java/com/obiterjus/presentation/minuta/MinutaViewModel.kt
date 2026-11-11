@@ -54,6 +54,12 @@ data class EstadoMinuta(
     val orientacoes: String = "",
     val sugestao: MinutaSugestao? = null,
     val erro: String? = null,
+    /**
+     * O erro em cartaz é falta de sessão (ou token recusado). A tela usa isso
+     * para oferecer "Entrar" no próprio aviso, em vez de só mandar o advogado
+     * procurar o Perfil.
+     */
+    val erroExigeLogin: Boolean = false,
 )
 
 class MinutaViewModel(
@@ -98,17 +104,17 @@ class MinutaViewModel(
                 progressoPct = 0,
                 progressoStage = null,
                 progressoStatus = null,
-                erro = null,
+                erro = null, erroExigeLogin = false,
             )
         }
     }
 
     fun voltarParaLista() {
-        _estado.update { it.copy(etapa = EtapaMinuta.LISTA, erro = null) }
+        _estado.update { it.copy(etapa = EtapaMinuta.LISTA, erro = null, erroExigeLogin = false) }
     }
 
     fun irParaConfigurar() {
-        _estado.update { it.copy(etapa = EtapaMinuta.CONFIGURAR, erro = null) }
+        _estado.update { it.copy(etapa = EtapaMinuta.CONFIGURAR, erro = null, erroExigeLogin = false) }
     }
 
     /** Substitui a estrutura em revisão pela versão editada pelo advogado. */
@@ -117,11 +123,11 @@ class MinutaViewModel(
     }
 
     fun voltarParaRevisar() {
-        _estado.update { it.copy(etapa = EtapaMinuta.REVISAR, erro = null) }
+        _estado.update { it.copy(etapa = EtapaMinuta.REVISAR, erro = null, erroExigeLogin = false) }
     }
 
     fun descartarErro() {
-        _estado.update { it.copy(erro = null) }
+        _estado.update { it.copy(erro = null, erroExigeLogin = false) }
     }
 
     /* ---------- Upload ---------- */
@@ -131,10 +137,10 @@ class MinutaViewModel(
         // O PDF é lido inteiro em memória para o multipart; sem teto, uma peça
         // digitalizada grande derruba o app antes de o servidor recusar.
         if (tamanho > MAX_PDF_BYTES) {
-            _estado.update { it.copy(erro = MSG_PDF_GRANDE) }
+            _estado.update { it.copy(erro = MSG_PDF_GRANDE, erroExigeLogin = false) }
             return
         }
-        _estado.update { it.copy(arquivoUri = uri, arquivoNome = nome, erro = null) }
+        _estado.update { it.copy(arquivoUri = uri, arquivoNome = nome, erro = null, erroExigeLogin = false) }
     }
 
     fun aoSelecionarTipoDeclarado(tipo: TipoPecaOrigem) {
@@ -146,11 +152,11 @@ class MinutaViewModel(
         val uri = estadoAtual.arquivoUri ?: return
         viewModelScope.launch {
             if (semSessao()) {
-                _estado.update { it.copy(erro = MSG_SEM_SESSAO) }
+                _estado.update { it.copy(erro = MSG_SEM_SESSAO, erroExigeLogin = true) }
                 return@launch
             }
             _estado.update {
-                it.copy(etapa = EtapaMinuta.EXTRAINDO, erro = null, progressoPct = 0, progressoStage = null)
+                it.copy(etapa = EtapaMinuta.EXTRAINDO, erro = null, erroExigeLogin = false, progressoPct = 0, progressoStage = null)
             }
             try {
                 val input = context.contentResolver.openInputStream(uri)
@@ -178,7 +184,11 @@ class MinutaViewModel(
                 }
             } catch (e: Exception) {
                 _estado.update {
-                    it.copy(etapa = EtapaMinuta.UPLOAD, erro = mensagemErro(e, "Falha ao extrair a peça."))
+                    it.copy(
+                        etapa = EtapaMinuta.UPLOAD,
+                        erro = mensagemErro(e, "Falha ao extrair a peça."),
+                        erroExigeLogin = exigeLogin(e),
+                    )
                 }
             }
         }
@@ -202,16 +212,16 @@ class MinutaViewModel(
         val pacote = estadoAtual.pacote
         if (pacote == null || pacote.markdown.isBlank()) {
             _estado.update {
-                it.copy(erro = "Texto da peça de origem indisponível. Refaça a extração.")
+                it.copy(erro = "Texto da peça de origem indisponível. Refaça a extração.", erroExigeLogin = false)
             }
             return
         }
         viewModelScope.launch {
             if (semSessao()) {
-                _estado.update { it.copy(erro = MSG_SEM_SESSAO) }
+                _estado.update { it.copy(erro = MSG_SEM_SESSAO, erroExigeLogin = true) }
                 return@launch
             }
-            _estado.update { it.copy(etapa = EtapaMinuta.GERANDO, erro = null) }
+            _estado.update { it.copy(etapa = EtapaMinuta.GERANDO, erro = null, erroExigeLogin = false) }
             try {
                 val sugestao = sugerirMinutaUC(
                     tipoMinuta = estadoAtual.tipoMinuta,
@@ -225,7 +235,11 @@ class MinutaViewModel(
                 _estado.update { it.copy(etapa = EtapaMinuta.RESULTADO, sugestao = sugestao) }
             } catch (e: Exception) {
                 _estado.update {
-                    it.copy(etapa = EtapaMinuta.CONFIGURAR, erro = mensagemErro(e, "Falha ao gerar a minuta."))
+                    it.copy(
+                        etapa = EtapaMinuta.CONFIGURAR,
+                        erro = mensagemErro(e, "Falha ao gerar a minuta."),
+                        erroExigeLogin = exigeLogin(e),
+                    )
                 }
             }
         }
@@ -253,6 +267,12 @@ class MinutaViewModel(
         val usuario = authRepository.currentUser.firstOrNull()
         return usuario == null || usuario.isAnonymous
     }
+
+    /**
+     * 401 da API de minutas: ou nenhum token foi enviado, ou o que foi enviado
+     * já não vale. Nos dois casos o caminho de saída é entrar na conta.
+     */
+    private fun exigeLogin(e: Throwable): Boolean = e is HttpException && e.code() == 401
 
     private fun mensagemErro(e: Throwable, padrao: String): String = when {
         e is HttpException -> {
@@ -310,6 +330,6 @@ class MinutaViewModel(
         const val MSG_PDF_GRANDE =
             "O PDF passa de 20 MB. Reduza o arquivo ou envie apenas a peça a ser respondida."
         const val MSG_SEM_SESSAO =
-            "Você precisa estar logado para gerar minutas. Abra o Perfil e entre na sua conta."
+            "A minuta é gerada no servidor do ObiterJus e precisa de uma conta. Entre para continuar."
     }
 }

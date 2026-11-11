@@ -61,6 +61,8 @@ class FirebaseRemoteAppConfigRepository(
             KEY_SYNC_LOOKBACK_DAYS to syncLookbackDays,
             KEY_DATAJUD_ENABLED to dataJudEnabled,
             KEY_DJEN_ENABLED to djenEnabled,
+            KEY_PUSH_DIARIO_ENABLED to pushDiarioEnabled,
+            KEY_PUSH_PRE_CHECAGEM_DISPONIVEL to pushPreChecagemDisponivel,
             KEY_REQUEST_TIMEOUT_SECONDS to requestTimeoutSeconds,
         )
 
@@ -84,6 +86,14 @@ class FirebaseRemoteAppConfigRepository(
             ),
             dataJudEnabled = getBooleanOrFallback(KEY_DATAJUD_ENABLED, fallback.dataJudEnabled),
             djenEnabled = getBooleanOrFallback(KEY_DJEN_ENABLED, fallback.djenEnabled),
+            pushDiarioEnabled = getBooleanOrFallback(
+                KEY_PUSH_DIARIO_ENABLED,
+                fallback.pushDiarioEnabled,
+            ),
+            pushPreChecagemDisponivel = getBooleanOrFallback(
+                KEY_PUSH_PRE_CHECAGEM_DISPONIVEL,
+                fallback.pushPreChecagemDisponivel,
+            ),
             requestTimeoutSeconds = getPositiveLongOrFallback(
                 KEY_REQUEST_TIMEOUT_SECONDS,
                 fallback.requestTimeoutSeconds,
@@ -131,6 +141,8 @@ class FirebaseRemoteAppConfigRepository(
         const val KEY_SYNC_LOOKBACK_DAYS = "sync_lookback_days"
         const val KEY_DATAJUD_ENABLED = "datajud_enabled"
         const val KEY_DJEN_ENABLED = "djen_enabled"
+        const val KEY_PUSH_DIARIO_ENABLED = "push_diario_enabled"
+        const val KEY_PUSH_PRE_CHECAGEM_DISPONIVEL = "push_pre_checagem_disponivel"
         const val KEY_REQUEST_TIMEOUT_SECONDS = "request_timeout_seconds"
         const val MIN_FETCH_INTERVAL_SECONDS = 60L * 60L
         const val DOMINIO_PERMITIDO = "jus.br"

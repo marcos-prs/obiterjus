@@ -331,6 +331,8 @@ class DetalhePublicacaoViewModelTest {
 
     private class PublicacaoDaoStub : PublicacaoDao {
 
+        override suspend fun maiorIdConhecido(): Long? = null
+
         override suspend fun getComPrazoPendente(
             dataMinima: LocalDate,
             limite: Int,

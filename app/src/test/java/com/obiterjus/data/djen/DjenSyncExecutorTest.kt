@@ -336,5 +336,6 @@ class DjenSyncExecutorTest {
         override suspend fun saveApenasPorNome(ativo: Boolean) {}
 
         override suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean) = Unit
+        override suspend fun savePushPreChecagemAutorizada(ativo: Boolean) = Unit
     }
 }

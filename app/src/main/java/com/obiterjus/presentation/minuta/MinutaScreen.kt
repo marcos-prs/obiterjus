@@ -70,6 +70,7 @@ fun MinutaScreen(
     viewModel: MinutaViewModel,
     numeroProcesso: String,
     onVoltar: () -> Unit,
+    aoEntrar: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(numeroProcesso) { viewModel.aoCarregar(numeroProcesso) }
@@ -94,7 +95,20 @@ fun MinutaScreen(
         )
 
         estado.erro?.let { erro ->
-            BannerErro(mensagem = erro, aoDescartar = viewModel::descartarErro)
+            BannerErro(
+                mensagem = erro,
+                aoDescartar = viewModel::descartarErro,
+                aoEntrar = if (estado.erroExigeLogin) {
+                    {
+                        // Descarta o aviso antes de sair: ao voltar da autenticação a
+                        // tela não deve reabrir com um erro de sessão já resolvido.
+                        viewModel.descartarErro()
+                        aoEntrar()
+                    }
+                } else {
+                    null
+                },
+            )
         }
 
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = dimens.screenMargin)) {
@@ -745,8 +759,16 @@ private fun CartaoAviso(titulo: String, itens: List<String>) {
     }
 }
 
+/**
+ * [aoEntrar] só vem preenchido quando o erro é falta de sessão: a saída fica no
+ * próprio aviso, e não numa instrução para ir procurar a tela de acesso.
+ */
 @Composable
-private fun BannerErro(mensagem: String, aoDescartar: () -> Unit) {
+private fun BannerErro(
+    mensagem: String,
+    aoDescartar: () -> Unit,
+    aoEntrar: (() -> Unit)? = null,
+) {
     val dimens = ObiterTheme.dimens
     val colors = ObiterTheme.colors
     Surface(color = colors.dangerPale, modifier = Modifier.fillMaxWidth()) {
@@ -757,6 +779,10 @@ private fun BannerErro(mensagem: String, aoDescartar: () -> Unit) {
             Icon(ObiterIcones.Erro, contentDescription = null, tint = colors.danger, modifier = Modifier.size(dimens.iconStarSize))
             Spacer(Modifier.width(dimens.space1))
             Text(mensagem, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            if (aoEntrar != null) {
+                Button(onClick = aoEntrar) { Text(stringResource(R.string.minuta_erro_entrar)) }
+                Spacer(Modifier.width(dimens.space1))
+            }
             TextButton(onClick = aoDescartar) { Text(stringResource(R.string.minuta_erro_ok)) }
         }
     }

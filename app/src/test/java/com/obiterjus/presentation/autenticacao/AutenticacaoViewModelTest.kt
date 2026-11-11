@@ -1,6 +1,8 @@
 package com.obiterjus.presentation.autenticacao
 
 import com.obiterjus.R
+import com.obiterjus.data.auth.CredencialGoogleProvider
+import com.obiterjus.data.auth.ResultadoCredencialGoogle
 import com.obiterjus.data.settings.PerfilPreferences
 import com.obiterjus.data.settings.PerfilPreferencesRepository
 import com.obiterjus.domain.model.AuthUser
@@ -11,11 +13,13 @@ import com.obiterjus.domain.model.ProcessoMonitorado
 import com.obiterjus.domain.model.SincronizacaoStatus
 import com.obiterjus.domain.model.SincronizarProcessosDataJudParams
 import com.obiterjus.domain.model.SincronizarProcessosDataJudResumo
+import com.obiterjus.domain.repository.AgendadorSincronizacao
 import com.obiterjus.domain.repository.AuthRepository
 import com.obiterjus.domain.repository.DataJudRepository
 import com.obiterjus.domain.repository.DjenRepository
 import com.obiterjus.domain.repository.CadastroOabRepository
 import com.obiterjus.domain.repository.ProcessosRepository
+import com.obiterjus.domain.usecase.AplicarPreferenciaSincronizacaoUC
 import com.obiterjus.domain.usecase.MonitorarCnjUseCase
 import com.obiterjus.domain.usecase.MonitorarDjenUseCase
 import com.obiterjus.domain.usecase.SincronizarProcessosDataJudUseCase
@@ -36,6 +40,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -113,16 +118,281 @@ class AutenticacaoViewModelTest {
         assertEquals(1, repositorio.loginEmailChamadas)
     }
 
-    private fun viewModel(authRepository: AuthRepositoryFake): AutenticacaoViewModel =
+    @Test
+    fun loginComGoogleComSucessoAutentica() = runTest {
+        val usuarioGoogle = AuthUser(
+            uid = "usuario-google",
+            email = "advogado@gmail.com",
+            isAnonymous = false,
+        )
+        val repositorio = AuthRepositoryFake(resultadoGoogle = Result.success(usuarioGoogle))
+        val viewModel = viewModel(
+            repositorio,
+            CredencialGoogleFake(ResultadoCredencialGoogle.Sucesso("id-token")),
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        advanceUntilIdle()
+
+        viewModel.aoEntrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.estado.value.mensagemErro)
+        assertEquals("success", viewModel.estado.value.mensagemSucesso)
+        assertEquals("advogado@gmail.com", viewModel.estado.value.emailUsuarioAtual)
+        assertEquals("id-token", repositorio.ultimoIdTokenGoogle)
+        assertFalse(viewModel.estado.value.carregando)
+    }
+
+    @Test
+    fun cancelarOSeletorDoGoogleNaoRendeErro() = runTest {
+        val repositorio = AuthRepositoryFake()
+        val viewModel = viewModel(repositorio, CredencialGoogleFake(ResultadoCredencialGoogle.Cancelado))
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        advanceUntilIdle()
+
+        viewModel.aoEntrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.estado.value.mensagemErro)
+        assertEquals(null, viewModel.estado.value.mensagemSucesso)
+        assertFalse(viewModel.estado.value.carregando)
+        assertEquals(null, repositorio.ultimoIdTokenGoogle)
+    }
+
+    @Test
+    fun aparelhoSemContaGoogleMostraMensagemPropria() = runTest {
+        val repositorio = AuthRepositoryFake()
+        val viewModel = viewModel(repositorio, CredencialGoogleFake(ResultadoCredencialGoogle.SemConta))
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        advanceUntilIdle()
+
+        viewModel.aoEntrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        assertEquals("google-sem-conta", viewModel.estado.value.mensagemErro)
+        assertFalse(viewModel.estado.value.carregando)
+        assertEquals(null, repositorio.ultimoIdTokenGoogle)
+    }
+
+    @Test
+    fun falhaDoFirebaseComGoogleMostraErroAmigavel() = runTest {
+        val repositorio = AuthRepositoryFake(
+            resultadoGoogle = Result.failure(IllegalStateException()),
+        )
+        val viewModel = viewModel(
+            repositorio,
+            CredencialGoogleFake(ResultadoCredencialGoogle.Sucesso("id-token")),
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        advanceUntilIdle()
+
+        viewModel.aoEntrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        assertEquals("google-falha", viewModel.estado.value.mensagemErro)
+        assertEquals(null, viewModel.estado.value.mensagemSucesso)
+        assertFalse(viewModel.estado.value.carregando)
+    }
+
+    @Test
+    fun cadastroComGoogleCumpreEtapaContaESegueParaOab() = runTest {
+        val repositorio = AuthRepositoryFake(
+            resultadoGoogle = Result.success(
+                AuthUser(uid = "usuario-google", email = "ana@gmail.com", isAnonymous = false),
+            ),
+        )
+        val viewModel = viewModel(
+            repositorio,
+            CredencialGoogleFake(
+                ResultadoCredencialGoogle.Sucesso(
+                    idToken = "id-token",
+                    nomeExibicao = "Ana Advogada",
+                    email = "ana@gmail.com",
+                ),
+            ),
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        viewModel.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
+        viewModel.aoAlternarTermos(true)
+        viewModel.aoAlternarPrivacidade(true)
+        advanceUntilIdle()
+
+        viewModel.aoCadastrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        val estado = viewModel.estado.value
+        assertTrue(estado.contaGoogle)
+        assertEquals(EtapaCadastro.OAB, estado.etapaCadastro)
+        assertEquals("Ana Advogada", estado.nomeCompleto)
+        assertEquals("ana@gmail.com", estado.email)
+        assertEquals("id-token", repositorio.ultimoIdTokenGoogle)
+        // Sucesso aqui tiraria o advogado da tela e abandonaria o cadastro.
+        assertEquals(null, estado.mensagemSucesso)
+        assertFalse(estado.carregando)
+    }
+
+    @Test
+    fun cadastroComGoogleSemAceitesNaoPedeCredencial() = runTest {
+        val repositorio = AuthRepositoryFake()
+        val credencial = CredencialGoogleFake(ResultadoCredencialGoogle.Sucesso("id-token"))
+        val viewModel = viewModel(repositorio, credencial)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        viewModel.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
+        advanceUntilIdle()
+
+        viewModel.aoCadastrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        assertEquals("politicas", viewModel.estado.value.mensagemErro)
+        assertFalse(viewModel.estado.value.contaGoogle)
+        assertEquals(0, credencial.chamadas)
+        assertEquals(null, repositorio.ultimoIdTokenGoogle)
+    }
+
+    @Test
+    fun cadastroComGoogleAdiantaOabDaContaQueJaExistia() = runTest {
+        val repositorio = AuthRepositoryFake(
+            resultadoGoogle = Result.success(
+                AuthUser(uid = "usuario-google", email = "ana@gmail.com", isAnonymous = false),
+            ),
+        )
+        val cadastroOab = CadastroOabRepositoryFake()
+        cadastroOab.cadastro.value = OabCadastro(
+            numero = "123456",
+            uf = "SP",
+            nomeAdvogado = "Ana da Silva",
+            tipoInscricao = "SOCIO",
+            nomeEscritorio = "Silva Advocacia",
+            areasAtuacao = listOf("Cível"),
+        )
+        val viewModel = viewModel(
+            repositorio,
+            CredencialGoogleFake(ResultadoCredencialGoogle.Sucesso("id-token")),
+            repositorioCadastroOab = cadastroOab,
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        viewModel.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
+        viewModel.aoAlternarTermos(true)
+        viewModel.aoAlternarPrivacidade(true)
+        advanceUntilIdle()
+
+        viewModel.aoCadastrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        val estado = viewModel.estado.value
+        assertEquals("SP", estado.uf)
+        assertEquals("123456", estado.numeroOab)
+        assertEquals("Ana da Silva", estado.nomeCompleto)
+        assertEquals(TipoInscricaoCadastro.SOCIO, estado.tipoInscricao)
+        assertEquals("Silva Advocacia", estado.nomeEscritorio)
+        assertEquals(setOf("Cível"), estado.areasAtuacao)
+    }
+
+    @Test
+    fun cadastroComGoogleFinalizaSemCriarContaPorSenha() = runTest {
+        val repositorio = AuthRepositoryFake(
+            resultadoGoogle = Result.success(
+                AuthUser(uid = "usuario-google", email = "ana@gmail.com", isAnonymous = false),
+            ),
+        )
+        val sincronizacao = SincronizacaoRepositoryFake()
+        val viewModel = viewModel(
+            repositorio,
+            CredencialGoogleFake(ResultadoCredencialGoogle.Sucesso("id-token")),
+            repositorioSincronizacao = sincronizacao,
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        viewModel.aoSelecionarModo(ModoAutenticacao.CADASTRAR)
+        viewModel.aoAlternarTermos(true)
+        viewModel.aoAlternarPrivacidade(true)
+        advanceUntilIdle()
+
+        viewModel.aoCadastrarComGoogle(contextoDaTela = null)
+        advanceUntilIdle()
+
+        // Pula direto ao resumo: a verificação automática não é assunto deste teste.
+        viewModel.aoSelecionarEtapa(EtapaCadastro.RESUMO.ordinal)
+        viewModel.aoAvancarCadastro()
+        advanceUntilIdle()
+
+        assertEquals("cadastro", viewModel.estado.value.mensagemSucesso)
+        assertEquals(0, repositorio.cadastroEmailChamadas)
+        assertEquals(1, sincronizacao.enviarPerfilChamadas)
+    }
+
+    @Test
+    fun etapaDePreferenciasAgendaASincronizacaoDiaria() = runTest {
+        val agendador = AgendadorSincronizacaoFake()
+        val viewModel = viewModel(AuthRepositoryFake(), agendador = agendador)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        advanceUntilIdle()
+
+        viewModel.aoSelecionarEtapa(EtapaCadastro.PREFERENCIAS.ordinal)
+        viewModel.aoAvancarCadastro()
+        advanceUntilIdle()
+
+        // Antes do AplicarPreferenciaSincronizacaoUC esta etapa gravava a
+        // preferência e seguia adiante, sem agendar nada.
+        assertEquals(1, agendador.agendamentos)
+        assertEquals(0, agendador.cancelamentos)
+    }
+
+    @Test
+    fun etapaDePreferenciasComSincronizacaoDesligadaCancelaOAgendamento() = runTest {
+        val agendador = AgendadorSincronizacaoFake()
+        val viewModel = viewModel(AuthRepositoryFake(), agendador = agendador)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.estado.collect() }
+        advanceUntilIdle()
+
+        viewModel.aoAlternarSincronizacaoAutomatica(false)
+        viewModel.aoSelecionarEtapa(EtapaCadastro.PREFERENCIAS.ordinal)
+        viewModel.aoAvancarCadastro()
+        advanceUntilIdle()
+
+        assertEquals(0, agendador.agendamentos)
+        assertEquals(1, agendador.cancelamentos)
+    }
+
+    private fun viewModel(
+        authRepository: AuthRepositoryFake,
+        credencialGoogle: CredencialGoogleProvider = CredencialGoogleFake(ResultadoCredencialGoogle.Cancelado),
+        repositorioCadastroOab: CadastroOabRepositoryFake = CadastroOabRepositoryFake(),
+        repositorioSincronizacao: SincronizacaoRepositoryFake = SincronizacaoRepositoryFake(),
+        perfilPreferences: PerfilPreferencesRepositoryFake = PerfilPreferencesRepositoryFake(),
+        agendador: AgendadorSincronizacaoFake = AgendadorSincronizacaoFake(),
+    ): AutenticacaoViewModel =
         AutenticacaoViewModel(
             authRepository = authRepository,
-            repositorioCadastroOab = CadastroOabRepositoryFake(),
-            repositorioSincronizacao = SincronizacaoRepositoryFake(),
+            repositorioCadastroOab = repositorioCadastroOab,
+            repositorioSincronizacao = repositorioSincronizacao,
             monitorarCnjUseCase = monitorarCnjUseCase(),
-            perfilPreferencesRepository = PerfilPreferencesRepositoryFake(),
+            perfilPreferencesRepository = perfilPreferences,
+            aplicarPreferenciaSincronizacao = AplicarPreferenciaSincronizacaoUC(
+                perfilPreferencesRepository = perfilPreferences,
+                agendador = agendador,
+            ),
             sessaoLocal = SessaoLocalRepositoryFake(),
+            credencialGoogle = credencialGoogle,
             textos = TextosFake,
         )
+
+    private class AgendadorSincronizacaoFake : AgendadorSincronizacao {
+        var garantias = 0
+        var agendamentos = 0
+        var cancelamentos = 0
+
+        override fun garantirDiaria() {
+            garantias++
+        }
+
+        override fun agendarDiaria() {
+            agendamentos++
+        }
+
+        override fun cancelarDiaria() {
+            cancelamentos++
+        }
+    }
 
     private fun monitorarCnjUseCase(): MonitorarCnjUseCase =
         MonitorarCnjUseCase(
@@ -167,6 +437,10 @@ class AutenticacaoViewModelTest {
                 R.string.autenticacao_error_required_fields -> "required"
                 R.string.autenticacao_error_login_email -> "login"
                 R.string.autenticacao_sucesso_login -> "success"
+                R.string.autenticacao_error_login_google -> "google-falha"
+                R.string.autenticacao_error_google_sem_conta -> "google-sem-conta"
+                R.string.autenticacao_error_politicas -> "politicas"
+                R.string.autenticacao_sucesso_cadastro -> "cadastro"
                 else -> resId.toString()
             }
 
@@ -175,17 +449,23 @@ class AutenticacaoViewModelTest {
 
     private class AuthRepositoryFake(
         private val resultadoEmail: Result<AuthUser> = Result.success(usuarioAnonimo),
+        private val resultadoGoogle: Result<AuthUser> = Result.success(usuarioAnonimo),
     ) : AuthRepository {
         private val usuarioAtual = MutableStateFlow<AuthUser?>(usuarioAnonimo)
         var loginEmailChamadas = 0
             private set
         var ultimoEmail: String? = null
             private set
+        var ultimoIdTokenGoogle: String? = null
+            private set
 
         override val currentUser: Flow<AuthUser?> = usuarioAtual
 
-        override suspend fun linkWithGoogle(idToken: String): Result<AuthUser> =
-            Result.success(usuarioAnonimo)
+        override suspend fun linkWithGoogle(idToken: String): Result<AuthUser> {
+            ultimoIdTokenGoogle = idToken
+            resultadoGoogle.getOrNull()?.let { usuarioAtual.value = it }
+            return resultadoGoogle
+        }
 
         override suspend fun signInWithEmail(email: String, password: String): Result<AuthUser> {
             loginEmailChamadas += 1
@@ -194,8 +474,13 @@ class AutenticacaoViewModelTest {
             return resultadoEmail
         }
 
-        override suspend fun signUpWithEmail(email: String, password: String): Result<AuthUser> =
-            signInWithEmail(email, password)
+        var cadastroEmailChamadas = 0
+            private set
+
+        override suspend fun signUpWithEmail(email: String, password: String): Result<AuthUser> {
+            cadastroEmailChamadas += 1
+            return signInWithEmail(email, password)
+        }
 
         override suspend fun sendPasswordResetEmail(email: String): Result<Unit> =
             Result.success(Unit)
@@ -221,6 +506,25 @@ class AutenticacaoViewModelTest {
                 email = null,
                 isAnonymous = true,
             )
+        }
+    }
+
+    private class CredencialGoogleFake(
+        private val resultado: ResultadoCredencialGoogle,
+    ) : CredencialGoogleProvider {
+        var chamadas = 0
+            private set
+
+        var limpezas = 0
+            private set
+
+        override suspend fun obterIdToken(contextoDaTela: android.content.Context?): ResultadoCredencialGoogle {
+            chamadas += 1
+            return resultado
+        }
+
+        override suspend fun limparEstadoDeCredencial() {
+            limpezas += 1
         }
     }
 
@@ -255,6 +559,7 @@ class AutenticacaoViewModelTest {
         override suspend fun saveApenasPorNome(ativo: Boolean) = Unit
 
         override suspend fun saveSincronizacaoNuvemAutorizada(ativo: Boolean) = Unit
+        override suspend fun savePushPreChecagemAutorizada(ativo: Boolean) = Unit
     }
 
     private class SessaoLocalRepositoryFake : com.obiterjus.data.settings.SessaoLocalRepository {
@@ -272,7 +577,13 @@ class AutenticacaoViewModelTest {
         override suspend fun restaurarTudo(userId: String): com.obiterjus.domain.model.SincronizacaoNuvemResumo =
             com.obiterjus.domain.model.SincronizacaoNuvemResumo()
 
-        override suspend fun enviarPerfil(userId: String): Result<Unit> = Result.success(Unit)
+        var enviarPerfilChamadas = 0
+            private set
+
+        override suspend fun enviarPerfil(userId: String): Result<Unit> {
+            enviarPerfilChamadas += 1
+            return Result.success(Unit)
+        }
 
         override suspend fun restaurarPerfil(userId: String): Result<Unit> = Result.success(Unit)
 
