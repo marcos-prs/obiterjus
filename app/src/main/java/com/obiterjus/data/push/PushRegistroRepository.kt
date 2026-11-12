@@ -182,9 +182,9 @@ class PushRegistroRepository(
     }
 
     /**
-     * O cron roda por hora cheia em UTC e precisa do deslocamento para saber
-     * quando são 7h aqui. O Brasil não é um fuso só: Acre e parte do Amazonas
-     * não são UTC-3.
+     * O emissor varre os fusos de 15 em 15 minutos em UTC e precisa do
+     * deslocamento para saber quando são 7h aqui. O Brasil não é um fuso só:
+     * Acre e parte do Amazonas não são UTC-3.
      */
     private fun offsetMinutos(): Int =
         clock.zone.rules.getOffset(clock.instant()).totalSeconds / SEGUNDOS_POR_MINUTO
