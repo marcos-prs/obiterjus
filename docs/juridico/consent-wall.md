@@ -1,7 +1,7 @@
 # Consent wall — avisos por tela e por ação
 
-**Versão 1.0** · Acompanha os [Termos de Uso](termos-de-uso.md) v1.0 e a
-[Política de Privacidade](politica-de-privacidade.md) v1.0
+**Versão 1.1** · Acompanha os [Termos de Uso](termos-de-uso.md) v1.0 e a
+[Política de Privacidade](politica-de-privacidade.md) v1.1
 
 Este documento define **o que o aplicativo exibe, onde, quando e como registra** a
 ciência do usuário. É a ponte entre o texto jurídico e a interface.
@@ -314,6 +314,26 @@ justificado aqui*
 
 **Faixa:** `OAB não é validada. Sincronização automática pode falhar em silêncio.`
 
+#### 4.10.1. Pré-checagem no servidor · chave `perfil.push.prechecagem` · **v1**
+
+Opt-in no mesmo Perfil, **desligado de origem**. O texto do próprio toggle é o aviso —
+não há modal, porque a decisão é tomada ali e não há como o usuário ligá-la sem ler o
+que está escrito abaixo do rótulo:
+
+> Autoriza o ObiterJus a consultar o Diário pela sua OAB no servidor, para só acordar o
+> aparelho quando houver algo novo. O servidor passa a guardar sua OAB e seu nome, e a
+> saber em que dias você tem publicação; na consulta ele lê o mesmo que o Diário mostra
+> a qualquer pesquisa, e não guarda nenhuma publicação. Desligado, o aparelho é acordado
+> todo dia no horário e a busca acontece só aqui.
+
+O consentimento é o próprio ato de ligar, e a revogação é desligar — o aplicativo
+apaga o registro no servidor na mesma ação. Ver o item 6.3 da Política.
+
+**Pré-requisito de publicação:** este toggle só aparece com o flag
+`push_pre_checagem_disponivel` ligado no Remote Config, e ele **não pode ser ligado
+antes de a Política v1.1 estar no ar**. Oferecer a autorização antes disso seria pedir
+consentimento para algo que o texto publicado não descreve.
+
 ---
 
 ### 4.11. Auditoria · `ObiterRota.Auditoria`
@@ -563,3 +583,4 @@ Pontos de atenção na implementação:
 | Versão | Data | Alterações |
 | --- | --- | --- |
 | 1.0 | `[DD/MM/AAAA]` | Texto inicial. |
+| 1.1 | 19/11/2026 | Acrescenta o item 4.10.1 — pré-checagem no servidor, opt-in no Perfil —, acompanhando a Política de Privacidade v1.1. |

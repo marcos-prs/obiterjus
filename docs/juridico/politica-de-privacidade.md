@@ -1,6 +1,6 @@
 # Política de Privacidade — ObiterJus
 
-**Versão 1.0** · Vigente a partir de `{{DATA_VIGENCIA}}` · Aplicável à versão `1.0` do aplicativo
+**Versão 1.1** · Vigente a partir de `{{DATA_VIGENCIA_V11}}` · Aplicável a partir da versão `0.0002` do aplicativo
 
 ---
 
@@ -110,7 +110,11 @@ e) telemetria de uso, analytics de comportamento ou relatórios automáticos de 
 f) histórico de navegação ou dados de outros aplicativos;
 g) dados de pagamento — não há cobrança nesta versão.
 
-O aplicativo declara apenas duas permissões Android: **internet** e **notificações**.
+O aplicativo declara duas permissões Android no próprio manifesto: **internet** e
+**notificações**. As bibliotecas que ele usa acrescentam as permissões técnicas
+necessárias para receber mensagens de push, manter o aparelho acordado durante a
+busca e verificar o estado da rede. Nenhuma delas dá acesso a conteúdo do aparelho,
+a localização ou a dados de outros aplicativos.
 
 ---
 
@@ -125,12 +129,16 @@ O aplicativo declara apenas duas permissões Android: **internet** e **notifica�
 | Sincronização em nuvem | **Consentimento** específico e destacado do Usuário — art. 7º, I — revogável a qualquer tempo |
 | Envio de peça para geração de minuta | **Consentimento** específico, manifestado a cada envio — art. 7º, I |
 | Integração com Google Calendar | **Consentimento** específico — art. 7º, I |
+| Aviso diário no horário escolhido, sem identificação (item 6.3) | Execução de contrato — art. 7º, V |
+| Pré-checagem no servidor, com OAB e nome do advogado (item 6.3) | **Consentimento** específico e destacado do Usuário — art. 7º, I — revogável a qualquer tempo |
 | Registros de sincronização e de aceite dos Termos | Legítimo interesse em segurança, auditoria e prova do dever de informação — art. 7º, IX; cumprimento de obrigação legal — art. 7º, II |
 | Segurança da aplicação e prevenção a fraude | Legítimo interesse — art. 7º, IX |
 
-**5.1.** O consentimento para sincronização em nuvem, para envio de peças e para o
-Google Calendar é **independente**: recusar um não impede o uso dos demais nem do
-restante do aplicativo.
+**5.1.** O consentimento para sincronização em nuvem, para envio de peças, para o
+Google Calendar e para a pré-checagem no servidor é **independente**: recusar um não
+impede o uso dos demais nem do restante do aplicativo. Recusar a pré-checagem não
+desliga o aviso diário — ele continua funcionando sem identificação, na forma do item
+6.3.
 
 ---
 
@@ -165,6 +173,57 @@ apenas os próprios documentos, e **sessão anônima é recusada**. Publicaçõe
 como sigilosas e os prazos a elas vinculados são **filtrados no envio** — observada a
 limitação da detecção heurística descrita nos Termos de Uso (cláusula 7.6).
 
+### 6.3. O aviso da manhã — como o aplicativo é acordado
+
+O Android não garante horário para tarefas em segundo plano: em certos estados de
+economia de bateria a rede em segundo plano é desligada, e a busca da manhã escorrega
+até o Usuário abrir o aplicativo. Por isso quem acorda o aplicativo é um servidor do
+Desenvolvedor (**API Obiter-Push**), por mensagem do Firebase Cloud Messaging.
+
+**Aviso sem identificação — o padrão.** O aparelho se inscreve em um tópico do
+Firebase cujo nome carrega apenas o horário e o fuso (`sync-diaria-h07-utcm180`).
+Não há identificação do aparelho nem do advogado, não há cadastro e não há banco de
+dados: **nenhum dado sai do aparelho para servidor do Desenvolvedor** neste caminho, e
+o servidor não sabe quantos aparelhos escutam nem de quem são. A mensagem não carrega
+conteúdo — ela apenas manda o aplicativo consultar o DJEN por conta própria.
+
+**Pré-checagem no servidor — apenas com autorização.** Opcional, **nasce desativada** e
+só é ligada por escolha expressa no Perfil. Com ela ativa, o aparelho envia à API
+Obiter-Push, a cada abertura do aplicativo:
+
+a) um identificador aleatório da instalação, gerado no próprio aparelho e sem relação
+   com a conta, com o e-mail ou com qualquer identificador do dispositivo;
+b) o número e a UF da OAB e o nome do advogado;
+c) o horário e o fuso em que o aviso deve sair, e o modo de busca escolhido;
+d) um número inteiro: o maior identificador de publicação que aquele aparelho já viu
+   no DJEN.
+
+Com isso, o servidor consulta o DJEN pela OAB **em nome do Usuário** e só envia o
+aviso quando há publicação nova. É o que evita avisar em dias sem movimento.
+
+**O que isso muda, dito sem rodeio:**
+
+1. Um servidor do Desenvolvedor passa a guardar OAB, UF e nome do advogado. São dados
+   que já são enviados ao DJEN hoje, mas que até aqui não ficavam em servidor do
+   Desenvolvedor — e que agora dizem **de quem** é cada registro.
+2. Esse servidor passa a saber **em que dias aquela OAB tem publicação**. É informação
+   sobre a rotina do escritório, ainda que qualquer pessoa possa obter a mesma coisa
+   consultando o Diário, que é público.
+3. A resposta do DJEN é lida apenas para extrair o maior identificador e **descartada**.
+   Só o número inteiro é gravado. Nenhum conteúdo de publicação é armazenado no
+   servidor.
+4. O aviso enviado ao aparelho **não carrega conteúdo nem contagem**. Quem lê a
+   publicação, classifica e decide o que notificar continua sendo o aplicativo, no
+   aparelho.
+5. O nome do tópico de entrega é derivado da OAB por função criptográfica
+   (HMAC-SHA256), de modo que o número da OAB não transita nos metadados do Firebase.
+
+**Revogação.** Desligar a opção no Perfil, desligar a sincronização automática ou
+excluir a conta apaga o registro no servidor: o aparelho pede a exclusão da linha
+correspondente, identificada pelo identificador aleatório da instalação. A partir daí
+o servidor volta a não guardar nada a respeito do Usuário, e o aviso sem identificação
+continua funcionando.
+
 ---
 
 ## 7. Com quem os dados são compartilhados
@@ -179,6 +238,8 @@ ocorre apenas com os operadores e fontes abaixo, na medida necessária.
 | **API CalendárioForense** (Desenvolvedor, hospedada na Render) | Sigla do tribunal, data de disponibilização, prazo, natureza. **Sem identificação de parte, de processo ou de advogado** | A cada cálculo de prazo | Exterior — Estados Unidos |
 | **API Obiter-Minuta** (Desenvolvedor, hospedada na Oracle Cloud) | PDF da peça, texto integral extraído, número do processo e vara quando informados, token de autenticação | Somente a cada envio deliberado pelo Usuário | `{{REGIAO_OBITER_MINUTA}}` |
 | **Google — Gemini API** (provedor de IA contratado pela API Obiter-Minuta) | Texto da peça, para extração e geração do rascunho | No processamento do envio | Exterior — infraestrutura global do Google (Estados Unidos) |
+| **API Obiter-Push** (Desenvolvedor, hospedada na Oracle Cloud) | Identificador aleatório da instalação, número e UF da OAB, nome do advogado, horário e fuso, modo de busca e o maior identificador de publicação já visto pelo aparelho | Somente com a pré-checagem ativada (item 6.3), a cada abertura do aplicativo | `{{REGIAO_OBITER_PUSH}}` |
+| **Google — Firebase Cloud Messaging** | A inscrição do aparelho em tópicos: horário, fuso e, com a pré-checagem ativa, um código derivado da OAB por função criptográfica. **Não recebe o número da OAB, o nome do advogado nem conteúdo de publicação** | Enquanto o aviso diário estiver ativo | Exterior — infraestrutura global do Google (Estados Unidos) |
 | **Google — Firebase Authentication** | E-mail, credenciais, registros de acesso | Sempre que há conta | Exterior — infraestrutura global do Google (Estados Unidos) |
 | **Google — Firebase Firestore** | Acervo sincronizado | Somente com sincronização ativa | Brasil — `southamerica-east1` (São Paulo) |
 | **Google — Firebase Remote Config** | Nenhum dado pessoal; apenas recebe parâmetros | Na inicialização | Exterior |
@@ -196,7 +257,8 @@ respectivos provedores.
 **7.2. O que nunca é enviado sem ação do Usuário.** Nenhum documento, nenhuma peça e
 nenhum dado de cliente sai do aparelho automaticamente. A sincronização em nuvem exige
 ativação; o envio para geração de minuta exige seleção de arquivo e confirmação; a
-integração de calendário exige autorização na conta Google.
+integração de calendário exige autorização na conta Google; o envio da OAB e do nome
+à API Obiter-Push exige ativar a pré-checagem no Perfil, que nasce desativada.
 
 ---
 
@@ -211,6 +273,7 @@ integração de calendário exige autorização na conta Google.
 | Banco de dados local | Até o Usuário excluir o registro, sair da conta, excluir a conta ou desinstalar |
 | Dados no Firestore | Enquanto a conta existir e a sincronização estiver ativa; apagados na hora na exclusão feita no aplicativo, ou em até 15 dias no pedido por escrito |
 | Dados de cadastro e de autenticação | Enquanto a conta existir; registros de acesso mantidos pelo prazo legal aplicável |
+| Registro da pré-checagem na API Obiter-Push | Enquanto a opção estiver ativa; apagado quando o Usuário a desliga, desliga a sincronização automática ou exclui a conta |
 | Registro de aceite dos Termos | Mantido enquanto puder ser exigido como prova do dever de informação, ainda que a conta seja excluída |
 
 **8.1.** Desativar a sincronização interrompe novos envios, mas **não apaga** o que já
@@ -349,3 +412,4 @@ Perfil do aplicativo.
 | Versão | Data | Alterações |
 | --- | --- | --- |
 | 1.0 | `{{DATA_VIGENCIA}}` | Texto inicial. |
+| 1.1 | `{{DATA_VIGENCIA_V11}}` | Descreve o aviso diário por push (item 6.3): o caminho sem identificação, que é o padrão, e a pré-checagem no servidor, opcional e desativada de origem, em que a API Obiter-Push passa a receber OAB, UF e nome do advogado e a consultar o DJEN em nome do Usuário. Acrescenta a API Obiter-Push e o Firebase Cloud Messaging à tabela do item 7, a base legal do item 5 e o prazo de retenção do item 8. Precisa as permissões Android no item 4.3. |
