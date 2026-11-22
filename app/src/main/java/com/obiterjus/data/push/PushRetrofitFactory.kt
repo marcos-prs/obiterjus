@@ -29,16 +29,20 @@ object PushRetrofitFactory {
             .create(PushRegistroDataSource::class.java)
     }
 
-    // PENDENTE, e de propósito: este é o host da API de minutas, não do emissor
-    // do push. O emissor (Obiter-Push) roda na mesma VM mas não tem porta nem
-    // hostname na Fase 1 — só os ganha quando a Fase 2 existir.
+    // Host do emissor. Primeira escolha, em 13/11/2026, foi
+    // `push.obiterjus.duckdns.org` — **errada**: o DuckDNS responde qualquer
+    // subdomínio, mas todos com o IP do domínio base, que é a VM da API de
+    // minutas (157.151.31.34). O emissor roda em máquina própria
+    // (157.151.26.150), então o nome tem de ser um domínio DuckDNS dele.
     //
-    // Nenhum APK publicado chega aqui: a Fase 2 está atrás de
-    // `push_pre_checagem_disponivel`, que nasce false. Então trocar esta
-    // constante é grátis HOJE. Depois de um APK publicado apontar para cá,
-    // mudar passa a depender de o usuário atualizar o app — por isso o host da
-    // Fase 2 tem de ser decidido ANTES de ligar aquele flag.
-    private const val BASE_URL = "https://obiterjus.duckdns.org/"
+    // Um nome por máquina, e não `/push` na VM de minutas repassando para cá:
+    // aquilo devolveria o acoplamento que motivou a máquina separada.
+    //
+    // Fica compilado no APK, então trocar exige build e envio novos. O nome tem
+    // de estar roteado antes de `push_pre_checagem_disponivel` ligar: sem rota,
+    // o registro falha em silêncio, que é o comportamento desenhado abaixo. Na
+    // Fase 1 ninguém chama este host — o emissor só fala com o FCM.
+    private const val BASE_URL = "https://obiterpush.duckdns.org/"
 
     // O registro roda na abertura do app e não deve atrasar nada: timeout curto,
     // e a falha é silenciosa — tenta de novo na próxima abertura.

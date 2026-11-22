@@ -18,12 +18,16 @@ import java.util.concurrent.TimeUnit
 object DjenSyncScheduler {
     private const val UNIQUE_WORK_NAME = "djen_periodic_sync"
     private const val UNIQUE_WORK_IMEDIATA = "djen_sync_push"
+    private const val UNIQUE_WORK_RETENTATIVA = "djen_sync_retentativa"
     private const val INTERVAL_HOURS = 24L
     private const val TARGET_HOUR = 7
     private const val BACKOFF_MINUTES = 30L
 
     /** Marca a execução como disparada por push, para a fonte da Auditoria. */
     const val KEY_ORIGEM_PUSH = "origem_push"
+
+    /** Marca a execução avulsa que repete uma diária que falhou. */
+    const val KEY_RETENTATIVA = "retentativa"
 
     /**
      * Dispara a sincronização agora, em resposta a um push do servidor.
@@ -50,6 +54,35 @@ object DjenSyncScheduler {
 
         WorkManager.getInstance(context.applicationContext)
             .enqueueUniqueWork(UNIQUE_WORK_IMEDIATA, ExistingWorkPolicy.KEEP, request)
+    }
+
+    /**
+     * Repete, numa execução avulsa, a diária que acabou de falhar.
+     *
+     * Existe para a periódica não precisar de `Result.retry()`, que trocaria o
+     * horário das 7h do dia seguinte por "hora da falha + backoff". Assim a
+     * periódica fica ancorada nas 7h e a repetição corre por fora, com o próprio
+     * backoff.
+     *
+     * Sem `setExpedited`: repetir uma busca que falhou não justifica gastar a
+     * cota de trabalho expedito, que é do push.
+     *
+     * KEEP: se já há uma repetição pendente, ela basta.
+     */
+    fun agendarRetentativa(context: Context) {
+        val request = OneTimeWorkRequestBuilder<DjenSyncWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build(),
+            )
+            .setInitialDelay(Duration.ofMinutes(BACKOFF_MINUTES))
+            .setInputData(workDataOf(KEY_RETENTATIVA to true))
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, Duration.ofMinutes(BACKOFF_MINUTES))
+            .build()
+
+        WorkManager.getInstance(context.applicationContext)
+            .enqueueUniqueWork(UNIQUE_WORK_RETENTATIVA, ExistingWorkPolicy.KEEP, request)
     }
 
     /**
@@ -103,8 +136,11 @@ object DjenSyncScheduler {
     }
 
     fun cancel(context: Context) {
-        WorkManager.getInstance(context.applicationContext)
-            .cancelUniqueWork(UNIQUE_WORK_NAME)
+        val workManager = WorkManager.getInstance(context.applicationContext)
+        workManager.cancelUniqueWork(UNIQUE_WORK_NAME)
+        // A repetição pendente de uma diária que falhou também é sincronização
+        // automática: quem a desligou não quer que ela rode.
+        workManager.cancelUniqueWork(UNIQUE_WORK_RETENTATIVA)
     }
 
     private fun delayAteProximoHorario(): Long {

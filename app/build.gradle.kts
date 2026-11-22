@@ -53,8 +53,8 @@ android {
         applicationId = "com.obiterjus"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.0001"
+        versionCode = 5
+        versionName = "0.0005"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DATAJUD_API_KEY", "\"$dataJudApiKey\"")

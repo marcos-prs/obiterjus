@@ -86,15 +86,19 @@ class PushRegistroRepository(
     }
 
     private suspend fun executarSincronizacao(): Resultado {
-        if (!appConfigRepository.current().pushDiarioEnabled) return Resultado.DESLIGADO
+        // `refresh`, não `current`: `current` lê a cópia guardada no aparelho,
+        // que só se renova quando alguém busca no Firebase. Lendo a cópia, ligar
+        // o flag não inscrevia ninguém até uma sincronização renová-la E o app
+        // abrir do zero depois disso — causa provável do 20/11 sem push às 7h.
+        // A busca respeita o intervalo mínimo do Remote Config e, sem rede,
+        // devolve a própria cópia.
+        if (!appConfigRepository.refresh().pushDiarioEnabled) return Resultado.DESLIGADO
 
         val preferencias = perfilPreferencesRepository.preferencias.first()
         if (!preferencias.sincronizacaoAutomatica) {
             cancelar()
             return Resultado.CANCELADO
         }
-
-        fcm.registrar()
 
         val offsetMinutos = offsetMinutos()
         val topicoCego = PushTopicos.acordaCego(HORA_ALVO, offsetMinutos)

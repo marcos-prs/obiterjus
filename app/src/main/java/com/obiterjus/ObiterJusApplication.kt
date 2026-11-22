@@ -42,7 +42,8 @@ class ObiterJusApplication : Application() {
         // acima é a rede de segurança. O registro é reenviado a cada abertura
         // porque o token do FCM rotaciona — é idempotente, e a falha é
         // silenciosa. Fica inerte até `push_diario_enabled` ligar no Remote
-        // Config, o que só acontece quando o cron estiver no ar.
+        // Config, o que só acontece quando o cron estiver no ar. O DjenSyncWorker
+        // repete a reconciliação ao fim de cada execução.
         val pushRegistro = koinApp.koin.get<PushRegistroRepository>()
         applicationScope.launch { pushRegistro.sincronizar() }
 
