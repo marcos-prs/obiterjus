@@ -199,7 +199,7 @@ class PublicacaoNotificationHelper(
         priority: Int = NotificationCompat.PRIORITY_DEFAULT,
     ) {
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notificacao)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

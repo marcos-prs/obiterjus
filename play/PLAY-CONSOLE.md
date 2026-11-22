@@ -4,8 +4,24 @@ Documento de trabalho: cada seção corresponde a um formulário da Play Console
 O que está escrito aqui pode ser copiado como está. O que depende de decisão sua
 está marcado com **▶ VOCÊ**.
 
-Pacote: `com.obiterjus` · versionCode `1` · versionName `1.0` · minSdk 26 · targetSdk 36
-Arquivo gerado: `app/build/outputs/bundle/release/app-release.aab` (assinado com a chave de upload).
+Pacote: `com.obiterjus` · minSdk 26 · targetSdk 36
+
+| Envio | versionCode | versionName | O que leva |
+| --- | --- | --- | --- |
+| 06/11/2026 | 1 | 1.0 | primeiro envio ao teste interno; **sem push** — é anterior a `ff17b62` |
+| 13/11/2026 | 2 | 0.0002 | gerado e conferido, **não enviado**: nasceu com o host do push errado |
+| 13/11/2026 | 3 | 0.0002 | Fase 1 do push, a chave da Fase 2 e o host `obiterpush.duckdns.org` |
+| 21/11/2026 | 4 | 0.0004 | flag do push lido do Firebase, diária ancorada às 7h após falha, retentativa no DJEN; **push ainda inerte**: `register()` falhava antes da inscrição |
+| a enviar | 5 | 0.0005 | inscrição no tópico sem `register()` — o push das 7h passa a alcançar o aparelho; ícone novo |
+
+Onde o arquivo cai depende de como foi gerado: `gradlew bundleRelease` escreve em
+`app/build/outputs/bundle/release/app-release.aab`; o *Generate Signed App Bundle* do
+Android Studio escreve em `app/release/app-release.aab`. Os dois saem assinados pela mesma
+chave de upload — conferido no envio de 13/11 comparando o certificado dentro do pacote com
+o do keystore (SHA-1 `00:2A:3B:2A:13:F1:31:E9:86:D8:CE:73:A4:07:1E:C4:9E:42:03:0D`).
+
+Não rode build pela linha de comando com o Android Studio compilando o mesmo módulo: em
+13/11 isso apagou intermediários no meio do R8 e, na tentativa seguinte, derrubou o daemon.
 
 ---
 
@@ -221,7 +237,7 @@ na tela de resultado da minuta.
 1. **Criar o app**: Todos os apps → Criar app. Nome `ObiterJus`, idioma padrão
    `português (Brasil)`, tipo `App`, `Gratuito`.
 2. **Testes → Teste fechado** → criar uma faixa (a padrão `alpha` serve).
-3. **Enviar** `app/build/outputs/bundle/release/app-release.aab`.
+3. **Enviar** o `app-release.aab` — veja no início deste documento onde ele cai.
 4. **Lista de testadores**: e-mails de Contas Google, um por testador.
 5. **URL de feedback**: `mailto:obiterjus@xablauinitiative.com.br` serve.
 6. **Notas da versão**:

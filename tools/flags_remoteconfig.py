@@ -11,9 +11,9 @@ apenas o que falta, e só então publicar.
 
 Por padrão não publica nada: mostra o que mudaria. Use --aplicar para valer.
 
-    python3 tools/flags_remoteconfig.py                   # mostra o que mudaria
-    python3 tools/flags_remoteconfig.py --aplicar         # cria os flags em false
-    python3 tools/flags_remoteconfig.py --ligar push_diario_enabled --aplicar
+    python tools/flags_remoteconfig.py                   # mostra o que mudaria
+    python tools/flags_remoteconfig.py --aplicar         # cria os flags em false
+    python tools/flags_remoteconfig.py --ligar push_diario_enabled --aplicar
 
 O template baixado fica fora do git (ver .gitignore): num projeto com valores
 publicados ele conteria a APIKey do DataJud e o token do DJEN.
@@ -143,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.aplicar:
         print(
             f"\nNada publicado. O template mesclado está em {TEMPLATE} "
-            "(fora do git).\nPara publicar: python3 flags_remoteconfig.py --aplicar"
+            "(fora do git).\nPara publicar: python tools/flags_remoteconfig.py --aplicar"
         )
         return 0
 

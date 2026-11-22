@@ -4,6 +4,10 @@
   "_NOME_TITULAR": "Nome civil do titular. Identifica o Encarregado (DPO) na Política e o titular do aplicativo na Cláusula 1 dos Termos. O controlador, na tabela da Política, é o próprio aplicativo: ObiterJus, sem razão social, sem CNPJ/CPF e sem endereço.",
   "REGIAO_OBITER_MINUTA": "Brasil — Oracle Cloud, região sa-vinhedo-1 (Vinhedo, São Paulo)",
   "_REGIAO_OBITER_MINUTA": "Região da instância Oracle Cloud que hospeda a API Obiter-Minuta. Veja em cloud.oracle.com, no canto superior direito.",
+  "REGIAO_OBITER_PUSH": "Brasil — Oracle Cloud, região sa-vinhedo-1 (Vinhedo, São Paulo)",
+  "_REGIAO_OBITER_PUSH": "Região da instância Oracle Cloud que hospeda a API Obiter-Push (o emissor do aviso diário). Máquina diferente da do Obiter-Minuta, mesma região.",
   "DATA_VIGENCIA": "06/11/2026",
-  "_DATA_VIGENCIA": "Data de início de vigência dos documentos. Deve ser igual ou anterior ao dia em que o teste fechado abre."
+  "_DATA_VIGENCIA": "Data de início de vigência dos documentos. Deve ser igual ou anterior ao dia em que o teste fechado abre.",
+  "DATA_VIGENCIA_V11": "19/11/2026",
+  "_DATA_VIGENCIA_V11": "Vigência da versão 1.1 da Política de Privacidade, que descreve o aviso diário por push. Deve ser igual ou anterior ao dia em que o site for republicado — e o site precisa estar no ar ANTES de o toggle da pré-checagem aparecer no app."
 }

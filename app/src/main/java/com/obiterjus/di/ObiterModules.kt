@@ -394,6 +394,7 @@ private val workerModule = module {
             syncLogDao = get(),
             recalcularPrazosPendentes = get(),
             repositorioCadastroOab = get(),
+            pushRegistro = get(),
         )
     }
     worker { params ->

@@ -4,7 +4,7 @@ Documento de trabalho exigido pelo art. 37 da LGPD. Descreve o que o app coleta,
 onde guarda e para quem envia. Atualizar junto com qualquer mudança que altere o
 fluxo de dados.
 
-Última revisão: 11/11/2026.
+Última revisão: 19/11/2026.
 
 ## Titulares
 
@@ -97,10 +97,15 @@ credencial de entrega.
 
 **Fase 2 — pré-checagem no servidor.** Só com `pushPreChecagemAutorizada`
 ligada no Perfil, que **nasce desligada**. A API de push
-(`obiterjus.duckdns.org`) passa a receber: uuid opaco da instalação, tópico
-derivado da OAB por HMAC com sal, hora e fuso, número e UF da OAB, nome do
-advogado, o modo de busca por nome, e a marca d'água — o maior `id` de
-comunicação do DJEN já conhecido pelo aparelho.
+(`obiterpush.duckdns.org`, máquina própria — não é o host da API de minutas)
+passa a receber: uuid opaco da instalação, tópico derivado da OAB por HMAC com
+sal, hora e fuso, número e UF da OAB, nome do advogado, o modo de busca por
+nome, e a marca d'água — o maior `id` de comunicação do DJEN já conhecido pelo
+aparelho.
+
+O que o servidor guarda é uma linha por instalação, num SQLite
+(`push/registro.py`, no repositório `Obiter-Push`): exatamente os campos acima e
+mais nada. A resposta do DJEN é lida para extrair o maior `id` e descartada.
 
 Com isso o servidor consulta o DJEN pela OAB para decidir se vale acordar o
 aparelho. **Três consequências que precisam estar claras:**
@@ -126,8 +131,16 @@ O push em si nunca carrega conteúdo — nem contagem. Quem consulta o DJEN para
 notificar é sempre o app, então o inteiro teor continua chegando só ao
 aparelho.
 
-**Pendência bloqueante:** a Fase 2 não pode entrar em produção antes de a
-política de privacidade descrever os itens acima e o site ser republicado.
+**Revogação.** Desligar a pré-checagem, desligar a sincronização automática ou
+excluir a conta apaga a linha no servidor (`DELETE /push/consulta/{instalacao}`).
+O uuid da instalação é a capacidade: sem ele ninguém altera nem apaga aquele
+registro.
+
+**Pendência bloqueante — resolvida em 19/11/2026.** A Política de Privacidade
+v1.1 descreve os itens acima no item 6.3, e a API Obiter-Push entrou na tabela
+de compartilhamento do item 7. **Falta republicar o site** (`python web/build.py`
+e deploy): enquanto o texto não estiver no ar, `push_pre_checagem_disponivel`
+não pode ser ligado no Remote Config.
 
 ### Consultas a serviços públicos
 
@@ -163,7 +176,11 @@ calendários). **Pendência:** `calendar.events` bastaria.
 3. Token de escopo restrito no lugar do Firebase ID token.
 4. Reduzir o escopo do OAuth do Google Calendar.
 5. Confirmar retenção e subcontratados do serviço de minutas.
-6. **Bloqueante para a Fase 2 do push:** descrever na política de privacidade
-   que um servidor nosso passa a guardar a OAB e o nome do advogado e a
-   consultar o DJEN por ele, e republicar o site. Enquanto isso não existir,
-   `pushPreChecagemAutorizada` não deve ser oferecida em produção.
+6. **Bloqueante para a Fase 2 do push — meio resolvido em 19/11/2026.** A
+   política já descreve a Fase 2 (v1.1, item 6.3). Falta **republicar o site**
+   com `python web/build.py` e o deploy do Hosting. Enquanto o texto não estiver
+   no ar, `push_pre_checagem_disponivel` não deve ser ligado no Remote Config.
+7. **Retenção no servidor de push é afirmação, não fato verificável pelo app** —
+   mesma situação do `pdf_descartado: true` da API de minutas. Vale enquanto as
+   duas pontas forem do mesmo desenvolvedor; deixa de valer no dia em que o
+   serviço for operado por terceiro.

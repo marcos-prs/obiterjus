@@ -30,7 +30,35 @@ class PushRegistroRepositoryTest {
 
         assertEquals(PushRegistroRepository.Resultado.DESLIGADO, repo.sincronizar())
         assertTrue(fcm.inscritos.isEmpty())
-        assertEquals(0, fcm.registros)
+    }
+
+    @Test
+    fun flagLigadaNoFirebaseInscreveMesmoComACopiaLocalAntiga() = runTest {
+        // O caso de 20/11: o flag foi ligado no Firebase, mas a cópia guardada
+        // no aparelho ainda dizia desligado. Lendo só a cópia, o aparelho não
+        // se inscrevia e o push das 7h ia para um tópico sem ele.
+        val fcm = FcmFake()
+        val repo = repositorio(
+            fcm = fcm,
+            appConfig = AppConfigRepositoryFake(emCache = false, noFirebase = true),
+        )
+
+        assertEquals(PushRegistroRepository.Resultado.REGISTRADO, repo.sincronizar())
+        assertEquals(setOf("sync-diaria-h07-utcm180"), fcm.inscritos)
+    }
+
+    @Test
+    fun flagDesligadaNoFirebaseNaoInscreveMesmoComACopiaLocalLigada() = runTest {
+        // O caminho inverso: desligar o flag tem de valer sem esperar a
+        // próxima sincronização renovar a cópia.
+        val fcm = FcmFake()
+        val repo = repositorio(
+            fcm = fcm,
+            appConfig = AppConfigRepositoryFake(emCache = true, noFirebase = false),
+        )
+
+        assertEquals(PushRegistroRepository.Resultado.DESLIGADO, repo.sincronizar())
+        assertTrue(fcm.inscritos.isEmpty())
     }
 
     @Test
@@ -45,7 +73,6 @@ class PushRegistroRepositoryTest {
         // Fase 1: o servidor não sabe de nós. Nenhuma chamada de rede.
         assertNull(dataSource.ultimaConsulta)
         assertEquals(setOf("sync-diaria-h07-utcm180"), fcm.inscritos)
-        assertEquals(1, fcm.registros)
     }
 
     @Test
@@ -176,10 +203,11 @@ class PushRegistroRepositoryTest {
         pushDiarioEnabled: Boolean = true,
         maiorIdConhecido: Long? = 100L,
         zona: ZoneId = ZoneId.of("America/Sao_Paulo"),
+        appConfig: AppConfigRepository = AppConfigRepositoryFake(emCache = pushDiarioEnabled),
     ): PushRegistroRepository = PushRegistroRepository(
         dataSource = dataSource,
         memoria = memoria,
-        appConfigRepository = AppConfigRepositoryFake(pushDiarioEnabled),
+        appConfigRepository = appConfig,
         perfilPreferencesRepository = PreferenciasFake(preferencias),
         repositorioCadastroOab = CadastroFake(),
         marcaDagua = { maiorIdConhecido },
@@ -192,13 +220,8 @@ class PushRegistroRepositoryTest {
         valor ?: throw AssertionError("esperava valor não nulo")
 
     private class FcmFake : FcmInscricoes {
-        var registros = 0
         val inscritos = linkedSetOf<String>()
         val desinscritos = mutableListOf<String>()
-
-        override suspend fun registrar() {
-            registros++
-        }
 
         override suspend fun inscrever(topico: String) {
             inscritos += topico
@@ -243,13 +266,22 @@ class PushRegistroRepositoryTest {
         }
     }
 
+    /**
+     * Separa o que está guardado no aparelho ([current]) do que está no
+     * Firebase ([refresh]), como no repositório real: `refresh` busca e passa
+     * a cópia local a valer o valor remoto.
+     */
     private class AppConfigRepositoryFake(
-        private val pushDiarioEnabled: Boolean,
+        emCache: Boolean,
+        private val noFirebase: Boolean = emCache,
     ) : AppConfigRepository {
-        private val estado = MutableStateFlow(AppConfig(pushDiarioEnabled = pushDiarioEnabled))
+        private val estado = MutableStateFlow(AppConfig(pushDiarioEnabled = emCache))
         override val config: Flow<AppConfig> = estado
         override suspend fun current(): AppConfig = estado.value
-        override suspend fun refresh(): AppConfig = estado.value
+        override suspend fun refresh(): AppConfig {
+            estado.value = AppConfig(pushDiarioEnabled = noFirebase)
+            return estado.value
+        }
     }
 
     private class PreferenciasFake(

@@ -8,13 +8,21 @@ import kotlinx.coroutines.tasks.await
  * [PushRegistroRepository] ser testável sem Firebase.
  *
  * Não há `token` aqui de propósito: `getToken()` está depreciado no
- * `firebase-messaging` 26. O modelo atual é o app se registrar e se inscrever
- * em tópicos, sem nunca manusear credencial de entrega — o que também tira do
- * nosso servidor a necessidade de guardá-la.
+ * `firebase-messaging` 26. O app se inscreve em tópicos sem nunca manusear
+ * credencial de entrega — o que também tira do nosso servidor a necessidade de
+ * guardá-la.
+ *
+ * Também não há `register()`, e a ausência importa. No 26.0.1 o
+ * `FirebaseMessaging.register()` público só funciona com o meta-data
+ * `firebase_messaging_installation_id_enabled=true` no manifest; sem ele
+ * devolve `IllegalStateException("API disabled...")` na hora. Foi o que
+ * deixou a VC4 sem push: o registro falhava antes da inscrição, o aparelho
+ * nunca entrava no tópico e o servidor empurrava para ninguém. A chamada é
+ * dispensável: `subscribeToTopic` registra o aparelho por conta própria
+ * (`TopicSubscriptionClient.subscribe` → `blockingRegister`), pelo caminho
+ * interno que não passa por essa trava — conferido com `javap` no artefato.
  */
 interface FcmInscricoes {
-    suspend fun registrar()
-
     suspend fun inscrever(topico: String)
 
     suspend fun desinscrever(topico: String)
@@ -23,10 +31,6 @@ interface FcmInscricoes {
 class FirebaseFcmInscricoes(
     private val messaging: FirebaseMessaging = FirebaseMessaging.getInstance(),
 ) : FcmInscricoes {
-
-    override suspend fun registrar() {
-        messaging.register().await()
-    }
 
     override suspend fun inscrever(topico: String) {
         messaging.subscribeToTopic(topico).await()
